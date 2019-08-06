@@ -444,12 +444,12 @@ int __pte_alloc_kernel(pmd_t *pmd)
 
 	smp_wmb(); /* See comment in __pte_alloc */
 
-	spin_lock(&init_mm.page_table_lock);
+	spin_lock(&init_mm.pgt.page_table_lock);
 	if (likely(pmd_none(*pmd))) {	/* Has another populated it ? */
 		pmd_populate_kernel(&init_mm, pmd, new);
 		new = NULL;
 	}
-	spin_unlock(&init_mm.page_table_lock);
+	spin_unlock(&init_mm.pgt.page_table_lock);
 	if (new)
 		pte_free_kernel(&init_mm, new);
 	return 0;
@@ -4038,12 +4038,12 @@ int __p4d_alloc(struct mm_struct *mm, pgd_t *pgd, unsigned long address)
 
 	smp_wmb(); /* See comment in __pte_alloc */
 
-	spin_lock(&mm->page_table_lock);
+	spin_lock(&mm->pgt.page_table_lock);
 	if (pgd_present(*pgd))		/* Another has populated it */
 		p4d_free(new);
 	else
 		pgd_populate(mm, pgd, new);
-	spin_unlock(&mm->page_table_lock);
+	spin_unlock(&mm->pgt.page_table_lock);
 	return 0;
 }
 #endif /* __PAGETABLE_P4D_FOLDED */
@@ -4061,7 +4061,7 @@ int __pud_alloc(struct mm_struct *mm, p4d_t *p4d, unsigned long address)
 
 	smp_wmb(); /* See comment in __pte_alloc */
 
-	spin_lock(&mm->page_table_lock);
+	spin_lock(&mm->pgt.page_table_lock);
 #ifndef __ARCH_HAS_5LEVEL_HACK
 	if (!p4d_present(*p4d)) {
 		mm_inc_nr_puds(mm);
@@ -4075,7 +4075,7 @@ int __pud_alloc(struct mm_struct *mm, p4d_t *p4d, unsigned long address)
 	} else	/* Another has populated it */
 		pud_free(new);
 #endif /* __ARCH_HAS_5LEVEL_HACK */
-	spin_unlock(&mm->page_table_lock);
+	spin_unlock(&mm->pgt.page_table_lock);
 	return 0;
 }
 #endif /* __PAGETABLE_PUD_FOLDED */

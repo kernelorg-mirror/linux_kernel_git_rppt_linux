@@ -48,7 +48,7 @@ __load_new_mm_context(struct mm_struct *next_mm)
 
 	pcb = &current_thread_info()->pcb;
 	pcb->asn = mmc & HARDWARE_ASN_MASK;
-	pcb->ptbr = ((unsigned long) next_mm->pgd - IDENT_ADDR) >> PAGE_SHIFT;
+	pcb->ptbr = ((unsigned long) next_mm->pgt.pgd - IDENT_ADDR) >> PAGE_SHIFT;
 
 	__reload_thread(pcb);
 }
@@ -240,7 +240,7 @@ retry:
 		long index = pgd_index(address);
 		pgd_t *pgd, *pgd_k;
 
-		pgd = current->active_mm->pgd + index;
+		pgd = current->active_mm->pgt.pgd + index;
 		pgd_k = swapper_pg_dir + index;
 		if (!pgd_present(*pgd) && pgd_present(*pgd_k)) {
 			pgd_val(*pgd) = pgd_val(*pgd_k);

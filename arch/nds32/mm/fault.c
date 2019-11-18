@@ -26,7 +26,7 @@ void show_pte(struct mm_struct *mm, unsigned long addr)
 	if (!mm)
 		mm = &init_mm;
 
-	pr_alert("pgd = %p\n", mm->pgd);
+	pr_alert("pgd = %p\n", mm->pgt.pgd);
 	pgd = pgd_offset(mm, addr);
 	pr_alert("[%08lx] *pgd=%08lx", addr, pgd_val(*pgd));
 
@@ -84,7 +84,7 @@ void do_page_fault(unsigned long entry, unsigned long addr,
 	si_code = SEGV_MAPERR;
 	/*
 	 * We fault-in kernel-space virtual memory on-demand. The
-	 * 'reference' page table is init_mm.pgd.
+	 * 'reference' page table is init_mm.pgt.pgd.
 	 *
 	 * NOTE! We MUST NOT take any locks for this case. We may
 	 * be in an interrupt or a critical region, and should
@@ -364,7 +364,7 @@ vmalloc_fault:
 		pte_t *pte_k;
 
 		pgd = (pgd_t *) __va(__nds32__mfsr(NDS32_SR_L1_PPTB)) + index;
-		pgd_k = init_mm.pgd + index;
+		pgd_k = init_mm.pgt.pgd + index;
 
 		if (!pgd_present(*pgd_k))
 			goto no_context;

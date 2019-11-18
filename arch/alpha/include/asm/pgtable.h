@@ -285,7 +285,7 @@ extern inline pte_t pte_mkspecial(pte_t pte)	{ return pte; }
 
 /* to find an entry in a page-table-directory. */
 #define pgd_index(address)	(((address) >> PGDIR_SHIFT) & (PTRS_PER_PGD-1))
-#define pgd_offset(mm, address)	((mm)->pgd+pgd_index(address))
+#define pgd_offset(mm, address)	((mm)->pgt.pgd+pgd_index(address))
 
 /*
  * The smp_read_barrier_depends() in the following functions are required to

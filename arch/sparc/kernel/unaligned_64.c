@@ -278,9 +278,9 @@ static void kernel_mna_trap_fault(int fixup_tstate_asi)
 		printk(KERN_ALERT "current->{active_,}mm->context = %016lx\n",
 			(current->mm ? CTX_HWBITS(current->mm->context) :
 			CTX_HWBITS(current->active_mm->context)));
-		printk(KERN_ALERT "current->{active_,}mm->pgd = %016lx\n",
-			(current->mm ? (unsigned long) current->mm->pgd :
-			(unsigned long) current->active_mm->pgd));
+		printk(KERN_ALERT "current->{active_,}mm->pgt.pgd = %016lx\n",
+			(current->mm ? (unsigned long) current->mm->pgt.pgd :
+			(unsigned long) current->active_mm->pgt.pgd));
 	        die_if_kernel("Oops", regs);
 		/* Not reached */
 	}

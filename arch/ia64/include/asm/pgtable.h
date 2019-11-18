@@ -372,13 +372,13 @@ pgd_index (unsigned long address)
 static inline pgd_t*
 pgd_offset (const struct mm_struct *mm, unsigned long address)
 {
-	return mm->pgd + pgd_index(address);
+	return mm->pgt.pgd + pgd_index(address);
 }
 
 /* In the kernel's mapped region we completely ignore the region number
    (since we know it's in region number 5). */
 #define pgd_offset_k(addr) \
-	(init_mm.pgd + (((addr) >> PGDIR_SHIFT) & (PTRS_PER_PGD - 1)))
+	(init_mm.pgt.pgd + (((addr) >> PGDIR_SHIFT) & (PTRS_PER_PGD - 1)))
 
 /* Look up a pgd entry in the gate area.  On IA-64, the gate-area
    resides in the kernel-mapped segment, hence we use pgd_offset_k()

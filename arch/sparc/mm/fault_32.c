@@ -49,9 +49,9 @@ static void __noreturn unhandled_fault(unsigned long address,
 	}
 	printk(KERN_ALERT "tsk->{mm,active_mm}->context = %08lx\n",
 		(tsk->mm ? tsk->mm->context : tsk->active_mm->context));
-	printk(KERN_ALERT "tsk->{mm,active_mm}->pgd = %08lx\n",
-		(tsk->mm ? (unsigned long) tsk->mm->pgd :
-			(unsigned long) tsk->active_mm->pgd));
+	printk(KERN_ALERT "tsk->{mm,active_mm}->pgt.pgd = %08lx\n",
+		(tsk->mm ? (unsigned long) tsk->mm->pgt.pgd :
+			(unsigned long) tsk->active_mm->pgt.pgd));
 	die_if_kernel("Oops", regs);
 }
 
@@ -175,7 +175,7 @@ asmlinkage void do_sparc_fault(struct pt_regs *regs, int text_fault, int write,
 
 	/*
 	 * We fault-in kernel-space virtual memory on-demand. The
-	 * 'reference' page table is init_mm.pgd.
+	 * 'reference' page table is init_mm.pgt.pgd.
 	 *
 	 * NOTE! We MUST NOT take any locks for this case. We may
 	 * be in an interrupt or a critical region, and should
@@ -353,8 +353,8 @@ vmalloc_fault:
 		pgd_t *pgd, *pgd_k;
 		pmd_t *pmd, *pmd_k;
 
-		pgd = tsk->active_mm->pgd + offset;
-		pgd_k = init_mm.pgd + offset;
+		pgd = tsk->active_mm->pgt.pgd + offset;
+		pgd_k = init_mm.pgt.pgd + offset;
 
 		if (!pgd_present(*pgd)) {
 			if (!pgd_present(*pgd_k))

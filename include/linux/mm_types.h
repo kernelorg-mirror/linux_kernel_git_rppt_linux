@@ -373,6 +373,7 @@ struct pg_table {
 	spinlock_t page_table_lock;	 /* Protects page tables and some
 					  * counters
 					  */
+	pgd_t *pgd;
 };
 
 struct kioctx_table;
@@ -396,7 +397,6 @@ struct mm_struct {
 #endif
 		unsigned long task_size;	/* size of task vm space */
 		unsigned long highest_vm_end;	/* highest vma end address */
-		pgd_t * pgd;
 
 #ifdef CONFIG_MEMBARRIER
 		/**

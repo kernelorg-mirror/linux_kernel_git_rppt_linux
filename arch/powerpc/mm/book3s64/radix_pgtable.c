@@ -367,7 +367,7 @@ static void __init radix_init_pgtable(void)
 	 * Fill in the process table.
 	 */
 	rts_field = radix__get_tree_size();
-	process_tb->prtb0 = cpu_to_be64(rts_field | __pa(init_mm.pgd) | RADIX_PGD_INDEX_SIZE);
+	process_tb->prtb0 = cpu_to_be64(rts_field | __pa(init_mm.pgt.pgd) | RADIX_PGD_INDEX_SIZE);
 
 	/*
 	 * The init_mm context is given the first available (non-zero) PID,
@@ -392,7 +392,7 @@ static void __init radix_init_partition_table(void)
 
 	mmu_partition_table_init();
 	rts_field = radix__get_tree_size();
-	dw0 = rts_field | __pa(init_mm.pgd) | RADIX_PGD_INDEX_SIZE | PATB_HR;
+	dw0 = rts_field | __pa(init_mm.pgt.pgd) | RADIX_PGD_INDEX_SIZE | PATB_HR;
 	dw1 = __pa(process_tb) | (PRTB_SIZE_SHIFT - 12) | PATB_GR;
 	mmu_partition_table_set_entry(0, dw0, dw1, false);
 

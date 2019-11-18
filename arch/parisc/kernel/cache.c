@@ -569,7 +569,7 @@ void flush_cache_mm(struct mm_struct *mm)
 		return;
 	}
 
-	pgd = mm->pgd;
+	pgd = mm->pgt.pgd;
 	for (vma = mm->mmap; vma; vma = vma->vm_next) {
 		unsigned long addr;
 
@@ -614,7 +614,7 @@ void flush_cache_range(struct vm_area_struct *vma,
 		return;
 	}
 
-	pgd = vma->vm_mm->pgd;
+	pgd = vma->vm_mm->pgt.pgd;
 	for (addr = vma->vm_start; addr < vma->vm_end; addr += PAGE_SIZE) {
 		unsigned long pfn;
 		pte_t *ptep = get_ptep(pgd, addr);

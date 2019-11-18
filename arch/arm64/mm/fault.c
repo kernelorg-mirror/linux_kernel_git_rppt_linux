@@ -117,9 +117,9 @@ static inline unsigned long mm_to_pgd_phys(struct mm_struct *mm)
 {
 	/* Either init_pg_dir or swapper_pg_dir */
 	if (mm == &init_mm)
-		return __pa_symbol(mm->pgd);
+		return __pa_symbol(mm->pgt.pgd);
 
-	return (unsigned long)virt_to_phys(mm->pgd);
+	return (unsigned long)virt_to_phys(mm->pgt.pgd);
 }
 
 /*

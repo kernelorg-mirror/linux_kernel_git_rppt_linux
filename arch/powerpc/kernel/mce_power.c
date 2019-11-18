@@ -38,7 +38,7 @@ unsigned long addr_to_pfn(struct pt_regs *regs, unsigned long addr)
 		mm = &init_mm;
 
 	local_irq_save(flags);
-	ptep = __find_linux_pte(mm->pgd, addr, NULL, &shift);
+	ptep = __find_linux_pte(mm->pgt.pgd, addr, NULL, &shift);
 
 	if (!ptep || pte_special(*ptep)) {
 		pfn = ULONG_MAX;

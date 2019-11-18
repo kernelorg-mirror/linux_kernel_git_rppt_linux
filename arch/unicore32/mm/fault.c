@@ -42,7 +42,7 @@ void show_pte(struct mm_struct *mm, unsigned long addr)
 	if (!mm)
 		mm = &init_mm;
 
-	printk(KERN_ALERT "pgd = %p\n", mm->pgd);
+	printk(KERN_ALERT "pgd = %p\n", mm->pgt.pgd);
 	pgd = pgd_offset(mm, addr);
 	printk(KERN_ALERT "[%08lx] *pgd=%08lx", addr, pgd_val(*pgd));
 
@@ -348,7 +348,7 @@ static int do_ifault(unsigned long addr, unsigned int fsr, struct pt_regs *regs)
 	index = pgd_index(addr);
 
 	pgd = cpu_get_pgd() + index;
-	pgd_k = init_mm.pgd + index;
+	pgd_k = init_mm.pgt.pgd + index;
 
 	if (pgd_none(*pgd_k))
 		goto bad_area;

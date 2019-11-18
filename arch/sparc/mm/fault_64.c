@@ -53,9 +53,9 @@ static void __kprobes unhandled_fault(unsigned long address,
 	       (tsk->mm ?
 		CTX_HWBITS(tsk->mm->context) :
 		CTX_HWBITS(tsk->active_mm->context)));
-	printk(KERN_ALERT "tsk->{mm,active_mm}->pgd = %016lx\n",
-	       (tsk->mm ? (unsigned long) tsk->mm->pgd :
-		          (unsigned long) tsk->active_mm->pgd));
+	printk(KERN_ALERT "tsk->{mm,active_mm}->pgt.pgd = %016lx\n",
+	       (tsk->mm ? (unsigned long) tsk->mm->pgt.pgd :
+		          (unsigned long) tsk->active_mm->pgt.pgd));
 	die_if_kernel("Oops", regs);
 }
 

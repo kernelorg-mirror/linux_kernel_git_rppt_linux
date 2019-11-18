@@ -898,7 +898,7 @@ static void tsb_sync(void *info)
 	 * switch_mm().  But that's OK, we just need to check the
 	 * current cpu's trap block PGD physical address.
 	 */
-	if (tp->pgd_paddr == __pa(mm->pgd))
+	if (tp->pgd_paddr == __pa(mm->pgt.pgd))
 		tsb_context_switch(mm);
 }
 

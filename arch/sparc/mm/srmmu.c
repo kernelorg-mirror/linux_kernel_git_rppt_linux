@@ -320,7 +320,7 @@ static void __init srmmu_nocache_init(void)
 
 	srmmu_swapper_pg_dir = __srmmu_get_nocache(SRMMU_PGD_TABLE_SIZE, SRMMU_PGD_TABLE_SIZE);
 	memset(__nocache_fix(srmmu_swapper_pg_dir), 0, SRMMU_PGD_TABLE_SIZE);
-	init_mm.pgd = srmmu_swapper_pg_dir;
+	init_mm.pgt.pgd = srmmu_swapper_pg_dir;
 
 	srmmu_early_allocate_ptable_skeleton(SRMMU_NOCACHE_VADDR, srmmu_nocache_end);
 
@@ -499,7 +499,7 @@ void switch_mm(struct mm_struct *old_mm, struct mm_struct *mm,
 		spin_lock_irqsave(&srmmu_context_spinlock, flags);
 		alloc_context(old_mm, mm);
 		spin_unlock_irqrestore(&srmmu_context_spinlock, flags);
-		srmmu_ctxd_set(&srmmu_context_table[mm->context], mm->pgd);
+		srmmu_ctxd_set(&srmmu_context_table[mm->context], mm->pgt.pgd);
 	}
 
 	if (sparc_cpu_model == sparc_leon)

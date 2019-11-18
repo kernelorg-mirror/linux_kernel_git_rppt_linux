@@ -119,7 +119,7 @@ static inline void cpu_uninstall_idmap(void)
 	cpu_set_default_tcr_t0sz();
 
 	if (mm != &init_mm && !system_uses_ttbr0_pan())
-		cpu_switch_mm(mm->pgd, mm);
+		cpu_switch_mm(mm->pgt.pgd, mm);
 }
 
 static inline void cpu_install_idmap(void)
@@ -189,7 +189,7 @@ static inline void update_saved_ttbr0(struct task_struct *tsk,
 	if (mm == &init_mm)
 		ttbr = __pa_symbol(empty_zero_page);
 	else
-		ttbr = virt_to_phys(mm->pgd) | ASID(mm) << 48;
+		ttbr = virt_to_phys(mm->pgt.pgd) | ASID(mm) << 48;
 
 	WRITE_ONCE(task_thread_info(tsk)->ttbr0, ttbr);
 }
@@ -215,7 +215,7 @@ static inline void __switch_mm(struct mm_struct *next)
 	unsigned int cpu = smp_processor_id();
 
 	/*
-	 * init_mm.pgd does not contain any user mappings and it is always
+	 * init_mm.pgt.pgd does not contain any user mappings and it is always
 	 * active for kernel addresses in TTBR1. Just set the reserved TTBR0.
 	 */
 	if (next == &init_mm) {

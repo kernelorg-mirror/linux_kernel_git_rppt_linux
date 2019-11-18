@@ -38,7 +38,7 @@ void show_pte(const char *lvl, struct mm_struct *mm, unsigned long addr)
 	if (!mm)
 		mm = &init_mm;
 
-	printk("%spgd = %p\n", lvl, mm->pgd);
+	printk("%spgd = %p\n", lvl, mm->pgt.pgd);
 	pgd = pgd_offset(mm, addr);
 	printk("%s[%08lx] *pgd=%08llx", lvl, addr, (long long)pgd_val(*pgd));
 
@@ -420,7 +420,7 @@ do_translation_fault(unsigned long addr, unsigned int fsr,
 	index = pgd_index(addr);
 
 	pgd = cpu_get_pgd() + index;
-	pgd_k = init_mm.pgd + index;
+	pgd_k = init_mm.pgt.pgd + index;
 
 	if (pgd_none(*pgd_k))
 		goto bad_area;

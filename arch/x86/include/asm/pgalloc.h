@@ -21,7 +21,7 @@ static inline void paravirt_alloc_pmd(struct mm_struct *mm, unsigned long pfn)	{
 static inline void paravirt_alloc_pmd_clone(unsigned long pfn, unsigned long clonepfn,
 					    unsigned long start, unsigned long count) {}
 static inline void paravirt_alloc_pud(struct mm_struct *mm, unsigned long pfn)	{}
-static inline void paravirt_alloc_p4d(struct mm_struct *mm, unsigned long pfn)	{}
+static inline void paravirt_alloc_p4d(struct pg_table *pgt, unsigned long pfn)	{}
 static inline void paravirt_release_pte(unsigned long pfn) {}
 static inline void paravirt_release_pmd(unsigned long pfn) {}
 static inline void paravirt_release_pud(unsigned long pfn) {}
@@ -171,27 +171,32 @@ static inline void __pud_free_tlb(struct mmu_gather *tlb, pud_t *pud,
 }
 
 #if CONFIG_PGTABLE_LEVELS > 4
-static inline void pgd_populate(struct mm_struct *mm, pgd_t *pgd, p4d_t *p4d)
+static inline void _pgd_populate(struct pg_table *pgt, pgd_t *pgd, p4d_t *p4d)
 {
 	if (!pgtable_l5_enabled())
 		return;
-	paravirt_alloc_p4d(mm, __pa(p4d) >> PAGE_SHIFT);
+	paravirt_alloc_p4d(pgt, __pa(p4d) >> PAGE_SHIFT);
 	set_pgd(pgd, __pgd(_PAGE_TABLE | __pa(p4d)));
+}
+
+static inline void pgd_populate(struct mm_struct *mm, pgd_t *pgd, p4d_t *p4d)
+{
+	_pgd_populate(&mm->pgt, pgd, p4d);
 }
 
 static inline void pgd_populate_safe(struct mm_struct *mm, pgd_t *pgd, p4d_t *p4d)
 {
 	if (!pgtable_l5_enabled())
 		return;
-	paravirt_alloc_p4d(mm, __pa(p4d) >> PAGE_SHIFT);
+	paravirt_alloc_p4d(&mm->pgt, __pa(p4d) >> PAGE_SHIFT);
 	set_pgd_safe(pgd, __pgd(_PAGE_TABLE | __pa(p4d)));
 }
 
-static inline p4d_t *p4d_alloc_one(struct mm_struct *mm, unsigned long addr)
+static inline p4d_t *p4d_alloc_one(struct pg_table *pgt, unsigned long addr)
 {
 	gfp_t gfp = GFP_KERNEL_ACCOUNT;
 
-	if (mm == &init_mm)
+	if (pgt == &init_mm.pgt)
 		gfp &= ~__GFP_ACCOUNT;
 	return (p4d_t *)get_zeroed_page(gfp);
 }

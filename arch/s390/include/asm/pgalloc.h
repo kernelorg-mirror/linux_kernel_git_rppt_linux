@@ -48,7 +48,7 @@ static inline unsigned long pgd_entry_type(struct mm_struct *mm)
 int crst_table_upgrade(struct mm_struct *mm, unsigned long limit);
 void crst_table_downgrade(struct mm_struct *);
 
-static inline p4d_t *p4d_alloc_one(struct mm_struct *mm, unsigned long address)
+static inline p4d_t *p4d_alloc_one(struct pg_table *pgt, unsigned long address)
 {
 	unsigned long *table = crst_table_alloc();
 
@@ -87,9 +87,14 @@ static inline void pmd_free(pmd_t *pmd)
 	crst_table_free((unsigned long *) pmd);
 }
 
-static inline void pgd_populate(struct mm_struct *mm, pgd_t *pgd, p4d_t *p4d)
+static inline void _pgd_populate(struct pg_table *pgt, pgd_t *pgd, p4d_t *p4d)
 {
 	pgd_val(*pgd) = _REGION1_ENTRY | __pa(p4d);
+}
+
+static inline void pgd_populate(struct mm_struct *mm, pgd_t *pgd, p4d_t *p4d)
+{
+	_pgd_populate(&mm->pgt, pgd, p4d);
 }
 
 static inline void p4d_populate(struct mm_struct *mm, p4d_t *p4d, pud_t *pud)

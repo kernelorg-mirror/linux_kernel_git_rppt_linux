@@ -1756,29 +1756,29 @@ int __p4d_alloc(struct pg_table *pgt, pgd_t *pgd, unsigned long address);
 #endif
 
 #if defined(__PAGETABLE_PUD_FOLDED) || !defined(CONFIG_MMU)
-static inline int __pud_alloc(struct mm_struct *mm, p4d_t *p4d,
+static inline int __pud_alloc(struct pg_table *pgt, p4d_t *p4d,
 						unsigned long address)
 {
 	return 0;
 }
-static inline void mm_inc_nr_puds(struct mm_struct *mm) {}
-static inline void mm_dec_nr_puds(struct mm_struct *mm) {}
+static inline void mm_inc_nr_puds(struct pg_table *pgt) {}
+static inline void mm_dec_nr_puds(struct pg_table *pgt) {}
 
 #else
-int __pud_alloc(struct mm_struct *mm, p4d_t *p4d, unsigned long address);
+int __pud_alloc(struct pg_table *pgt, p4d_t *p4d, unsigned long address);
 
-static inline void mm_inc_nr_puds(struct mm_struct *mm)
+static inline void mm_inc_nr_puds(struct pg_table *pgt)
 {
-	if (mm_pud_folded(mm))
+	if (pgt_pud_folded(pgt))
 		return;
-	atomic_long_add(PTRS_PER_PUD * sizeof(pud_t), &mm->pgt.pgtables_bytes);
+	atomic_long_add(PTRS_PER_PUD * sizeof(pud_t), &pgt->pgtables_bytes);
 }
 
-static inline void mm_dec_nr_puds(struct mm_struct *mm)
+static inline void mm_dec_nr_puds(struct pg_table *pgt)
 {
-	if (mm_pud_folded(mm))
+	if (pgt_pud_folded(pgt))
 		return;
-	atomic_long_sub(PTRS_PER_PUD * sizeof(pud_t), &mm->pgt.pgtables_bytes);
+	atomic_long_sub(PTRS_PER_PUD * sizeof(pud_t), &pgt->pgtables_bytes);
 }
 #endif
 
@@ -1865,11 +1865,17 @@ static inline p4d_t *p4d_alloc(struct mm_struct *mm, pgd_t *pgd,
 	return _p4d_alloc(&mm->pgt, pgd, address);
 }
 
+static inline pud_t *_pud_alloc(struct pg_table *pgt, p4d_t *p4d,
+		unsigned long address)
+{
+	return (unlikely(p4d_none(*p4d)) && __pud_alloc(pgt, p4d, address)) ?
+		NULL : pud_offset(p4d, address);
+}
+
 static inline pud_t *pud_alloc(struct mm_struct *mm, p4d_t *p4d,
 		unsigned long address)
 {
-	return (unlikely(p4d_none(*p4d)) && __pud_alloc(mm, p4d, address)) ?
-		NULL : pud_offset(p4d, address);
+	return _pud_alloc(&mm->pgt, p4d, address);
 }
 #endif /* !__ARCH_HAS_5LEVEL_HACK */
 

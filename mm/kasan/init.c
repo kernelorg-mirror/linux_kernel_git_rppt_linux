@@ -320,7 +320,7 @@ static void kasan_free_pmd(pmd_t *pmd_start, pud_t *pud)
 			return;
 	}
 
-	pmd_free(&init_mm, (pmd_t *)page_to_virt(pud_page(*pud)));
+	pmd_free((pmd_t *)page_to_virt(pud_page(*pud)));
 	pud_clear(pud);
 }
 
@@ -335,7 +335,7 @@ static void kasan_free_pud(pud_t *pud_start, p4d_t *p4d)
 			return;
 	}
 
-	pud_free(&init_mm, (pud_t *)page_to_virt(p4d_page(*p4d)));
+	pud_free((pud_t *)page_to_virt(p4d_page(*p4d)));
 	p4d_clear(p4d);
 }
 
@@ -350,7 +350,7 @@ static void kasan_free_p4d(p4d_t *p4d_start, pgd_t *pgd)
 			return;
 	}
 
-	p4d_free(&init_mm, (p4d_t *)page_to_virt(pgd_page(*pgd)));
+	p4d_free((p4d_t *)page_to_virt(pgd_page(*pgd)));
 	pgd_clear(pgd);
 }
 

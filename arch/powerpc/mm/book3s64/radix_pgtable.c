@@ -685,7 +685,7 @@ static void free_pmd_table(pmd_t *pmd_start, pud_t *pud)
 			return;
 	}
 
-	pmd_free(&init_mm, pmd_start);
+	pmd_free(pmd_start);
 	pud_clear(pud);
 }
 
@@ -1139,7 +1139,7 @@ int pud_free_pmd_page(pud_t *pud, unsigned long addr)
 		}
 	}
 
-	pmd_free(&init_mm, pmd);
+	pmd_free(pmd);
 
 	return 1;
 }

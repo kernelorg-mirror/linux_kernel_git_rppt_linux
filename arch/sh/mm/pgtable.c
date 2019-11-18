@@ -51,7 +51,7 @@ pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long address)
 	return kmem_cache_alloc(pmd_cachep, PGALLOC_GFP);
 }
 
-void pmd_free(struct mm_struct *mm, pmd_t *pmd)
+void pmd_free(pmd_t *pmd)
 {
 	kmem_cache_free(pmd_cachep, pmd);
 }

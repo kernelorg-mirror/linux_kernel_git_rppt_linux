@@ -109,7 +109,7 @@ static inline pud_t *pud_alloc_one(struct mm_struct *mm, unsigned long addr)
 	return pud;
 }
 
-static inline void pud_free(struct mm_struct *mm, pud_t *pud)
+static inline void pud_free(pud_t *pud)
 {
 	kmem_cache_free(PGT_CACHE(PUD_CACHE_INDEX), pud);
 }
@@ -135,7 +135,7 @@ static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
 	return pmd_fragment_alloc(mm, addr);
 }
 
-static inline void pmd_free(struct mm_struct *mm, pmd_t *pmd)
+static inline void pmd_free(pmd_t *pmd)
 {
 	pmd_fragment_free((unsigned long *)pmd);
 }

@@ -70,12 +70,12 @@ static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long address)
 	return pmd;
 }
 
-static inline void pmd_free(struct mm_struct *mm, pmd_t *pmd)
+static inline void pmd_free(pmd_t *pmd)
 {
 	free_pages((unsigned long)pmd, PMD_ORDER);
 }
 
-#define __pmd_free_tlb(tlb, x, addr)	pmd_free((tlb)->mm, x)
+#define __pmd_free_tlb(tlb, x, addr)	pmd_free(x)
 
 #endif
 
@@ -91,7 +91,7 @@ static inline pud_t *pud_alloc_one(struct mm_struct *mm, unsigned long address)
 	return pud;
 }
 
-static inline void pud_free(struct mm_struct *mm, pud_t *pud)
+static inline void pud_free(pud_t *pud)
 {
 	free_pages((unsigned long)pud, PUD_ORDER);
 }
@@ -101,7 +101,7 @@ static inline void pgd_populate(struct mm_struct *mm, pgd_t *pgd, pud_t *pud)
 	set_pgd(pgd, __pgd((unsigned long)pud));
 }
 
-#define __pud_free_tlb(tlb, x, addr)	pud_free((tlb)->mm, x)
+#define __pud_free_tlb(tlb, x, addr)	pud_free(x)
 
 #endif /* __PAGETABLE_PUD_FOLDED */
 

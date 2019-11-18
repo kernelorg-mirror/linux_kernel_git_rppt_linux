@@ -37,7 +37,7 @@ static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
 	return page_address(page);
 }
 
-static inline void pmd_free(struct mm_struct *mm, pmd_t *pmdp)
+static inline void pmd_free(pmd_t *pmdp)
 {
 	BUG_ON((unsigned long)pmdp & (PAGE_SIZE-1));
 	pgtable_pmd_page_dtor(virt_to_page(pmdp));
@@ -67,7 +67,7 @@ static inline pud_t *pud_alloc_one(struct mm_struct *mm, unsigned long addr)
 	return (pud_t *)__get_free_page(GFP_PGTABLE_USER);
 }
 
-static inline void pud_free(struct mm_struct *mm, pud_t *pudp)
+static inline void pud_free(pud_t *pudp)
 {
 	BUG_ON((unsigned long)pudp & (PAGE_SIZE-1));
 	free_page((unsigned long)pudp);

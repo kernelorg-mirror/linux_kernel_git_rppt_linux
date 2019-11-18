@@ -56,7 +56,7 @@ static inline p4d_t *p4d_alloc_one(struct mm_struct *mm, unsigned long address)
 		crst_table_init(table, _REGION2_ENTRY_EMPTY);
 	return (p4d_t *) table;
 }
-#define p4d_free(mm, p4d) crst_table_free((unsigned long *) p4d)
+#define p4d_free(p4d) crst_table_free((unsigned long *)p4d)
 
 static inline pud_t *pud_alloc_one(struct mm_struct *mm, unsigned long address)
 {
@@ -65,7 +65,7 @@ static inline pud_t *pud_alloc_one(struct mm_struct *mm, unsigned long address)
 		crst_table_init(table, _REGION3_ENTRY_EMPTY);
 	return (pud_t *) table;
 }
-#define pud_free(mm, pud) crst_table_free((unsigned long *) pud)
+#define pud_free(pud) crst_table_free((unsigned long *)pud)
 
 static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long vmaddr)
 {
@@ -81,7 +81,7 @@ static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long vmaddr)
 	return (pmd_t *) table;
 }
 
-static inline void pmd_free(struct mm_struct *mm, pmd_t *pmd)
+static inline void pmd_free(pmd_t *pmd)
 {
 	pgtable_pmd_page_dtor(virt_to_page(pmd));
 	crst_table_free((unsigned long *) pmd);

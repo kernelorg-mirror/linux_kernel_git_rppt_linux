@@ -103,7 +103,7 @@ static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
 	return (pmd_t *)page_address(page);
 }
 
-static inline void pmd_free(struct mm_struct *mm, pmd_t *pmd)
+static inline void pmd_free(pmd_t *pmd)
 {
 	BUG_ON((unsigned long)pmd & (PAGE_SIZE-1));
 	pgtable_pmd_page_dtor(virt_to_page(pmd));
@@ -156,7 +156,7 @@ static inline pud_t *pud_alloc_one(struct mm_struct *mm, unsigned long addr)
 	return (pud_t *)get_zeroed_page(gfp);
 }
 
-static inline void pud_free(struct mm_struct *mm, pud_t *pud)
+static inline void pud_free(pud_t *pud)
 {
 	BUG_ON((unsigned long)pud & (PAGE_SIZE-1));
 	free_page((unsigned long)pud);
@@ -196,7 +196,7 @@ static inline p4d_t *p4d_alloc_one(struct mm_struct *mm, unsigned long addr)
 	return (p4d_t *)get_zeroed_page(gfp);
 }
 
-static inline void p4d_free(struct mm_struct *mm, p4d_t *p4d)
+static inline void p4d_free(p4d_t *p4d)
 {
 	if (!pgtable_l5_enabled())
 		return;

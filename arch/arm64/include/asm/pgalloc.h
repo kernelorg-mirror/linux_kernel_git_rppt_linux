@@ -19,12 +19,12 @@
 
 #if CONFIG_PGTABLE_LEVELS > 2
 
-static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
+static inline pmd_t *pmd_alloc_one(struct pg_table *pgt, unsigned long addr)
 {
 	gfp_t gfp = GFP_PGTABLE_USER;
 	struct page *page;
 
-	if (mm == &init_mm)
+	if (pgt == &init_mm.pgt)
 		gfp = GFP_PGTABLE_KERNEL;
 
 	page = alloc_page(gfp);
@@ -49,9 +49,16 @@ static inline void __pud_populate(pud_t *pudp, phys_addr_t pmdp, pudval_t prot)
 	set_pud(pudp, __pud(__phys_to_pud_val(pmdp) | prot));
 }
 
-static inline void pud_populate(struct mm_struct *mm, pud_t *pudp, pmd_t *pmdp)
+static inline void _pud_populate(struct pg_table *pgt, pud_t *pudp,
+				 pmd_t *pmdp)
 {
 	__pud_populate(pudp, __pa(pmdp), PMD_TYPE_TABLE);
+}
+
+static inline void pud_populate(struct mm_struct *mm, pud_t *pudp,
+				pmd_t *pmdp)
+{
+	_pud_populate(&mm->pgt, pudp, pmdp);
 }
 #else
 static inline void __pud_populate(pud_t *pudp, phys_addr_t pmdp, pudval_t prot)

@@ -54,12 +54,18 @@ static inline void pud_free(pud_t *pud)
 #endif /* CONFIG_PGTABLE_LEVELS == 4 */
 
 static inline void
-pud_populate(struct mm_struct *mm, pud_t * pud_entry, pmd_t * pmd)
+_pud_populate(struct pg_table *pgt, pud_t *pud_entry, pmd_t *pmd)
 {
 	pud_val(*pud_entry) = __pa(pmd);
 }
 
-static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
+static inline void pud_populate(struct mm_struct *mm, pud_t *pud_entry,
+				pmd_t *pmd)
+{
+	_pud_populate(&mm->pgt, pud_entry, pmd);
+}
+
+static inline pmd_t *pmd_alloc_one(struct pg_table *pgt, unsigned long addr)
 {
 	return (pmd_t *)__get_free_page(GFP_KERNEL | __GFP_ZERO);
 }

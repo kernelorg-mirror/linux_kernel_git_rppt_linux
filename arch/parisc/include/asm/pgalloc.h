@@ -65,7 +65,8 @@ static inline void pgd_populate(struct mm_struct *mm, pgd_t *pgd, pmd_t *pmd)
 		        (__u32)(__pa((unsigned long)pmd) >> PxD_VALUE_SHIFT));
 }
 
-static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long address)
+static inline pmd_t *pmd_alloc_one(struct pg_table *pgt,
+				   unsigned long address)
 {
 	pmd_t *pmd = (pmd_t *)__get_free_pages(GFP_KERNEL, PMD_ORDER);
 	if (pmd)
@@ -82,7 +83,7 @@ static inline void pmd_free(pmd_t *pmd)
 		 * Increment the counter to compensate for the decrement
 		 * done by generic mm code.
 		 */
-		mm_inc_nr_pmds(mm);
+		mm_inc_nr_pmds(&mm->pgt);
 		return;
 	}
 	free_pages((unsigned long)pmd, PMD_ORDER);
@@ -97,7 +98,7 @@ static inline void pmd_free(pmd_t *pmd)
  * inside the pgd, so has no extra memory associated with it.
  */
 
-#define pmd_alloc_one(mm, addr)		({ BUG(); ((pmd_t *)2); })
+#define pmd_alloc_one(pgt,addr)		({ BUG(); ((pmd_t *)2); })
 #define pmd_free(x)			do { } while (0)
 #define pgd_populate(mm, pmd, pte)	BUG()
 

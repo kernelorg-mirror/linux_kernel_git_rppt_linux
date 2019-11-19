@@ -46,7 +46,7 @@ static inline void free_pgd(pgd_t *pgd)
  * the pgd will always be present..
  */
 #define pmd_alloc_one_fast(mm, address)	({ BUG(); ((pmd_t *)1); })
-#define pmd_alloc_one(mm, address)	({ BUG(); ((pmd_t *)2); })
+#define pmd_alloc_one(pgt,address)	({ BUG(); ((pmd_t *)2); })
 
 extern pte_t *pte_alloc_one_kernel(struct mm_struct *mm);
 
@@ -62,7 +62,7 @@ extern pte_t *pte_alloc_one_kernel(struct mm_struct *mm);
  * We don't have any real pmd's, and this code never triggers because
  * the pgd will always be present..
  */
-#define pmd_alloc_one(mm, address)	({ BUG(); ((pmd_t *)2); })
+#define pmd_alloc_one(pgt,address)	({ BUG(); ((pmd_t *)2); })
 #define pmd_free(x)			do { } while (0)
 #define __pmd_free_tlb(tlb, x, addr)	pmd_free(x)
 #define pgd_populate(mm, pmd, pte)	BUG()

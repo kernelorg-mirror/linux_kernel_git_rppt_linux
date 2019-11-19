@@ -35,9 +35,14 @@ extern void pmd_init(unsigned long page, unsigned long pagetable);
 
 #ifndef __PAGETABLE_PMD_FOLDED
 
-static inline void pud_populate(struct mm_struct *mm, pud_t *pud, pmd_t *pmd)
+static inline void _pud_populate(struct pg_table *pgt, pud_t *pud, pmd_t *pmd)
 {
 	set_pud(pud, __pud((unsigned long)pmd));
+}
+
+static inline void pud_populate(struct mm_struct *mm, pud_t *pud, pmd_t *pmd)
+{
+	_pud_populate(&mm->pgt, pud, pmd);
 }
 #endif
 
@@ -60,7 +65,8 @@ do {							\
 
 #ifndef __PAGETABLE_PMD_FOLDED
 
-static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long address)
+static inline pmd_t *pmd_alloc_one(struct pg_table *pgt,
+				   unsigned long address)
 {
 	pmd_t *pmd;
 

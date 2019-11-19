@@ -22,7 +22,7 @@
 
 #ifdef CONFIG_ARM_LPAE
 
-static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
+static inline pmd_t *pmd_alloc_one(struct pg_table *pgt, unsigned long addr)
 {
 	return (pmd_t *)get_zeroed_page(GFP_KERNEL);
 }
@@ -33,9 +33,14 @@ static inline void pmd_free(pmd_t *pmd)
 	free_page((unsigned long)pmd);
 }
 
-static inline void pud_populate(struct mm_struct *mm, pud_t *pud, pmd_t *pmd)
+static inline void _pud_populate(struct pg_table *pgt, pud_t *pud, pmd_t *pmd)
 {
 	set_pud(pud, __pud(__pa(pmd) | PMD_TYPE_TABLE));
+}
+
+static inline void pud_populate(struct mm_struct *mm, pud_t *pud, pmd_t *pmd)
+{
+	_pud_populate(&mm->pgt, pud, pmd);
 }
 
 #else	/* !CONFIG_ARM_LPAE */
@@ -43,7 +48,7 @@ static inline void pud_populate(struct mm_struct *mm, pud_t *pud, pmd_t *pmd)
 /*
  * Since we have only two-level page tables, these are trivial
  */
-#define pmd_alloc_one(mm,addr)		({ BUG(); ((pmd_t *)2); })
+#define pmd_alloc_one(pgt,addr)		({ BUG(); ((pmd_t *)2); })
 #define pmd_free(pmd)		do { } while (0)
 #define pud_populate(mm,pmd,pte)	BUG()
 

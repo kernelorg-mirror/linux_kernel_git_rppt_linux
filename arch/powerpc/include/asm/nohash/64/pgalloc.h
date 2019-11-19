@@ -28,9 +28,14 @@ static inline void pud_free(pud_t *pud)
 	kmem_cache_free(PGT_CACHE(PUD_INDEX_SIZE), pud);
 }
 
-static inline void pud_populate(struct mm_struct *mm, pud_t *pud, pmd_t *pmd)
+static inline void _pud_populate(struct pg_table *pgt, pud_t *pud, pmd_t *pmd)
 {
 	pud_set(pud, (unsigned long)pmd);
+}
+
+static inline void pud_populate(struct mm_struct *mm, pud_t *pud, pmd_t *pmd)
+{
+	_pud_populate(&mm->pgt, pud, pmd);
 }
 
 static inline void pmd_populate_kernel(struct mm_struct *mm, pmd_t *pmd,
@@ -45,10 +50,10 @@ static inline void pmd_populate(struct mm_struct *mm, pmd_t *pmd,
 	pmd_set(pmd, (unsigned long)pte_page);
 }
 
-static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
+static inline pmd_t *pmd_alloc_one(struct pg_table *pgt, unsigned long addr)
 {
 	return kmem_cache_alloc(PGT_CACHE(PMD_CACHE_INDEX),
-			pgtable_gfp_flags(mm, GFP_KERNEL));
+			pgtable_gfp_flags(pgt, GFP_KERNEL));
 }
 
 static inline void pmd_free(pmd_t *pmd)

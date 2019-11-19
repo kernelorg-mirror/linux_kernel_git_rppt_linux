@@ -17,7 +17,7 @@
 
 extern const char bad_pmd_string[];
 
-#define pmd_alloc_one(mm,address)       ({ BUG(); ((pmd_t *)2); })
+#define pmd_alloc_one(pgt,address)       ({ BUG(); ((pmd_t *)2); })
 
 #define __pte_free_tlb(tlb,pte,addr)			\
 do {							\

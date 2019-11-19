@@ -68,7 +68,7 @@ static inline pud_t *pud_alloc_one(struct pg_table *pgt,
 }
 #define pud_free(pud) crst_table_free((unsigned long *)pud)
 
-static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long vmaddr)
+static inline pmd_t *pmd_alloc_one(struct pg_table *pgt, unsigned long vmaddr)
 {
 	unsigned long *table = crst_table_alloc();
 
@@ -107,9 +107,14 @@ static inline void p4d_populate(struct mm_struct *mm, p4d_t *p4d, pud_t *pud) {
 	_p4d_populate(&mm->pgt, p4d, pud);
 }
 
-static inline void pud_populate(struct mm_struct *mm, pud_t *pud, pmd_t *pmd)
+static inline void _pud_populate(struct pg_table *pgt, pud_t *pud, pmd_t *pmd)
 {
 	pud_val(*pud) = _REGION3_ENTRY | __pa(pmd);
+}
+
+static inline void pud_populate(struct mm_struct *mm, pud_t *pud, pmd_t *pmd)
+{
+	_pud_populate(&mm->pgt, pud, pmd);
 }
 
 static inline pgd_t *pgd_alloc(struct mm_struct *mm)

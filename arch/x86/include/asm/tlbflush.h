@@ -596,7 +596,7 @@ static inline u64 inc_mm_tlb_gen(struct mm_struct *mm)
 	 * their read of mm_cpumask after their writes to the paging
 	 * structures.
 	 */
-	return atomic64_inc_return(&mm->context.tlb_gen);
+	return atomic64_inc_return(&mm->pgt.context.tlb_gen);
 }
 
 static inline void arch_tlbbatch_add_mm(struct arch_tlbflush_unmap_batch *batch,

@@ -8,8 +8,9 @@
 #include <linux/atomic.h>
 
 /*
- * x86 has arch-specific MMU state beyond what lives in mm_struct.
+ * x86 has arch-specific MMU state beyond what lives in pg_table and mm_struct.
  */
+
 typedef struct {
 	/*
 	 * ctx_id uniquely identifies this mm_struct.  A ctx_id will never
@@ -26,7 +27,10 @@ typedef struct {
 	 * This is not used on Xen PV.
 	 */
 	atomic64_t tlb_gen;
+} pt_context_t;
+#define pt_context_t pt_context_t
 
+typedef struct {
 #ifdef CONFIG_MODIFY_LDT_SYSCALL
 	struct rw_semaphore	ldt_usr_sem;
 	struct ldt_struct	*ldt;
@@ -58,8 +62,12 @@ typedef struct {
 
 #define INIT_MM_CONTEXT(mm)						\
 	.context = {							\
-		.ctx_id = 1,						\
 		.lock = __MUTEX_INITIALIZER(mm.context.lock),		\
+	}
+
+#define INIT_PT_CONTEXT(pgt)						\
+	.context = {							\
+		.ctx_id = 1,						\
 	}
 
 void leave_mm(int cpu);

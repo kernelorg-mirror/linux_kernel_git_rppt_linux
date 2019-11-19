@@ -89,7 +89,7 @@ static void choose_new_asid(struct mm_struct *next, u64 next_tlb_gen,
 
 	for (asid = 0; asid < TLB_NR_DYN_ASIDS; asid++) {
 		if (this_cpu_read(cpu_tlbstate.ctxs[asid].ctx_id) !=
-		    next->context.ctx_id)
+		    next->pgt.context.ctx_id)
 			continue;
 
 		*new_asid = asid;
@@ -205,7 +205,7 @@ static void cond_ibpb(struct task_struct *next)
 	/*
 	 * Both, the conditional and the always IBPB mode use the mm
 	 * pointer to avoid the IBPB when switching between tasks of the
-	 * same process. Using the mm pointer instead of mm->context.ctx_id
+	 * same process. Using the mm pointer instead of mm->pgt.context.ctx_id
 	 * opens a hypothetical hole vs. mm_struct reuse, which is more or
 	 * less impossible to control by an attacker. Aside of that it
 	 * would only affect the first schedule so the theoretically
@@ -332,7 +332,7 @@ void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
 	 */
 	if (real_prev == next) {
 		VM_WARN_ON(this_cpu_read(cpu_tlbstate.ctxs[prev_asid].ctx_id) !=
-			   next->context.ctx_id);
+			   next->pgt.context.ctx_id);
 
 		/*
 		 * Even in lazy TLB mode, the CPU should stay set in the
@@ -358,7 +358,7 @@ void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
 		 * the TLB shootdown code.
 		 */
 		smp_mb();
-		next_tlb_gen = atomic64_read(&next->context.tlb_gen);
+		next_tlb_gen = atomic64_read(&next->pgt.context.tlb_gen);
 		if (this_cpu_read(cpu_tlbstate.ctxs[prev_asid].tlb_gen) ==
 				next_tlb_gen)
 			return;
@@ -402,7 +402,7 @@ void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
 		 */
 		if (next != &init_mm)
 			cpumask_set_cpu(cpu, mm_cpumask(next));
-		next_tlb_gen = atomic64_read(&next->context.tlb_gen);
+		next_tlb_gen = atomic64_read(&next->pgt.context.tlb_gen);
 
 		choose_new_asid(next, next_tlb_gen, &new_asid, &need_flush);
 
@@ -412,7 +412,7 @@ void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
 	}
 
 	if (need_flush) {
-		this_cpu_write(cpu_tlbstate.ctxs[new_asid].ctx_id, next->context.ctx_id);
+		this_cpu_write(cpu_tlbstate.ctxs[new_asid].ctx_id, next->pgt.context.ctx_id);
 		this_cpu_write(cpu_tlbstate.ctxs[new_asid].tlb_gen, next_tlb_gen);
 		load_new_mm_cr3(next->pgt.pgd, new_asid, true);
 
@@ -483,7 +483,7 @@ void initialize_tlbstate_and_flush(void)
 {
 	int i;
 	struct mm_struct *mm = this_cpu_read(cpu_tlbstate.loaded_mm);
-	u64 tlb_gen = atomic64_read(&init_mm.context.tlb_gen);
+	u64 tlb_gen = atomic64_read(&init_mm.pgt.context.tlb_gen);
 	unsigned long cr3 = __read_cr3();
 
 	/* Assert that CR3 already references the right mm. */
@@ -504,7 +504,7 @@ void initialize_tlbstate_and_flush(void)
 	this_cpu_write(cpu_tlbstate.last_user_mm_ibpb, LAST_USER_MM_IBPB);
 	this_cpu_write(cpu_tlbstate.loaded_mm_asid, 0);
 	this_cpu_write(cpu_tlbstate.next_asid, 1);
-	this_cpu_write(cpu_tlbstate.ctxs[0].ctx_id, mm->context.ctx_id);
+	this_cpu_write(cpu_tlbstate.ctxs[0].ctx_id, mm->pgt.context.ctx_id);
 	this_cpu_write(cpu_tlbstate.ctxs[0].tlb_gen, tlb_gen);
 
 	for (i = 1; i < TLB_NR_DYN_ASIDS; i++)
@@ -532,7 +532,7 @@ static void flush_tlb_func_common(const struct flush_tlb_info *f,
 	 */
 	struct mm_struct *loaded_mm = this_cpu_read(cpu_tlbstate.loaded_mm);
 	u32 loaded_mm_asid = this_cpu_read(cpu_tlbstate.loaded_mm_asid);
-	u64 mm_tlb_gen = atomic64_read(&loaded_mm->context.tlb_gen);
+	u64 mm_tlb_gen = atomic64_read(&loaded_mm->pgt.context.tlb_gen);
 	u64 local_tlb_gen = this_cpu_read(cpu_tlbstate.ctxs[loaded_mm_asid].tlb_gen);
 
 	/* This code cannot presently handle being reentered. */
@@ -542,7 +542,7 @@ static void flush_tlb_func_common(const struct flush_tlb_info *f,
 		return;
 
 	VM_WARN_ON(this_cpu_read(cpu_tlbstate.ctxs[loaded_mm_asid].ctx_id) !=
-		   loaded_mm->context.ctx_id);
+		   loaded_mm->pgt.context.ctx_id);
 
 	if (this_cpu_read(cpu_tlbstate.is_lazy)) {
 		/*

@@ -366,6 +366,10 @@ struct core_state {
 	struct completion startup;
 };
 
+#ifndef pt_context_t
+typedef struct {} pt_context_t;
+#endif
+
 struct pg_table {
 #ifdef CONFIG_MMU
 	atomic_long_t pgtables_bytes;	/* PTE page table pages */
@@ -374,6 +378,9 @@ struct pg_table {
 					  * counters
 					  */
 	pgd_t *pgd;
+
+	/* Architecture-specific PT context */
+	pt_context_t context;
 };
 
 struct kioctx_table;

@@ -1821,14 +1821,14 @@ static inline unsigned long mm_pgtables_bytes(const struct mm_struct *mm)
 	return atomic_long_read(&mm->pgt.pgtables_bytes);
 }
 
-static inline void mm_inc_nr_ptes(struct mm_struct *mm)
+static inline void mm_inc_nr_ptes(struct pg_table *pgt)
 {
-	atomic_long_add(PTRS_PER_PTE * sizeof(pte_t), &mm->pgt.pgtables_bytes);
+	atomic_long_add(PTRS_PER_PTE * sizeof(pte_t), &pgt->pgtables_bytes);
 }
 
-static inline void mm_dec_nr_ptes(struct mm_struct *mm)
+static inline void mm_dec_nr_ptes(struct pg_table *pgt)
 {
-	atomic_long_sub(PTRS_PER_PTE * sizeof(pte_t), &mm->pgt.pgtables_bytes);
+	atomic_long_sub(PTRS_PER_PTE * sizeof(pte_t), &pgt->pgtables_bytes);
 }
 #else
 
@@ -1842,7 +1842,7 @@ static inline void mm_inc_nr_ptes(struct mm_struct *mm) {}
 static inline void mm_dec_nr_ptes(struct mm_struct *mm) {}
 #endif
 
-int __pte_alloc(struct mm_struct *mm, pmd_t *pmd);
+int __pte_alloc(struct pg_table *pgt, pmd_t *pmd);
 int __pte_alloc_kernel(pmd_t *pmd);
 
 /*
@@ -1977,6 +1977,15 @@ static inline void pgtable_pte_page_dtor(struct page *page)
 	dec_zone_page_state(page, NR_PAGETABLE);
 }
 
+#define _pte_offset_map_lock(pgt, pmd, address, ptlp)	\
+({							\
+	spinlock_t *__ptl = _pte_lockptr(pgt, pmd);	\
+	pte_t *__pte = pte_offset_map(pmd, address);	\
+	*(ptlp) = __ptl;				\
+	spin_lock(__ptl);				\
+	__pte;						\
+})
+
 #define pte_offset_map_lock(mm, pmd, address, ptlp)	\
 ({							\
 	spinlock_t *__ptl = pte_lockptr(mm, pmd);	\
@@ -1991,10 +2000,19 @@ static inline void pgtable_pte_page_dtor(struct page *page)
 	pte_unmap(pte);					\
 } while (0)
 
-#define pte_alloc(mm, pmd) (unlikely(pmd_none(*(pmd))) && __pte_alloc(mm, pmd))
+#define _pte_alloc(pgt, pmd) (unlikely(pmd_none(*(pmd))) && __pte_alloc(pgt, pmd))
 
-#define pte_alloc_map(mm, pmd, address)			\
+#define pte_alloc(mm, pmd) (unlikely(pmd_none(*(pmd))) && __pte_alloc(&(mm)->pgt, pmd))
+
+#define _pte_alloc_map(pgt, pmd, address)			\
+	(_pte_alloc(pgt, pmd) ? NULL : pte_offset_map(pmd, address))
+
+#define pte_alloc_map(mm, pmd, address)					\
 	(pte_alloc(mm, pmd) ? NULL : pte_offset_map(pmd, address))
+
+#define _pte_alloc_map_lock(pgt, pmd, address, ptlp)	\
+	(_pte_alloc(pgt, pmd) ?			\
+		 NULL : _pte_offset_map_lock(pgt, pmd, address, ptlp))
 
 #define pte_alloc_map_lock(mm, pmd, address, ptlp)	\
 	(pte_alloc(mm, pmd) ?			\
@@ -2013,6 +2031,11 @@ static struct page *pmd_to_page(pmd_t *pmd)
 }
 
 static inline spinlock_t *pmd_lockptr(struct mm_struct *mm, pmd_t *pmd)
+{
+	return ptlock_ptr(pmd_to_page(pmd));
+}
+
+static inline spinlock_t *_pmd_lockptr(struct pg_table *pgt, pmd_t *pmd)
 {
 	return ptlock_ptr(pmd_to_page(pmd));
 }
@@ -2037,9 +2060,14 @@ static inline void pgtable_pmd_page_dtor(struct page *page)
 
 #else
 
+static inline spinlock_t *_pmd_lockptr(struct pg_table *pgt, pmd_t *pmd)
+{
+	return &pgt->page_table_lock;
+}
+
 static inline spinlock_t *pmd_lockptr(struct mm_struct *mm, pmd_t *pmd)
 {
-	return &mm->pgt.page_table_lock;
+	return _pmd_lockptr(&mm->pgt, pmd);
 }
 
 static inline bool pgtable_pmd_page_ctor(struct page *page) { return true; }
@@ -2049,11 +2077,16 @@ static inline void pgtable_pmd_page_dtor(struct page *page) {}
 
 #endif
 
-static inline spinlock_t *pmd_lock(struct mm_struct *mm, pmd_t *pmd)
+static inline spinlock_t *_pmd_lock(struct pg_table *pgt, pmd_t *pmd)
 {
-	spinlock_t *ptl = pmd_lockptr(mm, pmd);
+	spinlock_t *ptl = _pmd_lockptr(pgt, pmd);
 	spin_lock(ptl);
 	return ptl;
+}
+
+static inline spinlock_t *pmd_lock(struct mm_struct *mm, pmd_t *pmd)
+{
+	return _pmd_lock(&mm->pgt, pmd);
 }
 
 /*

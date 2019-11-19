@@ -1431,7 +1431,7 @@ static vm_fault_t dax_pmd_load_hole(struct xa_state *xas, struct vm_fault *vmf,
 			DAX_PMD | DAX_ZERO_PAGE, false);
 
 	if (arch_needs_pgtable_deposit()) {
-		pgtable = pte_alloc_one(vma->vm_mm);
+		pgtable = pte_alloc_one(&vma->vm_mm->pgt);
 		if (!pgtable)
 			return VM_FAULT_OOM;
 	}
@@ -1444,7 +1444,7 @@ static vm_fault_t dax_pmd_load_hole(struct xa_state *xas, struct vm_fault *vmf,
 
 	if (pgtable) {
 		pgtable_trans_huge_deposit(vma->vm_mm, vmf->pmd, pgtable);
-		mm_inc_nr_ptes(vma->vm_mm);
+		mm_inc_nr_ptes(&vma->vm_mm->pgt);
 	}
 	pmd_entry = mk_pmd(zero_page, vmf->vma->vm_page_prot);
 	pmd_entry = pmd_mkhuge(pmd_entry);

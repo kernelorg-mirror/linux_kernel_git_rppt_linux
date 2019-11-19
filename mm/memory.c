@@ -198,7 +198,7 @@ static void free_pte_range(struct mmu_gather *tlb, pmd_t *pmd,
 	pgtable_t token = pmd_pgtable(*pmd);
 	pmd_clear(pmd);
 	pte_free_tlb(tlb, token, addr);
-	mm_dec_nr_ptes(tlb->mm);
+	mm_dec_nr_ptes(&tlb->mm->pgt);
 }
 
 static inline void free_pmd_range(struct mmu_gather *tlb, pud_t *pud,
@@ -402,10 +402,10 @@ void free_pgtables(struct mmu_gather *tlb, struct vm_area_struct *vma,
 	}
 }
 
-int __pte_alloc(struct mm_struct *mm, pmd_t *pmd)
+int __pte_alloc(struct pg_table *pgt, pmd_t *pmd)
 {
 	spinlock_t *ptl;
-	pgtable_t new = pte_alloc_one(mm);
+	pgtable_t new = pte_alloc_one(pgt);
 	if (!new)
 		return -ENOMEM;
 
@@ -424,15 +424,15 @@ int __pte_alloc(struct mm_struct *mm, pmd_t *pmd)
 	 */
 	smp_wmb(); /* Could be smp_wmb__xxx(before|after)_spin_lock */
 
-	ptl = pmd_lock(mm, pmd);
+	ptl = _pmd_lock(pgt, pmd);
 	if (likely(pmd_none(*pmd))) {	/* Has another populated it ? */
-		mm_inc_nr_ptes(mm);
-		pmd_populate(mm, pmd, new);
+		mm_inc_nr_ptes(pgt);
+		_pmd_populate(pgt, pmd, new);
 		new = NULL;
 	}
 	spin_unlock(ptl);
 	if (new)
-		pte_free(&mm->pgt, new);
+		pte_free(pgt, new);
 	return 0;
 }
 
@@ -3083,7 +3083,7 @@ static vm_fault_t __do_fault(struct vm_fault *vmf)
 	 *				# flush A, B to clear the writeback
 	 */
 	if (pmd_none(*vmf->pmd) && !vmf->prealloc_pte) {
-		vmf->prealloc_pte = pte_alloc_one(vmf->vma->vm_mm);
+		vmf->prealloc_pte = pte_alloc_one(&vmf->vma->vm_mm->pgt);
 		if (!vmf->prealloc_pte)
 			return VM_FAULT_OOM;
 		smp_wmb(); /* See comment in __pte_alloc() */
@@ -3134,7 +3134,7 @@ static vm_fault_t pte_alloc_one_map(struct vm_fault *vmf)
 			goto map_pte;
 		}
 
-		mm_inc_nr_ptes(vma->vm_mm);
+		mm_inc_nr_ptes(&vma->vm_mm->pgt);
 		pmd_populate(vma->vm_mm, vmf->pmd, vmf->prealloc_pte);
 		spin_unlock(vmf->ptl);
 		vmf->prealloc_pte = NULL;
@@ -3180,7 +3180,7 @@ static void deposit_prealloc_pte(struct vm_fault *vmf)
 	 * We are going to consume the prealloc table,
 	 * count that as nr_ptes.
 	 */
-	mm_inc_nr_ptes(vma->vm_mm);
+	mm_inc_nr_ptes(&vma->vm_mm->pgt);
 	vmf->prealloc_pte = NULL;
 }
 
@@ -3204,7 +3204,7 @@ static vm_fault_t do_set_pmd(struct vm_fault *vmf, struct page *page)
 	 * related to pte entry. Use the preallocated table for that.
 	 */
 	if (arch_needs_pgtable_deposit() && !vmf->prealloc_pte) {
-		vmf->prealloc_pte = pte_alloc_one(vma->vm_mm);
+		vmf->prealloc_pte = pte_alloc_one(&vma->vm_mm->pgt);
 		if (!vmf->prealloc_pte)
 			return VM_FAULT_OOM;
 		smp_wmb(); /* See comment in __pte_alloc() */
@@ -3441,7 +3441,7 @@ static vm_fault_t do_fault_around(struct vm_fault *vmf)
 			start_pgoff + nr_pages - 1);
 
 	if (pmd_none(*vmf->pmd)) {
-		vmf->prealloc_pte = pte_alloc_one(vmf->vma->vm_mm);
+		vmf->prealloc_pte = pte_alloc_one(&vmf->vma->vm_mm->pgt);
 		if (!vmf->prealloc_pte)
 			goto out;
 		smp_wmb(); /* See comment in __pte_alloc() */

@@ -540,7 +540,7 @@ retry:
 			break;
 		}
 		if (unlikely(pmd_none(dst_pmdval)) &&
-		    unlikely(__pte_alloc(dst_mm, dst_pmd))) {
+		    unlikely(__pte_alloc(&dst_mm->pgt, dst_pmd))) {
 			err = -ENOMEM;
 			break;
 		}

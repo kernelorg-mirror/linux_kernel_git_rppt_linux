@@ -65,7 +65,7 @@ static int __ref kasan_init_shadow_page_tables(unsigned long k_start, unsigned l
 		spin_unlock(&init_mm.page_table_lock);
 
 		if (new && slab_is_available())
-			pte_free_kernel(&init_mm, new);
+			pte_free_kernel(&init_mm.pgt, new);
 	}
 	return 0;
 }

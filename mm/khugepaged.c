@@ -1384,7 +1384,7 @@ void collapse_pte_mapped_thp(struct mm_struct *mm, unsigned long addr)
 	_pmd = pmdp_collapse_flush(vma, addr, pmd);
 	spin_unlock(ptl);
 	mm_dec_nr_ptes(mm);
-	pte_free(mm, pmd_pgtable(_pmd));
+	pte_free(&mm->pgt, pmd_pgtable(_pmd));
 	return;
 
 abort:
@@ -1462,7 +1462,7 @@ static void retract_page_tables(struct address_space *mapping, pgoff_t pgoff)
 			spin_unlock(ptl);
 			up_write(&vma->vm_mm->mmap_sem);
 			mm_dec_nr_ptes(vma->vm_mm);
-			pte_free(vma->vm_mm, pmd_pgtable(_pmd));
+			pte_free(&vma->vm_mm->pgt, pmd_pgtable(_pmd));
 		} else {
 			/* Try again later */
 			khugepaged_add_pte_mapped_thp(vma->vm_mm, addr);

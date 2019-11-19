@@ -90,6 +90,6 @@ pmd_populate_kernel(struct mm_struct *mm, pmd_t * pmd_entry, pte_t * pte)
 	pmd_val(*pmd_entry) = __pa(pte);
 }
 
-#define __pte_free_tlb(tlb, pte, address)	pte_free((tlb)->mm, pte)
+#define __pte_free_tlb(tlb, pte, address)	pte_free(&(tlb)->mm->pgt,  pte)
 
 #endif				/* _ASM_IA64_PGALLOC_H */

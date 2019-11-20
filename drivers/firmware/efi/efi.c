@@ -65,7 +65,6 @@ struct mm_struct efi_mm = {
 		.page_table_lock = __SPIN_LOCK_UNLOCKED(efi_mm.pgt.page_table_lock),
 	},
 	.mmlist			= LIST_HEAD_INIT(efi_mm.mmlist),
-	.cpu_bitmap		= { [BITS_TO_LONGS(NR_CPUS)] = 0},
 };
 
 struct workqueue_struct *efi_rts_wq;
@@ -374,6 +373,8 @@ static int __init efisubsys_init(void)
 		pr_err("efivars: Subsystem registration failed.\n");
 		goto err_remove_group;
 	}
+
+	mm_init_cpumask(&efi_mm);
 
 	return 0;
 

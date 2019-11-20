@@ -371,16 +371,25 @@ typedef struct {} pt_context_t;
 #endif
 
 struct pg_table {
+	struct {
 #ifdef CONFIG_MMU
-	atomic_long_t pgtables_bytes;	/* PTE page table pages */
+		atomic_long_t pgtables_bytes;	/* PTE page table pages */
 #endif
-	spinlock_t page_table_lock;	 /* Protects page tables and some
-					  * counters
-					  */
-	pgd_t *pgd;
+		spinlock_t page_table_lock;	 /* Protects page tables and
+						  * some counters
+						  */
+		pgd_t *pgd;
 
-	/* Architecture-specific PT context */
-	pt_context_t context;
+		/* Architecture-specific PT context */
+		pt_context_t context;
+	} __randomize_layout;
+
+	/*
+	 * The CPU bitmap needs to be at the end of mm_struct, because it
+	 * is dynamically sized based on nr_cpu_ids. This also implies
+	 * that pg_table has to be the last field of the mm_struct.
+	 */
+	unsigned long cpu_bitmap[];
 };
 
 struct kioctx_table;
@@ -388,7 +397,6 @@ struct mm_struct {
 	struct {
 		struct vm_area_struct *mmap;		/* list of VMAs */
 		struct rb_root mm_rb;
-		struct pg_table pgt;
 		u64 vmacache_seqnum;                   /* per-thread vmacache */
 #ifdef CONFIG_MMU
 		unsigned long (*get_unmapped_area) (struct file *filp,
@@ -538,10 +546,11 @@ struct mm_struct {
 	} __randomize_layout;
 
 	/*
-	 * The mm_cpumask needs to be at the end of mm_struct, because it
-	 * is dynamically sized based on nr_cpu_ids.
+	 * The pg_table contains the CPU bitmap and therefore needs to
+	 * be at the end of mm_struct, because the bitmap is
+	 * dynamically sized based on nr_cpu_ids.
 	 */
-	unsigned long cpu_bitmap[];
+	struct pg_table pgt;
 };
 
 extern struct mm_struct init_mm;
@@ -549,16 +558,22 @@ extern struct mm_struct init_mm;
 /* Pointer magic because the dynamic array size confuses some compilers. */
 static inline void mm_init_cpumask(struct mm_struct *mm)
 {
-	unsigned long cpu_bitmap = (unsigned long)mm;
+	struct pg_table *pgt = &mm->pgt;
+	unsigned long cpu_bitmap = (unsigned long)pgt;
 
-	cpu_bitmap += offsetof(struct mm_struct, cpu_bitmap);
+	cpu_bitmap += offsetof(struct pg_table, cpu_bitmap);
 	cpumask_clear((struct cpumask *)cpu_bitmap);
 }
 
 /* Future-safe accessor for struct mm_struct's cpu_vm_mask. */
+static inline cpumask_t *pgt_cpumask(struct pg_table *pgt)
+{
+	return (struct cpumask *)&pgt->cpu_bitmap;
+}
+
 static inline cpumask_t *mm_cpumask(struct mm_struct *mm)
 {
-	return (struct cpumask *)&mm->cpu_bitmap;
+	return pgt_cpumask(&mm->pgt);
 }
 
 struct mmu_gather;

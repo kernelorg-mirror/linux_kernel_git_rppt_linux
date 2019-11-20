@@ -736,4 +736,8 @@ config ARCH_HAS_PTE_SPECIAL
 config ARCH_HAS_HUGEPD
 	bool
 
+
+config ADDRESS_SPACE_ISOLATION
+        bool
+
 endmenu

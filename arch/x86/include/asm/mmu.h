@@ -27,6 +27,13 @@ typedef struct {
 	 * This is not used on Xen PV.
 	 */
 	atomic64_t tlb_gen;
+
+	/*
+	 * FIXME: the below fields do not really belong to page table
+	 * management, but having them here simplify transition from
+	 * mm_struct to pg_table
+	 */
+	atomic_t perf_rdpmc_allowed;	/* nonzero if rdpmc is allowed */
 } pt_context_t;
 #define pt_context_t pt_context_t
 
@@ -45,7 +52,6 @@ typedef struct {
 	void __user *vdso;			/* vdso base address */
 	const struct vdso_image *vdso_image;	/* vdso image in use */
 
-	atomic_t perf_rdpmc_allowed;	/* nonzero if rdpmc is allowed */
 #ifdef CONFIG_X86_INTEL_MEMORY_PROTECTION_KEYS
 	/*
 	 * One bit per protection key says whether userspace can

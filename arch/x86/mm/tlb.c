@@ -441,7 +441,7 @@ void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
 
 	if (next != real_prev) {
 		load_mm_cr4_irqsoff(next);
-		switch_ldt(real_prev, next);
+		switch_ldt(&real_prev->pgt, &next->pgt);
 	}
 }
 

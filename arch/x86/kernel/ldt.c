@@ -56,7 +56,7 @@ static void flush_ldt(void *__mm)
 	if (this_cpu_read(cpu_tlbstate.loaded_mm) != mm)
 		return;
 
-	load_mm_ldt(mm);
+	load_mm_ldt(&mm->pgt);
 
 	refresh_ldt_segments();
 }
@@ -106,7 +106,7 @@ static void do_sanity_check(struct mm_struct *mm,
 			    bool had_kernel_mapping,
 			    bool had_user_mapping)
 {
-	if (mm->context.ldt) {
+	if (mm->pgt.context.ldt) {
 		/*
 		 * We already had an LDT.  The top-level entry should already
 		 * have been allocated and synchronized with the usermode
@@ -156,7 +156,7 @@ static void map_ldt_struct_to_user(struct mm_struct *mm)
 	k_pmd = pgd_to_pmd_walk(k_pgd, LDT_BASE_ADDR);
 	u_pmd = pgd_to_pmd_walk(u_pgd, LDT_BASE_ADDR);
 
-	if (boot_cpu_has(X86_FEATURE_PTI) && !mm->context.ldt)
+	if (boot_cpu_has(X86_FEATURE_PTI) && !mm->pgt.context.ldt)
 		set_pmd(u_pmd, *k_pmd);
 }
 
@@ -181,7 +181,7 @@ static void map_ldt_struct_to_user(struct mm_struct *mm)
 {
 	pgd_t *pgd = pgd_offset(mm, LDT_BASE_ADDR);
 
-	if (boot_cpu_has(X86_FEATURE_PTI) && !mm->context.ldt)
+	if (boot_cpu_has(X86_FEATURE_PTI) && !mm->pgt.context.ldt)
 		set_pgd(kernel_to_user_pgdp(pgd), *pgd);
 }
 
@@ -331,7 +331,7 @@ static void install_ldt(struct mm_struct *mm, struct ldt_struct *ldt)
 	mutex_lock(&mm->context.lock);
 
 	/* Synchronizes with READ_ONCE in load_mm_ldt. */
-	smp_store_release(&mm->context.ldt, ldt);
+	smp_store_release(&mm->pgt.context.ldt, ldt);
 
 	/* Activate the LDT for all CPUs using currents mm. */
 	on_each_cpu_mask(mm_cpumask(mm), flush_ldt, mm, true);
@@ -365,16 +365,16 @@ int ldt_dup_context(struct mm_struct *old_mm, struct mm_struct *mm)
 		return 0;
 
 	mutex_lock(&old_mm->context.lock);
-	if (!old_mm->context.ldt)
+	if (!old_mm->pgt.context.ldt)
 		goto out_unlock;
 
-	new_ldt = alloc_ldt_struct(old_mm->context.ldt->nr_entries);
+	new_ldt = alloc_ldt_struct(old_mm->pgt.context.ldt->nr_entries);
 	if (!new_ldt) {
 		retval = -ENOMEM;
 		goto out_unlock;
 	}
 
-	memcpy(new_ldt->entries, old_mm->context.ldt->entries,
+	memcpy(new_ldt->entries, old_mm->pgt.context.ldt->entries,
 	       new_ldt->nr_entries * LDT_ENTRY_SIZE);
 	finalize_ldt_struct(new_ldt);
 
@@ -384,7 +384,7 @@ int ldt_dup_context(struct mm_struct *old_mm, struct mm_struct *mm)
 		free_ldt_struct(new_ldt);
 		goto out_unlock;
 	}
-	mm->context.ldt = new_ldt;
+	mm->pgt.context.ldt = new_ldt;
 
 out_unlock:
 	mutex_unlock(&old_mm->context.lock);
@@ -398,8 +398,8 @@ out_unlock:
  */
 void destroy_context_ldt(struct mm_struct *mm)
 {
-	free_ldt_struct(mm->context.ldt);
-	mm->context.ldt = NULL;
+	free_ldt_struct(mm->pgt.context.ldt);
+	mm->pgt.context.ldt = NULL;
 }
 
 void ldt_arch_exit_mmap(struct mm_struct *mm)
@@ -413,9 +413,9 @@ static int read_ldt(void __user *ptr, unsigned long bytecount)
 	unsigned long entries_size;
 	int retval;
 
-	down_read(&mm->context.ldt_usr_sem);
+	down_read(&mm->pgt.context.ldt_usr_sem);
 
-	if (!mm->context.ldt) {
+	if (!mm->pgt.context.ldt) {
 		retval = 0;
 		goto out_unlock;
 	}
@@ -423,11 +423,11 @@ static int read_ldt(void __user *ptr, unsigned long bytecount)
 	if (bytecount > LDT_ENTRY_SIZE * LDT_ENTRIES)
 		bytecount = LDT_ENTRY_SIZE * LDT_ENTRIES;
 
-	entries_size = mm->context.ldt->nr_entries * LDT_ENTRY_SIZE;
+	entries_size = mm->pgt.context.ldt->nr_entries * LDT_ENTRY_SIZE;
 	if (entries_size > bytecount)
 		entries_size = bytecount;
 
-	if (copy_to_user(ptr, mm->context.ldt->entries, entries_size)) {
+	if (copy_to_user(ptr, mm->pgt.context.ldt->entries, entries_size)) {
 		retval = -EFAULT;
 		goto out_unlock;
 	}
@@ -442,7 +442,7 @@ static int read_ldt(void __user *ptr, unsigned long bytecount)
 	retval = bytecount;
 
 out_unlock:
-	up_read(&mm->context.ldt_usr_sem);
+	up_read(&mm->pgt.context.ldt_usr_sem);
 	return retval;
 }
 
@@ -502,10 +502,10 @@ static int write_ldt(void __user *ptr, unsigned long bytecount, int oldmode)
 			ldt.avl = 0;
 	}
 
-	if (down_write_killable(&mm->context.ldt_usr_sem))
+	if (down_write_killable(&mm->pgt.context.ldt_usr_sem))
 		return -EINTR;
 
-	old_ldt       = mm->context.ldt;
+	old_ldt       = mm->pgt.context.ldt;
 	old_nr_entries = old_ldt ? old_ldt->nr_entries : 0;
 	new_nr_entries = max(ldt_info.entry_number + 1, old_nr_entries);
 
@@ -545,7 +545,7 @@ static int write_ldt(void __user *ptr, unsigned long bytecount, int oldmode)
 	error = 0;
 
 out_unlock:
-	up_write(&mm->context.ldt_usr_sem);
+	up_write(&mm->pgt.context.ldt_usr_sem);
 out:
 	return error;
 }

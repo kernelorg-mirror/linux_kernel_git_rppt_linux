@@ -34,11 +34,11 @@ unsigned long convert_ip_to_linear(struct task_struct *child, struct pt_regs *re
 		seg >>= 3;
 
 		mutex_lock(&child->mm->context.lock);
-		if (unlikely(!child->mm->context.ldt ||
-			     seg >= child->mm->context.ldt->nr_entries))
+		if (unlikely(!child->mm->pgt.context.ldt ||
+			     seg >= child->mm->pgt.context.ldt->nr_entries))
 			addr = -1L; /* bogus selector, access would fault */
 		else {
-			desc = &child->mm->context.ldt->entries[seg];
+			desc = &child->mm->pgt.context.ldt->entries[seg];
 			base = get_desc_base(desc);
 
 			/* 16-bit code segment? */

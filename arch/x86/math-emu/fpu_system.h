@@ -28,8 +28,8 @@ static inline struct desc_struct FPU_get_ldt_descriptor(unsigned seg)
 #ifdef CONFIG_MODIFY_LDT_SYSCALL
 	seg >>= 3;
 	mutex_lock(&current->mm->context.lock);
-	if (current->mm->context.ldt && seg < current->mm->context.ldt->nr_entries)
-		ret = current->mm->context.ldt->entries[seg];
+	if (current->mm->pgt.context.ldt && seg < current->mm->pgt.context.ldt->nr_entries)
+		ret = current->mm->pgt.context.ldt->entries[seg];
 	mutex_unlock(&current->mm->context.lock);
 #endif
 	return ret;

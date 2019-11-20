@@ -1890,7 +1890,7 @@ void cpu_init(void)
 	load_TR_desc();
 	load_sp0((unsigned long)(cpu_entry_stack(cpu) + 1));
 
-	load_mm_ldt(&init_mm);
+	load_mm_ldt(&init_mm.pgt);
 
 	clear_all_debug_regs();
 	dbg_restore_debug_regs();
@@ -1942,7 +1942,7 @@ void cpu_init(void)
 	load_TR_desc();
 	load_sp0((unsigned long)(cpu_entry_stack(cpu) + 1));
 
-	load_mm_ldt(&init_mm);
+	load_mm_ldt(&init_mm.pgt);
 
 	t->x86_tss.io_bitmap_base = IO_BITMAP_OFFSET;
 

@@ -80,8 +80,8 @@ static inline void *ldt_slot_va(int slot)
  */
 static inline void init_new_context_ldt(struct mm_struct *mm)
 {
-	mm->context.ldt = NULL;
-	init_rwsem(&mm->context.ldt_usr_sem);
+	mm->pgt.context.ldt = NULL;
+	init_rwsem(&mm->pgt.context.ldt_usr_sem);
 }
 int ldt_dup_context(struct mm_struct *oldmm, struct mm_struct *mm);
 void destroy_context_ldt(struct mm_struct *mm);
@@ -97,17 +97,17 @@ static inline void destroy_context_ldt(struct mm_struct *mm) { }
 static inline void ldt_arch_exit_mmap(struct mm_struct *mm) { }
 #endif
 
-static inline void load_mm_ldt(struct mm_struct *mm)
+static inline void load_mm_ldt(struct pg_table *pgt)
 {
 #ifdef CONFIG_MODIFY_LDT_SYSCALL
 	struct ldt_struct *ldt;
 
 	/* READ_ONCE synchronizes with smp_store_release */
-	ldt = READ_ONCE(mm->context.ldt);
+	ldt = READ_ONCE(pgt->context.ldt);
 
 	/*
-	 * Any change to mm->context.ldt is followed by an IPI to all
-	 * CPUs with the mm active.  The LDT will not be freed until
+	 * Any change to pgt->context.ldt is followed by an IPI to all
+	 * CPUs with the pgt active.  The LDT will not be freed until
 	 * after the IPI is handled by all such CPUs.  This means that,
 	 * if the ldt_struct changes before we return, the values we see
 	 * will be safe, and the new values will be loaded before we run
@@ -149,11 +149,11 @@ static inline void load_mm_ldt(struct mm_struct *mm)
 #endif
 }
 
-static inline void switch_ldt(struct mm_struct *prev, struct mm_struct *next)
+static inline void switch_ldt(struct pg_table *prev, struct pg_table *next)
 {
 #ifdef CONFIG_MODIFY_LDT_SYSCALL
 	/*
-	 * Load the LDT if either the old or new mm had an LDT.
+	 * Load the LDT if either the old or new mm->pgt had an LDT.
 	 *
 	 * An mm will never go from having an LDT to not having an LDT.  Two
 	 * mms never share an LDT, so we don't gain anything by checking to

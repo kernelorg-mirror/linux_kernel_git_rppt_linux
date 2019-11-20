@@ -315,7 +315,7 @@ static unsigned long x86_fsgsbase_read_task(struct task_struct *task,
 		 * take the mutex.
 		 */
 		mutex_lock(&task->mm->context.lock);
-		ldt = task->mm->context.ldt;
+		ldt = task->mm->pgt.context.ldt;
 		if (unlikely(idx >= ldt->nr_entries))
 			base = 0;
 		else

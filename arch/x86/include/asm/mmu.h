@@ -34,14 +34,14 @@ typedef struct {
 	 * mm_struct to pg_table
 	 */
 	atomic_t perf_rdpmc_allowed;	/* nonzero if rdpmc is allowed */
-} pt_context_t;
-#define pt_context_t pt_context_t
-
-typedef struct {
 #ifdef CONFIG_MODIFY_LDT_SYSCALL
 	struct rw_semaphore	ldt_usr_sem;
 	struct ldt_struct	*ldt;
 #endif
+} pt_context_t;
+#define pt_context_t pt_context_t
+
+typedef struct {
 
 #ifdef CONFIG_X86_64
 	/* True if mm supports a task running in 32 bit compatibility mode. */

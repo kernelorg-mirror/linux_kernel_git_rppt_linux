@@ -584,7 +584,7 @@ static bool get_desc(struct desc_struct *out, unsigned short sel)
 		sel >>= 3;
 
 		mutex_lock(&current->active_mm->context.lock);
-		ldt = current->active_mm->context.ldt;
+		ldt = current->active_mm->pgt.context.ldt;
 		if (ldt && sel < ldt->nr_entries) {
 			*out = ldt->entries[sel];
 			success = true;

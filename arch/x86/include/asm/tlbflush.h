@@ -155,19 +155,19 @@ struct tlb_context {
 
 struct tlb_state {
 	/*
-	 * cpu_tlbstate.loaded_mm should match CR3 whenever interrupts
-	 * are on.  This means that it may not match current->active_mm,
+	 * cpu_tlbstate.loaded_pgt should match CR3 whenever interrupts
+	 * are on.  This means that it may not match current->active_mm.pgt,
 	 * which will contain the previous user mm when we're in lazy TLB
 	 * mode even if we've already switched back to swapper_pg_dir.
 	 *
-	 * During switch_mm_irqs_off(), loaded_mm will be set to
+	 * During switch_mm_irqs_off(), loaded_pgt will be set to
 	 * LOADED_MM_SWITCHING during the brief interrupts-off window
 	 * when CR3 and loaded_mm would otherwise be inconsistent.  This
 	 * is for nmi_uaccess_okay()'s benefit.
 	 */
-	struct mm_struct *loaded_mm;
+	struct pg_table *loaded_pgt;
 
-#define LOADED_MM_SWITCHING ((struct mm_struct *)1UL)
+#define LOADED_PGT_SWITCHING ((struct pg_table *)1UL)
 
 	/* Last user mm for optimizing IBPB */
 	union {
@@ -251,25 +251,25 @@ DECLARE_PER_CPU_SHARED_ALIGNED(struct tlb_state, cpu_tlbstate);
  */
 static inline bool nmi_uaccess_okay(void)
 {
-	struct mm_struct *loaded_mm = this_cpu_read(cpu_tlbstate.loaded_mm);
-	struct mm_struct *current_mm = current->mm;
+	struct pg_table *loaded_pgt = this_cpu_read(cpu_tlbstate.loaded_pgt);
+	struct pg_table *current_pgt = &current->mm->pgt;
 
-	VM_WARN_ON_ONCE(!loaded_mm);
+	VM_WARN_ON_ONCE(!loaded_pgt);
 
 	/*
 	 * The condition we want to check is
-	 * current_mm->pgt.pgd == __va(read_cr3_pa()). This may be slow, though,
+	 * current_pgt->pgd == __va(read_cr3_pa()). This may be slow, though,
 	 * if we're running in a VM with shadow paging, and nmi_uaccess_okay()
 	 * is supposed to be reasonably fast.
 	 *
 	 * Instead, we check the almost equivalent but somewhat conservative
 	 * condition below, and we rely on the fact that switch_mm_irqs_off()
-	 * sets loaded_mm to LOADED_MM_SWITCHING before writing to CR3.
+	 * sets loaded_mm to LOADED_PGT_SWITCHING before writing to CR3.
 	 */
-	if (loaded_mm != current_mm)
+	if (loaded_pgt != current_pgt)
 		return false;
 
-	VM_WARN_ON_ONCE(current_mm->pgt.pgd != __va(read_cr3_pa()));
+	VM_WARN_ON_ONCE(current_pgt->pgd != __va(read_cr3_pa()));
 
 	return true;
 }

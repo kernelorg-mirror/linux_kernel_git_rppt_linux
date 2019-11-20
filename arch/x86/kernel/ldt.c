@@ -53,7 +53,7 @@ static void flush_ldt(void *__mm)
 {
 	struct mm_struct *mm = __mm;
 
-	if (this_cpu_read(cpu_tlbstate.loaded_mm) != mm)
+	if (this_cpu_read(cpu_tlbstate.loaded_pgt) != &mm->pgt)
 		return;
 
 	load_mm_ldt(&mm->pgt);

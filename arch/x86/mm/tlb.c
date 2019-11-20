@@ -73,7 +73,7 @@ static void clear_asid_other(void)
 atomic64_t last_mm_ctx_id = ATOMIC64_INIT(1);
 
 
-static void choose_new_asid(struct mm_struct *next, u64 next_tlb_gen,
+static void choose_new_asid(struct pg_table *next, u64 next_tlb_gen,
 			    u16 *new_asid, bool *need_flush)
 {
 	u16 asid;
@@ -89,7 +89,7 @@ static void choose_new_asid(struct mm_struct *next, u64 next_tlb_gen,
 
 	for (asid = 0; asid < TLB_NR_DYN_ASIDS; asid++) {
 		if (this_cpu_read(cpu_tlbstate.ctxs[asid].ctx_id) !=
-		    next->pgt.context.ctx_id)
+		    next->context.ctx_id)
 			continue;
 
 		*new_asid = asid;
@@ -131,7 +131,7 @@ static void load_new_mm_cr3(pgd_t *pgdir, u16 new_asid, bool need_flush)
 
 void leave_mm(int cpu)
 {
-	struct mm_struct *loaded_mm = this_cpu_read(cpu_tlbstate.loaded_mm);
+	struct pg_table *loaded_pgt = this_cpu_read(cpu_tlbstate.loaded_pgt);
 
 	/*
 	 * It's plausible that we're in lazy TLB mode while our mm is init_mm.
@@ -141,30 +141,36 @@ void leave_mm(int cpu)
 	 * This needs to happen before any other sanity checks due to
 	 * intel_idle's shenanigans.
 	 */
-	if (loaded_mm == &init_mm)
+	if (loaded_pgt == &init_mm.pgt)
 		return;
 
 	/* Warn if we're not lazy. */
 	WARN_ON(!this_cpu_read(cpu_tlbstate.is_lazy));
 
-	switch_mm(NULL, &init_mm, NULL);
+	switch_pgt(NULL, &init_mm.pgt, NULL);
 }
 EXPORT_SYMBOL_GPL(leave_mm);
 
-void switch_mm(struct mm_struct *prev, struct mm_struct *next,
+void switch_pgt(struct pg_table *prev, struct pg_table *next,
 	       struct task_struct *tsk)
 {
 	unsigned long flags;
 
 	local_irq_save(flags);
-	switch_mm_irqs_off(prev, next, tsk);
+	switch_pgt_irqs_off(prev, next, tsk);
 	local_irq_restore(flags);
 }
 
-static void sync_current_stack_to_mm(struct mm_struct *mm)
+void switch_mm(struct mm_struct *prev, struct mm_struct *next,
+	       struct task_struct *tsk)
+{
+	switch_pgt(&prev->pgt, &next->pgt, tsk);
+}
+
+static void sync_current_stack_to_pgt(struct pg_table *pgt)
 {
 	unsigned long sp = current_stack_pointer;
-	pgd_t *pgd = pgd_offset(mm, sp);
+	pgd_t *pgd = pgd_offset_pgd(pgt->pgd, sp);
 
 	if (pgtable_l5_enabled()) {
 		if (unlikely(pgd_none(*pgd))) {
@@ -272,10 +278,10 @@ static void cond_ibpb(struct task_struct *next)
 	}
 }
 
-void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
-			struct task_struct *tsk)
+void switch_pgt_irqs_off(struct pg_table *prev, struct pg_table *next,
+			 struct task_struct *tsk)
 {
-	struct mm_struct *real_prev = this_cpu_read(cpu_tlbstate.loaded_mm);
+	struct pg_table *real_prev = this_cpu_read(cpu_tlbstate.loaded_pgt);
 	u16 prev_asid = this_cpu_read(cpu_tlbstate.loaded_mm_asid);
 	bool was_lazy = this_cpu_read(cpu_tlbstate.is_lazy);
 	unsigned cpu = smp_processor_id();
@@ -306,7 +312,7 @@ void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
 	 * isn't free.
 	 */
 #ifdef CONFIG_DEBUG_VM
-	if (WARN_ON_ONCE(__read_cr3() != build_cr3(real_prev->pgt.pgd, prev_asid))) {
+	if (WARN_ON_ONCE(__read_cr3() != build_cr3(real_prev->pgd, prev_asid))) {
 		/*
 		 * If we were to BUG here, we'd be very likely to kill
 		 * the system so hard that we don't see the call trace.
@@ -332,16 +338,16 @@ void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
 	 */
 	if (real_prev == next) {
 		VM_WARN_ON(this_cpu_read(cpu_tlbstate.ctxs[prev_asid].ctx_id) !=
-			   next->pgt.context.ctx_id);
+			   next->context.ctx_id);
 
 		/*
 		 * Even in lazy TLB mode, the CPU should stay set in the
 		 * mm_cpumask. The TLB shootdown code can figure out from
 		 * from cpu_tlbstate.is_lazy whether or not to send an IPI.
 		 */
-		if (WARN_ON_ONCE(real_prev != &init_mm &&
-				 !cpumask_test_cpu(cpu, mm_cpumask(next))))
-			cpumask_set_cpu(cpu, mm_cpumask(next));
+		if (WARN_ON_ONCE(real_prev != &init_mm.pgt &&
+				 !cpumask_test_cpu(cpu, pgt_cpumask(next))))
+			cpumask_set_cpu(cpu, pgt_cpumask(next));
 
 		/*
 		 * If the CPU is not in lazy TLB mode, we are just switching
@@ -358,7 +364,7 @@ void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
 		 * the TLB shootdown code.
 		 */
 		smp_mb();
-		next_tlb_gen = atomic64_read(&next->pgt.context.tlb_gen);
+		next_tlb_gen = atomic64_read(&next->context.tlb_gen);
 		if (this_cpu_read(cpu_tlbstate.ctxs[prev_asid].tlb_gen) ==
 				next_tlb_gen)
 			return;
@@ -383,7 +389,7 @@ void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
 			 * mapped in the new pgd, we'll double-fault.  Forcibly
 			 * map it.
 			 */
-			sync_current_stack_to_mm(next);
+			sync_current_stack_to_pgt(next);
 		}
 
 		/*
@@ -391,30 +397,30 @@ void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
 		 * Skip kernel threads; we never send init_mm TLB flushing IPIs,
 		 * but the bitmap manipulation can cause cache line contention.
 		 */
-		if (real_prev != &init_mm) {
+		if (real_prev != &init_mm.pgt) {
 			VM_WARN_ON_ONCE(!cpumask_test_cpu(cpu,
-						mm_cpumask(real_prev)));
-			cpumask_clear_cpu(cpu, mm_cpumask(real_prev));
+						pgt_cpumask(real_prev)));
+			cpumask_clear_cpu(cpu, pgt_cpumask(real_prev));
 		}
 
 		/*
 		 * Start remote flushes and then read tlb_gen.
 		 */
-		if (next != &init_mm)
-			cpumask_set_cpu(cpu, mm_cpumask(next));
-		next_tlb_gen = atomic64_read(&next->pgt.context.tlb_gen);
+		if (next != &init_mm.pgt)
+			cpumask_set_cpu(cpu, pgt_cpumask(next));
+		next_tlb_gen = atomic64_read(&next->context.tlb_gen);
 
 		choose_new_asid(next, next_tlb_gen, &new_asid, &need_flush);
 
 		/* Let nmi_uaccess_okay() know that we're changing CR3. */
-		this_cpu_write(cpu_tlbstate.loaded_mm, LOADED_MM_SWITCHING);
+		this_cpu_write(cpu_tlbstate.loaded_pgt, LOADED_PGT_SWITCHING);
 		barrier();
 	}
 
 	if (need_flush) {
-		this_cpu_write(cpu_tlbstate.ctxs[new_asid].ctx_id, next->pgt.context.ctx_id);
+		this_cpu_write(cpu_tlbstate.ctxs[new_asid].ctx_id, next->context.ctx_id);
 		this_cpu_write(cpu_tlbstate.ctxs[new_asid].tlb_gen, next_tlb_gen);
-		load_new_mm_cr3(next->pgt.pgd, new_asid, true);
+		load_new_mm_cr3(next->pgd, new_asid, true);
 
 		/*
 		 * NB: This gets called via leave_mm() in the idle path
@@ -427,7 +433,7 @@ void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
 		trace_tlb_flush_rcuidle(TLB_FLUSH_ON_TASK_SWITCH, TLB_FLUSH_ALL);
 	} else {
 		/* The new ASID is already up to date. */
-		load_new_mm_cr3(next->pgt.pgd, new_asid, false);
+		load_new_mm_cr3(next->pgd, new_asid, false);
 
 		/* See above wrt _rcuidle. */
 		trace_tlb_flush_rcuidle(TLB_FLUSH_ON_TASK_SWITCH, 0);
@@ -436,13 +442,19 @@ void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
 	/* Make sure we write CR3 before loaded_mm. */
 	barrier();
 
-	this_cpu_write(cpu_tlbstate.loaded_mm, next);
+	this_cpu_write(cpu_tlbstate.loaded_pgt, next);
 	this_cpu_write(cpu_tlbstate.loaded_mm_asid, new_asid);
 
 	if (next != real_prev) {
 		load_mm_cr4_irqsoff(next);
-		switch_ldt(&real_prev->pgt, &next->pgt);
+		switch_ldt(real_prev, next);
 	}
+}
+
+void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
+			struct task_struct *tsk)
+{
+	switch_pgt_irqs_off(&prev->pgt, &next->pgt, tsk);
 }
 
 /*
@@ -460,7 +472,7 @@ void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
  */
 void enter_lazy_tlb(struct mm_struct *mm, struct task_struct *tsk)
 {
-	if (this_cpu_read(cpu_tlbstate.loaded_mm) == &init_mm)
+	if (this_cpu_read(cpu_tlbstate.loaded_pgt) == &init_mm.pgt)
 		return;
 
 	this_cpu_write(cpu_tlbstate.is_lazy, true);
@@ -482,12 +494,12 @@ void enter_lazy_tlb(struct mm_struct *mm, struct task_struct *tsk)
 void initialize_tlbstate_and_flush(void)
 {
 	int i;
-	struct mm_struct *mm = this_cpu_read(cpu_tlbstate.loaded_mm);
+	struct pg_table *pgt = this_cpu_read(cpu_tlbstate.loaded_pgt);
 	u64 tlb_gen = atomic64_read(&init_mm.pgt.context.tlb_gen);
 	unsigned long cr3 = __read_cr3();
 
 	/* Assert that CR3 already references the right mm. */
-	WARN_ON((cr3 & CR3_ADDR_MASK) != __pa(mm->pgt.pgd));
+	WARN_ON((cr3 & CR3_ADDR_MASK) != __pa(pgt->pgd));
 
 	/*
 	 * Assert that CR4.PCIDE is set if needed.  (CR4.PCIDE initialization
@@ -498,13 +510,13 @@ void initialize_tlbstate_and_flush(void)
 		!(cr4_read_shadow() & X86_CR4_PCIDE));
 
 	/* Force ASID 0 and force a TLB flush. */
-	write_cr3(build_cr3(mm->pgt.pgd, 0));
+	write_cr3(build_cr3(pgt->pgd, 0));
 
 	/* Reinitialize tlbstate. */
 	this_cpu_write(cpu_tlbstate.last_user_mm_ibpb, LAST_USER_MM_IBPB);
 	this_cpu_write(cpu_tlbstate.loaded_mm_asid, 0);
 	this_cpu_write(cpu_tlbstate.next_asid, 1);
-	this_cpu_write(cpu_tlbstate.ctxs[0].ctx_id, mm->pgt.context.ctx_id);
+	this_cpu_write(cpu_tlbstate.ctxs[0].ctx_id, pgt->context.ctx_id);
 	this_cpu_write(cpu_tlbstate.ctxs[0].tlb_gen, tlb_gen);
 
 	for (i = 1; i < TLB_NR_DYN_ASIDS; i++)
@@ -530,19 +542,19 @@ static void flush_tlb_func_common(const struct flush_tlb_info *f,
 	 * - f->new_tlb_gen: the generation that the requester of the flush
 	 *                   wants us to catch up to.
 	 */
-	struct mm_struct *loaded_mm = this_cpu_read(cpu_tlbstate.loaded_mm);
+	struct pg_table *loaded_pgt = this_cpu_read(cpu_tlbstate.loaded_pgt);
 	u32 loaded_mm_asid = this_cpu_read(cpu_tlbstate.loaded_mm_asid);
-	u64 mm_tlb_gen = atomic64_read(&loaded_mm->pgt.context.tlb_gen);
+	u64 mm_tlb_gen = atomic64_read(&loaded_pgt->context.tlb_gen);
 	u64 local_tlb_gen = this_cpu_read(cpu_tlbstate.ctxs[loaded_mm_asid].tlb_gen);
 
 	/* This code cannot presently handle being reentered. */
 	VM_WARN_ON(!irqs_disabled());
 
-	if (unlikely(loaded_mm == &init_mm))
+	if (unlikely(loaded_pgt == &init_mm.pgt))
 		return;
 
 	VM_WARN_ON(this_cpu_read(cpu_tlbstate.ctxs[loaded_mm_asid].ctx_id) !=
-		   loaded_mm->pgt.context.ctx_id);
+		   loaded_pgt->context.ctx_id);
 
 	if (this_cpu_read(cpu_tlbstate.is_lazy)) {
 		/*
@@ -648,7 +660,7 @@ static void flush_tlb_func_remote(void *info)
 
 	inc_irq_stat(irq_tlb_count);
 
-	if (f->mm && f->mm != this_cpu_read(cpu_tlbstate.loaded_mm))
+	if (f->mm && &f->mm->pgt != this_cpu_read(cpu_tlbstate.loaded_pgt))
 		return;
 
 	count_vm_tlb_event(NR_TLB_REMOTE_FLUSH_RECEIVED);
@@ -787,7 +799,7 @@ void flush_tlb_mm_range(struct mm_struct *mm, unsigned long start,
 	info = get_flush_tlb_info(mm, start, end, stride_shift, freed_tables,
 				  new_tlb_gen);
 
-	if (mm == this_cpu_read(cpu_tlbstate.loaded_mm)) {
+	if (&mm->pgt == this_cpu_read(cpu_tlbstate.loaded_pgt)) {
 		lockdep_assert_irqs_enabled();
 		local_irq_disable();
 		flush_tlb_func_local(info, TLB_LOCAL_MM_SHOOTDOWN);

@@ -28,16 +28,16 @@ static inline void paravirt_activate_mm(struct mm_struct *prev,
 
 DECLARE_STATIC_KEY_FALSE(rdpmc_always_available_key);
 
-static inline void load_mm_cr4_irqsoff(struct mm_struct *mm)
+static inline void load_mm_cr4_irqsoff(struct pg_table *pgt)
 {
 	if (static_branch_unlikely(&rdpmc_always_available_key) ||
-	    atomic_read(&mm->pgt.context.perf_rdpmc_allowed))
+	    atomic_read(&pgt->context.perf_rdpmc_allowed))
 		cr4_set_bits_irqsoff(X86_CR4_PCE);
 	else
 		cr4_clear_bits_irqsoff(X86_CR4_PCE);
 }
 #else
-static inline void load_mm_cr4_irqsoff(struct mm_struct *mm) {}
+static inline void load_mm_cr4_irqsoff(struct pg_table *pgt) {}
 #endif
 
 #ifdef CONFIG_MODIFY_LDT_SYSCALL
@@ -207,9 +207,13 @@ static inline void destroy_context(struct mm_struct *mm)
 	destroy_context_ldt(mm);
 }
 
+extern void switch_pgt(struct pg_table *prev, struct pg_table *next,
+		      struct task_struct *tsk);
 extern void switch_mm(struct mm_struct *prev, struct mm_struct *next,
 		      struct task_struct *tsk);
 
+extern void switch_pgt_irqs_off(struct pg_table *prev, struct pg_table *next,
+			       struct task_struct *tsk);
 extern void switch_mm_irqs_off(struct mm_struct *prev, struct mm_struct *next,
 			       struct task_struct *tsk);
 #define switch_mm_irqs_off switch_mm_irqs_off
@@ -347,8 +351,8 @@ static inline bool arch_vma_access_permitted(struct vm_area_struct *vma,
  */
 static inline unsigned long __get_current_cr3_fast(void)
 {
-	unsigned long cr3 = build_cr3(this_cpu_read(cpu_tlbstate.loaded_mm)->pgt.pgd,
-		this_cpu_read(cpu_tlbstate.loaded_mm_asid));
+	unsigned long cr3 = build_cr3(this_cpu_read(cpu_tlbstate.loaded_pgt)->pgd,
+				      this_cpu_read(cpu_tlbstate.loaded_mm_asid));
 
 	/* For now, be very restrictive about when this can be called. */
 	VM_WARN_ON(in_nmi() || preemptible());
@@ -358,7 +362,7 @@ static inline unsigned long __get_current_cr3_fast(void)
 }
 
 typedef struct {
-	struct mm_struct *mm;
+	struct pg_table *pgt;
 } temp_mm_state_t;
 
 /*
@@ -379,8 +383,8 @@ static inline temp_mm_state_t use_temporary_mm(struct mm_struct *mm)
 	temp_mm_state_t temp_state;
 
 	lockdep_assert_irqs_disabled();
-	temp_state.mm = this_cpu_read(cpu_tlbstate.loaded_mm);
-	switch_mm_irqs_off(NULL, mm, current);
+	temp_state.pgt = this_cpu_read(cpu_tlbstate.loaded_pgt);
+	switch_pgt_irqs_off(NULL, &mm->pgt, current);
 
 	/*
 	 * If breakpoints are enabled, disable them while the temporary mm is
@@ -402,7 +406,7 @@ static inline temp_mm_state_t use_temporary_mm(struct mm_struct *mm)
 static inline void unuse_temporary_mm(temp_mm_state_t prev_state)
 {
 	lockdep_assert_irqs_disabled();
-	switch_mm_irqs_off(NULL, prev_state.mm, current);
+	switch_pgt_irqs_off(NULL, prev_state.pgt, current);
 
 	/*
 	 * Restore the breakpoints if they were disabled before the temporary mm

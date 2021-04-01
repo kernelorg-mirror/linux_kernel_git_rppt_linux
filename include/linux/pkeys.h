@@ -54,6 +54,13 @@ static inline bool arch_pkeys_enabled(void)
 void pkrs_save_set_irq(struct pt_regs *regs, u32 val);
 void pkrs_restore_irq(struct pt_regs *regs);
 
+__must_check int pks_key_alloc(const char *const pkey_user);
+void pks_key_free(int pkey);
+
+void pks_mk_noaccess(int pkey);
+void pks_mk_readonly(int pkey);
+void pks_mk_readwrite(int pkey);
+
 #else /* !CONFIG_ARCH_ENABLE_SUPERVISOR_PKEYS */
 
 #ifndef INIT_PKRS_VALUE
@@ -62,6 +69,16 @@ void pkrs_restore_irq(struct pt_regs *regs);
 
 static inline void pkrs_save_set_irq(struct pt_regs *regs, u32 val) { }
 static inline void pkrs_restore_irq(struct pt_regs *regs) { }
+
+static inline __must_check int pks_key_alloc(const char * const pkey_user)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline void pks_key_free(int pkey) {}
+static inline void pks_mk_noaccess(int pkey) {}
+static inline void pks_mk_readonly(int pkey) {}
+static inline void pks_mk_readwrite(int pkey) {}
 
 #endif /* CONFIG_ARCH_ENABLE_SUPERVISOR_PKEYS */
 

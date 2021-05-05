@@ -7,6 +7,10 @@
 #include <linux/pagemap.h>
 
 #define __HAVE_ARCH_PTE_ALLOC_ONE
+#ifdef CONFIG_PKS_PG_TABLES
+#define __HAVE_ARCH_FREE_TABLE
+#define __HAVE_ARCH_ALLOC_TABLE
+#endif
 #define __HAVE_ARCH_PGD_FREE
 #include <asm-generic/pgalloc.h>
 

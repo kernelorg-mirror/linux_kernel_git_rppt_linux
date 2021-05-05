@@ -6,12 +6,16 @@
 #include <asm/tlb.h>
 #include <asm/fixmap.h>
 #include <asm/mtrr.h>
+#include <asm/set_memory.h>
+#include <linux/page-flags.h>
 
 #ifdef CONFIG_DYNAMIC_PHYSICAL_MASK
 phys_addr_t physical_mask __ro_after_init = (1ULL << __PHYSICAL_MASK_SHIFT) - 1;
 EXPORT_SYMBOL(physical_mask);
 #endif
 
+static struct grouped_page_cache gpc_pks;
+static bool pks_page_en;
 #ifdef CONFIG_HIGHPTE
 #define PGTABLE_HIGHMEM __GFP_HIGHMEM
 #else
@@ -32,6 +36,46 @@ pgtable_t pte_alloc_one(struct mm_struct *mm)
 {
 	return __pte_alloc_one(mm, __userpte_alloc_gfp);
 }
+
+#ifdef CONFIG_PKS_PG_TABLES
+struct page *alloc_table(gfp_t gfp)
+{
+	struct page *table;
+
+	if (!pks_page_en)
+		return alloc_page(gfp);
+
+	table = get_grouped_page(numa_node_id(), &gpc_pks);
+	if (!table)
+		return NULL;
+
+	if (gfp & __GFP_ZERO)
+		memset(page_address(table), 0, PAGE_SIZE);
+
+	if (memcg_kmem_enabled() &&
+	    gfp & __GFP_ACCOUNT &&
+	    !__memcg_kmem_charge_page(table, gfp, 0)) {
+		free_table(table);
+		table = NULL;
+	}
+
+	VM_BUG_ON_PAGE(*(unsigned long *)&table->ptl, table);
+
+	return table;
+}
+
+void free_table(struct page *table_page)
+{
+	if (!pks_page_en) {
+		__free_pages(table_page, 0);
+		return;
+	}
+
+	if (memcg_kmem_enabled() && PageMemcgKmem(table_page))
+		__memcg_kmem_uncharge_page(table_page, 0);
+	free_grouped_page(&gpc_pks, table_page);
+}
+#endif /* CONFIG_PKS_PG_TABLES */
 
 static int __init setup_userpte(char *arg)
 {
@@ -54,6 +98,8 @@ void ___pte_free_tlb(struct mmu_gather *tlb, struct page *pte)
 {
 	pgtable_pte_page_dtor(pte);
 	paravirt_release_pte(page_to_pfn(pte));
+	/* Set Page Table so swap knows how to free it */
+	__SetPageTable(pte);
 	paravirt_tlb_remove_table(tlb, pte);
 }
 
@@ -70,12 +116,16 @@ void ___pmd_free_tlb(struct mmu_gather *tlb, pmd_t *pmd)
 	tlb->need_flush_all = 1;
 #endif
 	pgtable_pmd_page_dtor(page);
+	/* Set Page Table so swap nows how to free it */
+	__SetPageTable(virt_to_page(pmd));
 	paravirt_tlb_remove_table(tlb, page);
 }
 
 #if CONFIG_PGTABLE_LEVELS > 3
 void ___pud_free_tlb(struct mmu_gather *tlb, pud_t *pud)
 {
+	/* Set Page Table so swap nows how to free it */
+	__SetPageTable(virt_to_page(pud));
 	paravirt_release_pud(__pa(pud) >> PAGE_SHIFT);
 	paravirt_tlb_remove_table(tlb, virt_to_page(pud));
 }
@@ -83,6 +133,8 @@ void ___pud_free_tlb(struct mmu_gather *tlb, pud_t *pud)
 #if CONFIG_PGTABLE_LEVELS > 4
 void ___p4d_free_tlb(struct mmu_gather *tlb, p4d_t *p4d)
 {
+	/* Set Page Table so swap nows how to free it */
+	__SetPageTable(virt_to_page(p4d));
 	paravirt_release_p4d(__pa(p4d) >> PAGE_SHIFT);
 	paravirt_tlb_remove_table(tlb, virt_to_page(p4d));
 }
@@ -411,12 +463,24 @@ static inline void _pgd_free(pgd_t *pgd)
 
 static inline pgd_t *_pgd_alloc(void)
 {
+	if (pks_page_en) {
+		struct page *page = alloc_table(GFP_PGTABLE_USER);
+
+		if (!page)
+			return NULL;
+		return page_address(page);
+	}
+
 	return (pgd_t *)__get_free_pages(GFP_PGTABLE_USER,
 					 PGD_ALLOCATION_ORDER);
 }
 
 static inline void _pgd_free(pgd_t *pgd)
 {
+	if (pks_page_en) {
+		free_table(virt_to_page(pgd));
+		return;
+	}
 	free_pages((unsigned long)pgd, PGD_ALLOCATION_ORDER);
 }
 #endif /* CONFIG_X86_PAE */
@@ -851,6 +915,17 @@ int pmd_free_pte_page(pmd_t *pmd, unsigned long addr)
 	return 1;
 }
 
+#ifdef CONFIG_PKS_PG_TABLES
+static int __init pks_page_init(void)
+{
+	pks_page_en = !init_grouped_page_cache(&gpc_pks, GFP_KERNEL | PGTABLE_HIGHMEM);
+
+out:
+	return !pks_page_en;
+}
+
+device_initcall(pks_page_init);
+#endif /* CONFIG_PKS_PG_TABLES */
 #else /* !CONFIG_X86_64 */
 
 /*

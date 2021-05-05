@@ -2239,6 +2239,13 @@ static inline bool ptlock_init(struct page *page) { return true; }
 static inline void ptlock_free(struct page *page) {}
 #endif /* USE_SPLIT_PTE_PTLOCKS */
 
+#ifndef CONFIG_PKS_PG_TABLES
+static inline void free_table(struct page *table_page)
+{
+	__free_pages(table_page, 0);
+}
+#endif /* CONFIG_PKS_PG_TABLES */
+
 static inline void pgtable_init(void)
 {
 	ptlock_cache_init();

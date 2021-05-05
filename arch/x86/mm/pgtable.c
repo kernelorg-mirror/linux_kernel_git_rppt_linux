@@ -918,7 +918,8 @@ int pmd_free_pte_page(pmd_t *pmd, unsigned long addr)
 #ifdef CONFIG_PKS_PG_TABLES
 static int __init pks_page_init(void)
 {
-	pks_page_en = !init_grouped_page_cache(&gpc_pks, GFP_KERNEL | PGTABLE_HIGHMEM);
+	pks_page_en = !init_grouped_page_cache(&gpc_pks, GFP_KERNEL | PGTABLE_HIGHMEM,
+					       NULL, NULL);
 
 out:
 	return !pks_page_en;

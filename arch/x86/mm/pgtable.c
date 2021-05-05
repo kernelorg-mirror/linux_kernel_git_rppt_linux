@@ -7,6 +7,7 @@
 #include <asm/fixmap.h>
 #include <asm/mtrr.h>
 #include <asm/set_memory.h>
+#include <linux/pkeys.h>
 #include <linux/page-flags.h>
 
 #ifdef CONFIG_DYNAMIC_PHYSICAL_MASK
@@ -16,6 +17,7 @@ EXPORT_SYMBOL(physical_mask);
 
 static struct grouped_page_cache gpc_pks;
 static bool pks_page_en;
+
 #ifdef CONFIG_HIGHPTE
 #define PGTABLE_HIGHMEM __GFP_HIGHMEM
 #else
@@ -49,8 +51,11 @@ struct page *alloc_table(gfp_t gfp)
 	if (!table)
 		return NULL;
 
-	if (gfp & __GFP_ZERO)
+	if (gfp & __GFP_ZERO) {
+		enable_pgtable_write();
 		memset(page_address(table), 0, PAGE_SIZE);
+		disable_pgtable_write();
+	}
 
 	if (memcg_kmem_enabled() &&
 	    gfp & __GFP_ACCOUNT &&
@@ -607,9 +612,12 @@ int ptep_test_and_clear_young(struct vm_area_struct *vma,
 {
 	int ret = 0;
 
-	if (pte_young(*ptep))
+	if (pte_young(*ptep)) {
+		enable_pgtable_write();
 		ret = test_and_clear_bit(_PAGE_BIT_ACCESSED,
 					 (unsigned long *) &ptep->pte);
+		disable_pgtable_write();
+	}
 
 	return ret;
 }
@@ -620,9 +628,12 @@ int pmdp_test_and_clear_young(struct vm_area_struct *vma,
 {
 	int ret = 0;
 
-	if (pmd_young(*pmdp))
+	if (pmd_young(*pmdp)) {
+		enable_pgtable_write();
 		ret = test_and_clear_bit(_PAGE_BIT_ACCESSED,
 					 (unsigned long *)pmdp);
+		disable_pgtable_write();
+	}
 
 	return ret;
 }
@@ -631,9 +642,12 @@ int pudp_test_and_clear_young(struct vm_area_struct *vma,
 {
 	int ret = 0;
 
-	if (pud_young(*pudp))
+	if (pud_young(*pudp)) {
+		enable_pgtable_write();
 		ret = test_and_clear_bit(_PAGE_BIT_ACCESSED,
 					 (unsigned long *)pudp);
+		disable_pgtable_write();
+	}
 
 	return ret;
 }
@@ -642,6 +656,7 @@ int pudp_test_and_clear_young(struct vm_area_struct *vma,
 int ptep_clear_flush_young(struct vm_area_struct *vma,
 			   unsigned long address, pte_t *ptep)
 {
+	int ret;
 	/*
 	 * On x86 CPUs, clearing the accessed bit without a TLB flush
 	 * doesn't cause data corruption. [ It could cause incorrect
@@ -655,7 +670,10 @@ int ptep_clear_flush_young(struct vm_area_struct *vma,
 	 * shouldn't really matter because there's no real memory
 	 * pressure for swapout to react to. ]
 	 */
-	return ptep_test_and_clear_young(vma, address, ptep);
+	enable_pgtable_write();
+	ret = ptep_test_and_clear_young(vma, address, ptep);
+	disable_pgtable_write();
+	return ret;
 }
 
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
@@ -666,7 +684,9 @@ int pmdp_clear_flush_young(struct vm_area_struct *vma,
 
 	VM_BUG_ON(address & ~HPAGE_PMD_MASK);
 
+	enable_pgtable_write();
 	young = pmdp_test_and_clear_young(vma, address, pmdp);
+	disable_pgtable_write();
 	if (young)
 		flush_tlb_range(vma, address, address + HPAGE_PMD_SIZE);
 
@@ -916,10 +936,50 @@ int pmd_free_pte_page(pmd_t *pmd, unsigned long addr)
 }
 
 #ifdef CONFIG_PKS_PG_TABLES
+static int pks_key;
+
+static int _pks_protect(struct page *page, unsigned int cnt)
+{
+	/* TODO: do this in one step */
+	if (set_memory_4k((unsigned long)page_address(page), cnt))
+		return 1;
+	set_memory_pks((unsigned long)page_address(page), cnt, pks_key);
+	return 0;
+}
+
+static int _pks_unprotect(struct page *page, unsigned int cnt)
+{
+	set_memory_pks((unsigned long)page_address(page), cnt, 0);
+	return 0;
+}
+
+void enable_pgtable_write(void)
+{
+	if (pks_page_en)
+		pks_mk_readwrite(STATIC_TABLE_KEY);
+}
+
+void disable_pgtable_write(void)
+{
+	if (pks_page_en)
+		pks_mk_readonly(STATIC_TABLE_KEY);
+}
+
 static int __init pks_page_init(void)
 {
+	/*
+	 * TODO: Needs global keys to be initially set globally readable, for now
+	 * warn if its not the expected static key
+	 */
+	pks_key = pks_key_alloc("PKS protected page tables");
+	if (pks_key < 0)
+		goto out;
+	WARN_ON(pks_key != STATIC_TABLE_KEY);
+
 	pks_page_en = !init_grouped_page_cache(&gpc_pks, GFP_KERNEL | PGTABLE_HIGHMEM,
-					       NULL, NULL);
+					       _pks_protect, _pks_unprotect);
+	if (!pks_page_en)
+		pks_key_free(pks_key);
 
 out:
 	return !pks_page_en;

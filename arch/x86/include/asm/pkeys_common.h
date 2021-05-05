@@ -25,7 +25,13 @@
  *
  * NOTE: This needs to be a macro to be used as part of the INIT_THREAD macro.
  */
-#define INIT_PKRS_VALUE (PKR_AD_KEY(1) | PKR_AD_KEY(2) | PKR_AD_KEY(3) | \
+
+/*
+ * HACK: There is no global pkeys support yet. We want the pg table key to be
+ * read only, not disabled. Assume the page table key will be key 1 and set it
+ * WD in the default mask.
+ */
+#define INIT_PKRS_VALUE (PKR_WD_KEY(1) | PKR_AD_KEY(2) | PKR_AD_KEY(3) | \
 			 PKR_AD_KEY(4) | PKR_AD_KEY(5) | PKR_AD_KEY(6) | \
 			 PKR_AD_KEY(7) | PKR_AD_KEY(8) | PKR_AD_KEY(9) | \
 			 PKR_AD_KEY(10) | PKR_AD_KEY(11) | PKR_AD_KEY(12) | \

@@ -6,6 +6,8 @@
 #include <linux/mm.h>		/* for struct page */
 #include <linux/pagemap.h>
 
+#define STATIC_TABLE_KEY	1
+
 #define __HAVE_ARCH_PTE_ALLOC_ONE
 #ifdef CONFIG_PKS_PG_TABLES
 #define __HAVE_ARCH_FREE_TABLE

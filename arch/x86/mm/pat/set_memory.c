@@ -71,6 +71,90 @@ static DEFINE_SPINLOCK(cpa_lock);
 #define CPA_PAGES_ARRAY 4
 #define CPA_NO_CHECK_ALIAS 8 /* Do not search for aliases */
 
+#ifdef CONFIG_PKS_PG_TABLES
+static LLIST_HEAD(tables_cache);
+static LLIST_HEAD(tables_to_covert);
+static bool tables_inited;
+
+struct pks_table_llnode {
+	struct llist_node node;
+	void *table;
+};
+
+static void __add_dmap_table_to_convert(void *table, struct pks_table_llnode *ob)
+{
+	ob->table = table;
+	llist_add(&ob->node, &tables_to_covert);
+}
+
+static void add_dmap_table_to_convert(void *table)
+{
+	struct pks_table_llnode *ob;
+
+	ob = kmalloc(sizeof(*ob), GFP_KERNEL);
+
+	WARN(!ob, "Page table unprotected\n");
+
+	__add_dmap_table_to_convert(table, ob);
+}
+
+void add_pks_table(unsigned long addr)
+{
+	struct llist_node *node = (struct llist_node *)addr;
+
+	enable_pgtable_write();
+	llist_add(node, &tables_cache);
+	disable_pgtable_write();
+}
+
+static void *get_pks_table(void)
+{
+	return llist_del_first(&tables_cache);
+}
+
+static void *_alloc_dmap_table(void)
+{
+	struct page *page = alloc_pages(GFP_KERNEL, 0);
+
+	if (!page)
+		return NULL;
+
+	return page_address(page);
+}
+
+static struct page *alloc_dmap_table(void)
+{
+	void *tablep = get_pks_table();
+
+	/* Fall back to un-protected table is something went wrong */
+	if (!tablep) {
+		if (tables_inited)
+			WARN(1, "Allocating unprotected direct map table\n");
+		tablep = _alloc_dmap_table();
+	}
+
+	if (tablep && !tables_inited)
+		add_dmap_table_to_convert(tablep);
+
+	return virt_to_page(tablep);
+}
+
+static void free_dmap_table(struct page *table)
+{
+	add_pks_table((unsigned long)virt_to_page(table));
+}
+#else /* CONFIG_PKS_PG_TABLES */
+static struct page *alloc_dmap_table(void)
+{
+	return alloc_pages(GFP_KERNEL, 0);
+}
+
+static void free_dmap_table(struct page *table)
+{
+	__free_page(table);
+}
+#endif
+
 static inline pgprot_t cachemode2pgprot(enum page_cache_mode pcm)
 {
 	return __pgprot(cachemode2protval(pcm));
@@ -1076,14 +1160,15 @@ static int split_large_page(struct cpa_data *cpa, pte_t *kpte,
 
 	if (!debug_pagealloc_enabled())
 		spin_unlock(&cpa_lock);
-	base = alloc_pages(GFP_KERNEL, 0);
+	base = alloc_dmap_table();
+
 	if (!debug_pagealloc_enabled())
 		spin_lock(&cpa_lock);
 	if (!base)
 		return -ENOMEM;
 
 	if (__split_large_page(cpa, kpte, address, base))
-		__free_page(base);
+		free_dmap_table(base);
 
 	return 0;
 }
@@ -1096,7 +1181,7 @@ static bool try_to_free_pte_page(pte_t *pte)
 		if (!pte_none(pte[i]))
 			return false;
 
-	free_page((unsigned long)pte);
+	free_dmap_table(virt_to_page(pte));
 	return true;
 }
 
@@ -1108,7 +1193,7 @@ static bool try_to_free_pmd_page(pmd_t *pmd)
 		if (!pmd_none(pmd[i]))
 			return false;
 
-	free_page((unsigned long)pmd);
+	free_dmap_table(virt_to_page(pmd));
 	return true;
 }
 
@@ -2492,6 +2577,47 @@ void free_grouped_page(struct grouped_page_cache *gpc, struct page *page)
 	list_lru_add_node(&gpc->lru, &page->lru, page_to_nid(page));
 }
 #endif /* !HIGHMEM */
+
+#ifdef CONFIG_PKS_PG_TABLES
+/* PKS protect reserved dmap tables */
+static int __init init_pks_dmap_tables(void)
+{
+	struct pks_table_llnode *cur_entry;
+	static LLIST_HEAD(from_cache);
+	struct pks_table_llnode *tmp;
+	struct llist_node *cur, *next;
+
+	llist_for_each_safe(cur, next, llist_del_all(&tables_cache))
+		llist_add(cur, &from_cache);
+
+	while ((cur = llist_del_first(&from_cache))) {
+		llist_add(cur, &tables_cache);
+
+		tmp = kmalloc(sizeof(*tmp), GFP_KERNEL);
+		if (!tmp)
+			goto out_err;
+		tmp->table = cur;
+		llist_add(&tmp->node, &tables_to_covert);
+	}
+
+	tables_inited = true;
+
+	while ((cur = llist_del_first(&tables_to_covert))) {
+		cur_entry = llist_entry(cur, struct pks_table_llnode, node);
+		set_memory_pks((unsigned long)cur_entry->table, 1, STATIC_TABLE_KEY);
+		kfree(cur_entry);
+	}
+
+	return 0;
+out_err:
+	WARN(1, "Unable to protect all page tables\n");
+	llist_add(llist_del_all(&from_cache), &tables_cache);
+	return 0;
+}
+
+device_initcall(init_pks_dmap_tables);
+#endif
+
 /*
  * The testcases use internal knowledge of the implementation that shouldn't
  * be exposed to the rest of the kernel. Include these directly here.

@@ -26,6 +26,7 @@
 #include <asm/pti.h>
 #include <asm/text-patching.h>
 #include <asm/memtype.h>
+#include <asm/pgalloc.h>
 
 /*
  * We need to define the tracepoints somewhere, and tlb.c
@@ -119,6 +120,8 @@ __ref void *alloc_low_pages(unsigned int num)
 	if (after_bootmem) {
 		unsigned int order;
 
+		WARN_ON(IS_ENABLED(CONFIG_PKS_PG_TABLES));
+		/* TODO: When does this happen, how to deal with the order? */
 		order = get_order((unsigned long)num << PAGE_SHIFT);
 		return (void *)__get_free_pages(GFP_ATOMIC | __GFP_ZERO, order);
 	}
@@ -151,6 +154,11 @@ __ref void *alloc_low_pages(unsigned int num)
 		clear_page(adr);
 	}
 
+	printk("Allocing un-protected page table: %lx\n", (unsigned long)__va(pfn << PAGE_SHIFT));
+	/*
+	 * TODO: Save the va of this table to PKS protect post boot, but we need a small allocation
+	 * for the list...
+	 */
 	return __va(pfn << PAGE_SHIFT);
 }
 
@@ -530,6 +538,36 @@ unsigned long __ref init_memory_mapping(unsigned long start,
 	return ret >> PAGE_SHIFT;
 }
 
+/* TODO: Check this math */
+static u64 calc_tables_needed(unsigned int size)
+{
+	unsigned int puds = size >> PUD_SHIFT;
+	unsigned int pmds = size >> PMD_SHIFT;
+	unsigned int needed_to_map_tables = 0; //??
+
+	return puds + pmds + needed_to_map_tables;
+}
+
+static void __init reserve_page_tables(u64 start, u64 end)
+{
+	u64 reserve_size = calc_tables_needed(end - start);
+	u64 reserved = 0;
+	u64 cur;
+	int i;
+
+	while (reserved < reserve_size) {
+		cur = memblock_phys_alloc_range(HPAGE_SIZE, HPAGE_SIZE, start, end);
+		if (!cur) {
+			WARN(1, "Could not reserve HPAGE size page tables");
+			return;
+		}
+
+		for (i = 0; i < HPAGE_SIZE; i += PAGE_SIZE)
+			add_pks_table((long unsigned int)__va(cur + i));
+		reserved += HPAGE_SIZE;
+	}
+}
+
 /*
  * We need to iterate through the E820 memory map and create direct mappings
  * for only E820_TYPE_RAM and E820_KERN_RESERVED regions. We cannot simply
@@ -566,6 +604,8 @@ static unsigned long __init init_range_memory_mapping(
 		init_memory_mapping(start, end, PAGE_KERNEL);
 		mapped_ram_size += end - start;
 		can_use_brk_pgt = true;
+		if (IS_ENABLED(CONFIG_PKS_PG_TABLES))
+			reserve_page_tables(start, end);
 	}
 
 	return mapped_ram_size;

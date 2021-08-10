@@ -247,6 +247,14 @@ config ARCH_HAS_SET_DIRECT_MAP
 	bool
 
 #
+# Select if the architecture wants to minimize fragmentation of its
+# direct/linear map cauesd by set_memory and set_direct_map operations
+#
+config ARCH_WANTS_PTE_MAPPED_CACHE
+	bool
+	depends on ARCH_HAS_SET_MEMORY || ARCH_HAS_SET_DIRECT_MAP
+
+#
 # Select if the architecture provides the arch_dma_set_uncached symbol to
 # either provide an uncached segment alias for a DMA allocation, or
 # to remap the page tables in place.

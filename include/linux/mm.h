@@ -3291,5 +3291,7 @@ static inline int seal_check_future_write(int seals, struct vm_area_struct *vma)
 	return 0;
 }
 
+void pte_mapped_cache_init(void);
+
 #endif /* __KERNEL__ */
 #endif /* _LINUX_MM_H */

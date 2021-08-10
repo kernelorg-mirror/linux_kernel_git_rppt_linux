@@ -21,6 +21,8 @@ enum pageblock_bits {
 			/* 3 bits required for migrate types */
 	PB_migrate_skip,/* If set the block is skipped by compaction */
 
+	PB_pte_mapped, /* If set the block is mapped with PTEs in direct map */
+
 	/*
 	 * Assume the bits will always align on a word. If this assumption
 	 * changes then get/set pageblock needs updating.
@@ -87,5 +89,29 @@ static inline void set_pageblock_skip(struct page *page)
 {
 }
 #endif /* CONFIG_COMPACTION */
+
+#ifdef CONFIG_ARCH_WANTS_PTE_MAPPED_CACHE
+#define get_pageblock_pte_mapped(page)				\
+	get_pfnblock_flags_mask(page, page_to_pfn(page),	\
+			(1 << (PB_pte_mapped)))
+#define clear_pageblock_pte_mapped(page) \
+	set_pfnblock_flags_mask(page, 0, page_to_pfn(page),	\
+			(1 << PB_pte_mapped))
+#define set_pageblock_pte_mapped(page) \
+	set_pfnblock_flags_mask(page, (1 << PB_pte_mapped),	\
+			page_to_pfn(page),			\
+			(1 << PB_pte_mapped))
+#else /* CONFIG_ARCH_WANTS_PTE_MAPPED_CACHE */
+static inline bool get_pageblock_pte_mapped(struct page *page)
+{
+	return false;
+}
+static inline void clear_pageblock_pte_mapped(struct page *page)
+{
+}
+static inline void set_pageblock_pte_mapped(struct page *page)
+{
+}
+#endif /* CONFIG_ARCH_WANTS_PTE_MAPPED_CACHE */
 
 #endif	/* PAGEBLOCK_FLAGS_H */

@@ -72,6 +72,7 @@
 #include <linux/padata.h>
 #include <linux/khugepaged.h>
 #include <linux/buffer_head.h>
+#include <linux/set_memory.h>
 #include <asm/sections.h>
 #include <asm/tlbflush.h>
 #include <asm/div64.h>
@@ -106,6 +107,14 @@ typedef int __bitwise fpi_t;
  *       reporting).
  */
 #define FPI_TO_TAIL		((__force fpi_t)BIT(1))
+
+/*
+ * Free page directly to the page allocator rather than check if it should
+ * be placed into the cache of pte_mapped pages.
+ * Used by the pte_mapped cache shrinker.
+ * Has effect only when pte-mapped cache is enabled
+ */
+#define FPI_NO_PTE_MAP		((__force fpi_t)BIT(2))
 
 /*
  * Don't poison memory with KASAN (only for the tag-based modes).
@@ -224,6 +233,19 @@ static inline void set_pcppage_migratetype(struct page *page, int migratetype)
 {
 	page->index = migratetype;
 }
+
+#ifdef CONFIG_ARCH_WANTS_PTE_MAPPED_CACHE
+static struct page *alloc_page_pte_mapped(gfp_t gfp);
+static void free_page_pte_mapped(struct page *page);
+#else
+static inline struct page *alloc_page_pte_mapped(gfp_t gfp)
+{
+	return NULL;
+}
+static void free_page_pte_mapped(struct page *page)
+{
+}
+#endif
 
 #ifdef CONFIG_PM_SLEEP
 /*
@@ -536,7 +558,7 @@ void set_pfnblock_flags_mask(struct page *page, unsigned long flags,
 	unsigned long bitidx, word_bitidx;
 	unsigned long old_word, word;
 
-	BUILD_BUG_ON(NR_PAGEBLOCK_BITS != 4);
+	BUILD_BUG_ON(NR_PAGEBLOCK_BITS != 5);
 	BUILD_BUG_ON(MIGRATE_TYPES > (1 << PB_migratetype_bits));
 
 	bitmap = get_pageblock_bitmap(page, pfn);
@@ -1342,6 +1364,16 @@ static __always_inline bool free_pages_prepare(struct page *page,
 					   PAGE_SIZE << order);
 		debug_check_no_obj_freed(page_address(page),
 					   PAGE_SIZE << order);
+	}
+
+	/*
+	 * Unless are we shrinking pte_mapped cache return a page from
+	 * a pageblock mapped with PTEs to that cache.
+	 */
+	if (!order && !(fpi_flags & FPI_NO_PTE_MAP) &&
+	    get_pageblock_pte_mapped(page)) {
+		free_page_pte_mapped(page);
+		return false;
 	}
 
 	kernel_poison_pages(page, 1 << order);
@@ -3428,6 +3460,13 @@ void free_unref_page_list(struct list_head *list)
 	/* Prepare pages for freeing */
 	list_for_each_entry_safe(page, next, list, lru) {
 		pfn = page_to_pfn(page);
+
+		if (get_pageblock_pte_mapped(page)) {
+			list_del(&page->lru);
+			free_page_pte_mapped(page);
+			continue;
+		}
+
 		if (!free_unref_page_prepare(page, pfn, 0)) {
 			list_del(&page->lru);
 			continue;
@@ -5365,6 +5404,12 @@ struct page *__alloc_pages(gfp_t gfp, unsigned int order, int preferred_nid,
 			&alloc_gfp, &alloc_flags))
 		return NULL;
 
+	if ((alloc_gfp & __GFP_PTE_MAPPED) && order == 0) {
+		page = alloc_page_pte_mapped(alloc_gfp);
+		if (page)
+			goto out;
+	}
+
 	/*
 	 * Forbid the first pass from falling back to types that fragment
 	 * memory until all local zones are considered.
@@ -5664,6 +5709,220 @@ void free_pages_exact(void *virt, size_t size)
 	}
 }
 EXPORT_SYMBOL(free_pages_exact);
+
+#ifdef CONFIG_ARCH_WANTS_PTE_MAPPED_CACHE
+
+struct pte_mapped_cache {
+	struct shrinker shrinker;
+	struct list_lru lru;
+	atomic_t nid_round_robin;
+	unsigned long free_cnt;
+};
+
+static struct pte_mapped_cache pte_mapped_cache;
+
+static struct page *pte_mapped_cache_get(struct pte_mapped_cache *cache)
+{
+	unsigned long start_nid, i;
+	struct list_head *head;
+	struct page *page = NULL;
+
+	start_nid = atomic_fetch_inc(&cache->nid_round_robin) % nr_node_ids;
+	for (i = 0; i < nr_node_ids; i++) {
+		int cur_nid = (start_nid + i) % nr_node_ids;
+
+		head = list_lru_get_mru(&cache->lru, cur_nid);
+		if (head) {
+			page = list_entry(head, struct page, lru);
+			break;
+		}
+	}
+
+	return page;
+}
+
+static void pte_mapped_cache_add(struct pte_mapped_cache *cache,
+				 struct page *page)
+{
+	INIT_LIST_HEAD(&page->lru);
+	list_lru_add_node(&cache->lru, &page->lru, page_to_nid(page));
+	set_page_count(page, 0);
+}
+
+static void pte_mapped_cache_add_neighbour_pages(struct page *page)
+{
+#if 0
+	/*
+	 * TODO: if pte_mapped_cache_replenish() had to fallback to order-0
+	 * allocation, the large page in the direct map will be split
+	 * anyway and if there are free pages in the same pageblock they
+	 * can be added to pte_mapped cache.
+	 */
+	unsigned int order = (1 << HUGETLB_PAGE_ORDER);
+	unsigned int nr_pages = (1 << order);
+	unsigned long pfn = page_to_pfn(page);
+	struct page *page_head = page - (pfn & (order - 1));
+
+	for (i = 0; i < nr_pages; i++) {
+		page = page_head + i;
+		if (is_free_buddy_page(page)) {
+			take_page_off_buddy(page);
+			pte_mapped_cache_add(&pte_mapped_cache, page);
+		}
+	}
+#endif
+}
+
+static struct page *pte_mapped_cache_replenish(struct pte_mapped_cache *cache,
+					       gfp_t gfp)
+{
+	unsigned int order = HUGETLB_PAGE_ORDER;
+	unsigned int nr_pages;
+	struct page *page;
+	int i, err;
+
+	gfp &= ~__GFP_PTE_MAPPED;
+
+	page = alloc_pages(gfp, order);
+	if (!page) {
+		order = 0;
+		page = alloc_pages(gfp, order);
+		if (!page)
+			return NULL;
+	}
+
+	nr_pages = (1 << order);
+	err = set_memory_4k((unsigned long)page_address(page), nr_pages);
+	if (err)
+		goto err_free_pages;
+
+	if (order)
+		split_page(page, order);
+	else
+		pte_mapped_cache_add_neighbour_pages(page);
+
+	for (i = 1; i < nr_pages; i++)
+		pte_mapped_cache_add(cache, page + i);
+
+	set_pageblock_pte_mapped(page);
+
+	return page;
+
+err_free_pages:
+	__free_pages(page, order);
+	return NULL;
+}
+
+static struct page *alloc_page_pte_mapped(gfp_t gfp)
+{
+	struct pte_mapped_cache *cache = &pte_mapped_cache;
+	struct page *page;
+
+	page = pte_mapped_cache_get(cache);
+	if (page) {
+		prep_new_page(page, 0, gfp, 0);
+		goto out;
+	}
+
+	page = pte_mapped_cache_replenish(cache, gfp);
+
+out:
+	return page;
+}
+
+static void free_page_pte_mapped(struct page *page)
+{
+	pte_mapped_cache_add(&pte_mapped_cache, page);
+}
+
+static struct pte_mapped_cache *pte_mapped_cache_from_sc(struct shrinker *sh)
+{
+	return container_of(sh, struct pte_mapped_cache, shrinker);
+}
+
+static unsigned long pte_mapped_cache_shrink_count(struct shrinker *shrinker,
+						   struct shrink_control *sc)
+{
+	struct pte_mapped_cache *cache = pte_mapped_cache_from_sc(shrinker);
+	unsigned long count = list_lru_shrink_count(&cache->lru, sc);
+
+	return count ? count : SHRINK_EMPTY;
+}
+
+static enum lru_status pte_mapped_cache_shrink_isolate(struct list_head *item,
+						       struct list_lru_one *lst,
+						       spinlock_t *lock,
+						       void *cb_arg)
+{
+	struct list_head *freeable = cb_arg;
+
+	list_lru_isolate_move(lst, item, freeable);
+
+	return LRU_REMOVED;
+}
+
+static unsigned long pte_mapped_cache_shrink_scan(struct shrinker *shrinker,
+						  struct shrink_control *sc)
+{
+	struct pte_mapped_cache *cache = pte_mapped_cache_from_sc(shrinker);
+	struct list_head *cur, *next;
+	unsigned long isolated;
+	LIST_HEAD(freeable);
+
+	isolated = list_lru_shrink_walk(&cache->lru, sc,
+					pte_mapped_cache_shrink_isolate,
+					&freeable);
+
+	list_for_each_safe(cur, next, &freeable) {
+		struct page *page = list_entry(cur, struct page, lru);
+
+		list_del(cur);
+		__free_pages_ok(page, 0, FPI_NO_PTE_MAP);
+	}
+
+	/* Every item walked gets isolated */
+	sc->nr_scanned += isolated;
+
+	return isolated;
+}
+
+static int __pte_mapped_cache_init(struct pte_mapped_cache *cache)
+{
+	int err;
+
+	err = list_lru_init(&cache->lru);
+	if (err)
+		return err;
+
+	cache->shrinker.count_objects = pte_mapped_cache_shrink_count;
+	cache->shrinker.scan_objects = pte_mapped_cache_shrink_scan;
+	cache->shrinker.seeks = DEFAULT_SEEKS;
+	cache->shrinker.flags = SHRINKER_NUMA_AWARE;
+
+	err = register_shrinker(&cache->shrinker);
+	if (err)
+		goto err_list_lru_destroy;
+
+	return 0;
+
+err_list_lru_destroy:
+	list_lru_destroy(&cache->lru);
+	return err;
+}
+
+void __init pte_mapped_cache_init(void)
+{
+	if (gfp_allowed_mask & __GFP_PTE_MAPPED)
+		return;
+
+	if (!__pte_mapped_cache_init(&pte_mapped_cache))
+		gfp_allowed_mask |= __GFP_PTE_MAPPED;
+}
+#else
+void __init pte_mapped_cache_init(void)
+{
+}
+#endif /* CONFIG_ARCH_WANTS_PTE_MAPPED_CACHE */
 
 /**
  * nr_free_zone_pages - count number of pages beyond high watermark

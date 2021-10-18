@@ -17,6 +17,7 @@ EXPORT_SYMBOL(physical_mask);
 
 static struct grouped_page_cache gpc_pks;
 static bool pks_page_en;
+static int _pks_unprotect(struct page *page, unsigned int cnt);
 
 #ifdef CONFIG_HIGHPTE
 #define PGTABLE_HIGHMEM __GFP_HIGHMEM
@@ -72,6 +73,7 @@ struct page *alloc_table(gfp_t gfp)
 void free_table(struct page *table_page)
 {
 	if (!pks_page_en) {
+		_pks_unprotect(table_page, 1);
 		__free_pages(table_page, 0);
 		return;
 	}
@@ -101,10 +103,11 @@ early_param("userpte", setup_userpte);
 
 void ___pte_free_tlb(struct mmu_gather *tlb, struct page *pte)
 {
+	if (pks_page_en)
+		_pks_unprotect(pte, 1);
+
 	pgtable_pte_page_dtor(pte);
 	paravirt_release_pte(page_to_pfn(pte));
-	/* Set Page Table so swap knows how to free it */
-	__SetPageTable(pte);
 	paravirt_tlb_remove_table(tlb, pte);
 }
 
@@ -112,6 +115,10 @@ void ___pte_free_tlb(struct mmu_gather *tlb, struct page *pte)
 void ___pmd_free_tlb(struct mmu_gather *tlb, pmd_t *pmd)
 {
 	struct page *page = virt_to_page(pmd);
+
+	if (pks_page_en)
+		_pks_unprotect(page, 1);
+
 	paravirt_release_pmd(__pa(pmd) >> PAGE_SHIFT);
 	/*
 	 * NOTE! For PAE, any changes to the top page-directory-pointer-table
@@ -121,16 +128,17 @@ void ___pmd_free_tlb(struct mmu_gather *tlb, pmd_t *pmd)
 	tlb->need_flush_all = 1;
 #endif
 	pgtable_pmd_page_dtor(page);
-	/* Set Page Table so swap nows how to free it */
-	__SetPageTable(virt_to_page(pmd));
 	paravirt_tlb_remove_table(tlb, page);
 }
 
 #if CONFIG_PGTABLE_LEVELS > 3
 void ___pud_free_tlb(struct mmu_gather *tlb, pud_t *pud)
 {
+	struct page *page = virt_to_page(pud);
+
 	/* Set Page Table so swap nows how to free it */
-	__SetPageTable(virt_to_page(pud));
+	if (pks_page_en)
+		_pks_unprotect(page, 1);
 	paravirt_release_pud(__pa(pud) >> PAGE_SHIFT);
 	paravirt_tlb_remove_table(tlb, virt_to_page(pud));
 }
@@ -138,8 +146,11 @@ void ___pud_free_tlb(struct mmu_gather *tlb, pud_t *pud)
 #if CONFIG_PGTABLE_LEVELS > 4
 void ___p4d_free_tlb(struct mmu_gather *tlb, p4d_t *p4d)
 {
+	struct page *page = virt_to_page(p4d);
+
 	/* Set Page Table so swap nows how to free it */
-	__SetPageTable(virt_to_page(p4d));
+	if (pks_page_en)
+		_pks_unprotect(page, 1);
 	paravirt_release_p4d(__pa(p4d) >> PAGE_SHIFT);
 	paravirt_tlb_remove_table(tlb, virt_to_page(p4d));
 }
@@ -483,7 +494,10 @@ static inline pgd_t *_pgd_alloc(void)
 static inline void _pgd_free(pgd_t *pgd)
 {
 	if (pks_page_en) {
-		free_table(virt_to_page(pgd));
+		struct page *page = virt_to_page(pgd);
+
+		_pks_unprotect(page, 1);
+		free_table(page);
 		return;
 	}
 	free_pages((unsigned long)pgd, PGD_ALLOCATION_ORDER);

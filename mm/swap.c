@@ -929,7 +929,7 @@ void release_pages(struct page **pages, int nr)
 			continue;
 		}
 
-		if (PageTable(page)) {
+		if (WARN_ON_ONCE(PageTable(page))) {
 			__ClearPageTable(page);
 			free_table(page);
 			continue;

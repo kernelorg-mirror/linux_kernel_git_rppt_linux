@@ -2563,9 +2563,59 @@ out:
 	return err;
 }
 
+#define PKS_ALLOC_MODE_GROUPED 0
+#define PKS_ALLOC_MODE_PTE_MAPPED 1
+#define PKS_ALLOC_MODE_PTE_MAPPED_2 2
+
+static unsigned int pks_alloc_mode;
+static gfp_t pks_alloc_gfp;
+
+static __init int pks_alloc_mode_parse(char *arg)
+{
+	ssize_t ret;
+	unsigned long val;
+
+	if (!arg) {
+		pr_err("pks_alloc_mode config string not provided\n");
+		return -EINVAL;
+	}
+
+	ret = kstrtoul(arg, 10, &val);
+	if (ret)
+		return ret;
+
+	switch (val) {
+	case PKS_ALLOC_MODE_GROUPED:
+		break;
+	case PKS_ALLOC_MODE_PTE_MAPPED:
+		pks_alloc_gfp = __GFP_PTE_MAPPED;
+		break;
+	case PKS_ALLOC_MODE_PTE_MAPPED_2:
+		pks_alloc_gfp = __GFP_PTE_MAPPED_2;
+		break;
+	default:
+		pr_warn("Unknown PKS page tables allocation mode: %ld", val);
+		return -EINVAL;
+	}
+
+	pks_alloc_mode = val;
+
+	return 0;
+}
+early_param("pks_alloc_mode", pks_alloc_mode_parse);
+
 struct page *get_grouped_page(int node, struct grouped_page_cache *gpc)
 {
 	struct page *page;
+
+	if (pks_alloc_mode != PKS_ALLOC_MODE_GROUPED) {
+		gfp_t gfp = gpc->gfp | pks_alloc_gfp;
+
+		page = __alloc_page_order(node, gfp, 0);
+		if (page && gpc->pre_add_to_cache)
+			gpc->pre_add_to_cache(page, 1);
+		return page;
+	}
 
 	page = __remove_first_page(gpc, node);
 
@@ -2577,6 +2627,13 @@ struct page *get_grouped_page(int node, struct grouped_page_cache *gpc)
 
 void free_grouped_page(struct grouped_page_cache *gpc, struct page *page)
 {
+	if (pks_alloc_mode != PKS_ALLOC_MODE_GROUPED) {
+		if (page && gpc->pre_shrink_free)
+			gpc->pre_shrink_free(page, 1);
+		__free_page(page);
+		return;
+	}
+
 	INIT_LIST_HEAD(&page->lru);
 	set_page_private(page, 0);
 	list_lru_add_node(&gpc->lru, &page->lru, page_to_nid(page));

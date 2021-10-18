@@ -1465,6 +1465,8 @@ static void pagetypeinfo_showfree_print(struct seq_file *m,
 	int order, mtype;
 
 	for (mtype = 0; mtype < MIGRATE_TYPES; mtype++) {
+		unsigned long freesize = 0;
+
 		seq_printf(m, "Node %4d, zone %8s, type %12s ",
 					pgdat->node_id,
 					zone->name,
@@ -1493,11 +1495,12 @@ static void pagetypeinfo_showfree_print(struct seq_file *m,
 				}
 			}
 			seq_printf(m, "%s%6lu ", overflow ? ">" : "", freecount);
+			freesize += (freecount * (1 << order) * PAGE_SIZE);
 			spin_unlock_irq(&zone->lock);
 			cond_resched();
 			spin_lock_irq(&zone->lock);
 		}
-		seq_putc(m, '\n');
+		seq_printf(m, "%ldK\n", freesize >> 10);
 	}
 }
 

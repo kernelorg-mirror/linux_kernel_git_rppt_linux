@@ -56,8 +56,9 @@ struct vm_area_struct;
 #define ___GFP_ZEROTAGS		0x800000u
 #define ___GFP_SKIP_KASAN_POISON	0x1000000u
 #define ___GFP_PTE_MAPPED	0x2000000u
+#define ___GFP_PTE_MAPPED_2		0x4000000u
 #ifdef CONFIG_LOCKDEP
-#define ___GFP_NOLOCKDEP	0x4000000u
+#define ___GFP_NOLOCKDEP	0x8000000u
 #else
 #define ___GFP_NOLOCKDEP	0
 #endif
@@ -114,6 +115,7 @@ struct vm_area_struct;
 #define __GFP_THISNODE	((__force gfp_t)___GFP_THISNODE)
 #define __GFP_ACCOUNT	((__force gfp_t)___GFP_ACCOUNT)
 #define __GFP_PTE_MAPPED ((__force gfp_t)___GFP_PTE_MAPPED)
+#define __GFP_PTE_MAPPED_2 ((__force gfp_t)___GFP_PTE_MAPPED_2)
 
 /**
  * DOC: Watermark modifiers
@@ -256,7 +258,7 @@ struct vm_area_struct;
 #define __GFP_NOLOCKDEP ((__force gfp_t)___GFP_NOLOCKDEP)
 
 /* Room for N __GFP_FOO bits */
-#define __GFP_BITS_SHIFT (26 + IS_ENABLED(CONFIG_LOCKDEP))
+#define __GFP_BITS_SHIFT (27 + IS_ENABLED(CONFIG_LOCKDEP))
 #define __GFP_BITS_MASK ((__force gfp_t)((1 << __GFP_BITS_SHIFT) - 1))
 
 /**
@@ -355,6 +357,11 @@ static inline int gfp_migratetype(const gfp_t gfp_flags)
 
 	if (unlikely(page_group_by_mobility_disabled))
 		return MIGRATE_UNMOVABLE;
+
+#ifdef CONFIG_ARCH_HAS_FRAGILE_DIRECT_MAP
+	if (unlikely(gfp_flags & __GFP_PTE_MAPPED_2))
+		return MIGRATE_PTE_MAPPED;
+#endif
 
 	/* Group based on mobility */
 	return (gfp_flags & GFP_MOVABLE_MASK) >> GFP_MOVABLE_SHIFT;

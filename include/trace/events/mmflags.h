@@ -51,7 +51,8 @@
 	{(unsigned long)__GFP_KSWAPD_RECLAIM,	"__GFP_KSWAPD_RECLAIM"},\
 	{(unsigned long)__GFP_ZEROTAGS,		"__GFP_ZEROTAGS"},	\
 	{(unsigned long)__GFP_SKIP_KASAN_POISON,"__GFP_SKIP_KASAN_POISON"},\
-	{(unsigned long)__GFP_PTE_MAPPED,	"__GFP_PTE_MAPPED"}
+	{(unsigned long)__GFP_PTE_MAPPED,	"__GFP_PTE_MAPPED"}, \
+	{(unsigned long)__GFP_PTE_MAPPED_2,	"__GFP_PTE_MAPPED_2"}	\
 
 #define show_gfp_flags(flags)						\
 	(flags) ? __print_flags(flags, "|",				\

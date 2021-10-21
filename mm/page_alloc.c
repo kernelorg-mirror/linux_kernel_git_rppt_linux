@@ -80,6 +80,12 @@
 #include "shuffle.h"
 #include "page_reporting.h"
 
+/*
+ * FIXME: add a proper definition in include/linux/mm.h once DAX and arch
+ * people agree on the name
+ */
+#define PMD_ORDER      (PMD_SHIFT - PAGE_SHIFT)
+
 /* Free Page Internal flags: for internal, non-pcp variants of free_pages(). */
 typedef int __bitwise fpi_t;
 
@@ -342,6 +348,9 @@ const char * const migratetype_names[MIGRATE_TYPES] = {
 #ifdef CONFIG_CMA
 	"CMA",
 #endif
+#ifdef CONFIG_ARCH_HAS_FRAGILE_DIRECT_MAP
+	"Unmapped",
+#endif
 #ifdef CONFIG_MEMORY_ISOLATION
 	"Isolate",
 #endif
@@ -588,6 +597,38 @@ void set_pageblock_migratetype(struct page *page, int migratetype)
 
 	set_pfnblock_flags_mask(page, (unsigned long)migratetype,
 				page_to_pfn(page), MIGRATETYPE_MASK);
+}
+
+static __always_inline int migratetype_from_mapping(const struct page *page,
+						    int migratetype)
+{
+	int mt = migratetype;
+
+#ifdef CONFIG_ARCH_HAS_FRAGILE_DIRECT_MAP
+	unsigned long addr;
+	unsigned int level;
+	pte_t *pte;
+
+	if (is_migrate_pte_mapped(migratetype))
+		return migratetype;
+
+	addr = (unsigned long)page_address(page);
+	pte = lookup_address(addr, &level);
+	if (pte && level == PG_LEVEL_4K)
+		mt = MIGRATE_PTE_MAPPED;
+#endif
+
+	return mt;
+}
+
+static __always_inline int direct_map_aware_migratetype(const struct page *page,
+							unsigned long pfn)
+{
+	int mt = get_pfnblock_migratetype(page, pfn);
+
+	mt = migratetype_from_mapping(page, mt);
+
+	return mt;
 }
 
 #ifdef CONFIG_DEBUG_VM
@@ -951,7 +992,8 @@ compaction_capture(struct capture_control *capc, struct page *page,
 
 	/* Do not accidentally pollute CMA or isolated regions*/
 	if (is_migrate_cma(migratetype) ||
-	    is_migrate_isolate(migratetype))
+	    is_migrate_isolate(migratetype) ||
+	    is_migrate_pte_mapped(migratetype))
 		return false;
 
 	/*
@@ -1153,6 +1195,17 @@ continue_merging:
 
 done_merging:
 	set_buddy_order(page, order);
+
+#if 0
+	/*
+	 * FIXME: collapse 2M page in the direct map and move the pageblock
+	 * from MIGRATE_PTE_MAPPED to another migrate type.
+	 */
+	if ((order == PMD_ORDER) && is_migrate_pte_mapped_page(page)) {
+		set_direct_map_2M(page);
+		set_pageblock_migratetype(page, MIGRATE_MOVABLE);
+	}
+#endif
 
 	if (fpi_flags & FPI_TO_TAIL)
 		to_tail = true;
@@ -1560,7 +1613,10 @@ static void free_pcppages_bulk(struct zone *zone, int count,
 		order = mt & NR_PCP_ORDER_MASK;
 		mt >>= NR_PCP_ORDER_WIDTH;
 
-		/* MIGRATE_ISOLATE page should not go to pcplists */
+		/*
+		 * MIGRATE_ISOLATE or MIGRATE_PTE_MAPPED page should not go to
+		 * pcplists
+		 */
 		VM_BUG_ON_PAGE(is_migrate_isolate(mt), page);
 		/* Pageblock could have been isolated meanwhile */
 		if (unlikely(isolated_pageblocks))
@@ -2506,6 +2562,9 @@ static int fallbacks[MIGRATE_TYPES][3] = {
 	[MIGRATE_UNMOVABLE]   = { MIGRATE_RECLAIMABLE, MIGRATE_MOVABLE,   MIGRATE_TYPES },
 	[MIGRATE_MOVABLE]     = { MIGRATE_RECLAIMABLE, MIGRATE_UNMOVABLE, MIGRATE_TYPES },
 	[MIGRATE_RECLAIMABLE] = { MIGRATE_UNMOVABLE,   MIGRATE_MOVABLE,   MIGRATE_TYPES },
+#ifdef CONFIG_ARCH_HAS_FRAGILE_DIRECT_MAP
+	[MIGRATE_PTE_MAPPED] = { MIGRATE_RECLAIMABLE, MIGRATE_UNMOVABLE, MIGRATE_TYPES },
+#endif
 #ifdef CONFIG_CMA
 	[MIGRATE_CMA]         = { MIGRATE_TYPES }, /* Never used */
 #endif
@@ -2522,6 +2581,17 @@ static __always_inline struct page *__rmqueue_cma_fallback(struct zone *zone,
 }
 #else
 static inline struct page *__rmqueue_cma_fallback(struct zone *zone,
+					unsigned int order) { return NULL; }
+#endif
+
+#ifdef CONFIG_ARCH_HAS_FRAGILE_DIRECT_MAP
+static __always_inline struct page *__rmqueue_unmapped_fallback(struct zone *zone,
+					unsigned int order)
+{
+	return __rmqueue_smallest(zone, order, MIGRATE_PTE_MAPPED);
+}
+#else
+static inline struct page *__rmqueue_unmapped_fallback(struct zone *zone,
 					unsigned int order) { return NULL; }
 #endif
 
@@ -2693,6 +2763,15 @@ static void steal_suitable_fallback(struct zone *zone, struct page *page,
 	 */
 	if (is_migrate_highatomic(old_block_type))
 		goto single_page;
+
+	/*
+	 * take the entire page block if start_type is MIGRATE_PTE_MAPPED
+	 */
+	if (unlikely(is_migrate_pte_mapped(start_type))) {
+		free_pages = move_freepages_block(zone, page, start_type, NULL);
+		set_pageblock_migratetype(page, start_type);
+		return;
+	}
 
 	/* Take ownership for orders >= pageblock_order */
 	if (current_order >= pageblock_order) {
@@ -3030,6 +3109,9 @@ retry:
 		if (!page && __rmqueue_fallback(zone, order, migratetype,
 								alloc_flags))
 			goto retry;
+
+		if (!page && IS_ENABLED(CONFIG_ARCH_HAS_FRAGILE_DIRECT_MAP))
+			page = __rmqueue_unmapped_fallback(zone, order);
 	}
 out:
 	if (page)
@@ -5437,6 +5519,23 @@ out:
 	    unlikely(__memcg_kmem_charge_page(page, gfp, order) != 0)) {
 		__free_pages(page, order);
 		page = NULL;
+	}
+
+	if (gfp & __GFP_PTE_MAPPED_2) {
+		unsigned long addr = (unsigned long)page_address(page);
+		unsigned long nr_pages = (1 << order);
+		int err;
+
+		err = set_memory_4k(addr, nr_pages);
+		if (err) {
+			/* FIXME: reset pageblock migratetype */
+			/* set_pageblock_migratetype(old_mt) */
+			__free_pages(page, order);
+			page = NULL;
+		}
+
+		/* FIXME: should we flush TLB here or later? */
+		/* flush_tlb_kernel_range(addr, addr + PAGE_SIZE * nr_pages); */
 	}
 
 	trace_mm_page_alloc(page, order, alloc_gfp, ac.migratetype);

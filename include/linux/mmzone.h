@@ -43,6 +43,9 @@ enum migratetype {
 	MIGRATE_UNMOVABLE,
 	MIGRATE_MOVABLE,
 	MIGRATE_RECLAIMABLE,
+#ifdef CONFIG_ARCH_HAS_FRAGILE_DIRECT_MAP
+	MIGRATE_PTE_MAPPED,
+#endif
 	MIGRATE_PCPTYPES,	/* the number of types on the pcp lists */
 	MIGRATE_HIGHATOMIC = MIGRATE_PCPTYPES,
 #ifdef CONFIG_CMA
@@ -76,6 +79,14 @@ extern const char * const migratetype_names[MIGRATE_TYPES];
 #else
 #  define is_migrate_cma(migratetype) false
 #  define is_migrate_cma_page(_page) false
+#endif
+
+#ifdef CONFIG_ARCH_HAS_FRAGILE_DIRECT_MAP
+#  define is_migrate_pte_mapped(migratetype) ((migratetype) == MIGRATE_PTE_MAPPED)
+#  define is_migrate_pte_mapped_page(_page) (get_pageblock_migratetype(_page) == MIGRATE_PTE_MAPPED)
+#else
+#  define is_migrate_pte_mapped(migratetype) false
+#  define is_migrate_pte_mapped_page(_page) false
 #endif
 
 static inline bool is_migrate_movable(int mt)

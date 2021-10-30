@@ -2574,6 +2574,7 @@ struct page *get_grouped_page(int node, struct grouped_page_cache *gpc)
 void free_grouped_page(struct grouped_page_cache *gpc, struct page *page)
 {
 	INIT_LIST_HEAD(&page->lru);
+	set_page_private(page, 0);
 	list_lru_add_node(&gpc->lru, &page->lru, page_to_nid(page));
 }
 #endif /* !HIGHMEM */

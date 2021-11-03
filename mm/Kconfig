@@ -831,7 +831,7 @@ config ARCH_ENABLE_SUPERVISOR_PKEYS
 
 config PKS_PG_TABLES
 	def_bool y
-	depends on !PAGE_TABLE_ISOLATION && !HIGHMEM && !X86_PAE && PGTABLE_LEVELS = 4
+	depends on !HIGHMEM && !X86_PAE && PGTABLE_LEVELS = 4
 
 config PERCPU_STATS
 	bool "Collect percpu memory statistics"

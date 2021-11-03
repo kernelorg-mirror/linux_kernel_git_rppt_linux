@@ -41,14 +41,14 @@ pgtable_t pte_alloc_one(struct mm_struct *mm)
 }
 
 #ifdef CONFIG_PKS_PG_TABLES
-struct page *alloc_table(gfp_t gfp)
+static struct page *__alloc_table(gfp_t gfp, int order)
 {
 	struct page *table;
 
 	if (!pks_page_en)
 		return alloc_page(gfp);
 
-	table = get_grouped_page(numa_node_id(), &gpc_pks);
+	table = get_grouped_page(numa_node_id(), order, &gpc_pks);
 	if (!table)
 		return NULL;
 
@@ -70,17 +70,37 @@ struct page *alloc_table(gfp_t gfp)
 	return table;
 }
 
-void free_table(struct page *table_page)
+struct page *alloc_table(gfp_t gfp)
+{
+	return __alloc_table(gfp, 0);
+}
+
+static void __free_table(struct page *table_page, int order)
 {
 	if (!pks_page_en) {
-		_pks_unprotect(table_page, 1);
-		__free_pages(table_page, 0);
+		_pks_unprotect(table_page, (1 << order));
+		__free_pages(table_page, order);
 		return;
 	}
 
 	if (memcg_kmem_enabled() && PageMemcgKmem(table_page))
 		__memcg_kmem_uncharge_page(table_page, 0);
 	free_grouped_page(&gpc_pks, table_page);
+}
+
+void free_table(struct page *table_page)
+{
+	__free_table(table_page, 0);
+}
+#else
+static struct page *__alloc_table(gfp_t gfp, int order)
+{
+	return alloc_pages(gfp, order);
+}
+
+static void __free_table(struct page *table_page, int order)
+{
+	__free_pages(table_page, order);
 }
 #endif /* CONFIG_PKS_PG_TABLES */
 
@@ -480,7 +500,8 @@ static inline void _pgd_free(pgd_t *pgd)
 static inline pgd_t *_pgd_alloc(void)
 {
 	if (pks_page_en) {
-		struct page *page = alloc_table(GFP_PGTABLE_USER);
+		struct page *page = __alloc_table(GFP_PGTABLE_USER,
+						PGD_ALLOCATION_ORDER);
 
 		if (!page)
 			return NULL;

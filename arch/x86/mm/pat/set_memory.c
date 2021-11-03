@@ -2604,9 +2604,13 @@ static __init int pks_alloc_mode_parse(char *arg)
 }
 early_param("pks_alloc_mode", pks_alloc_mode_parse);
 
-struct page *get_grouped_page(int node, struct grouped_page_cache *gpc)
+struct page *get_grouped_page(int node, int order,
+			      struct grouped_page_cache *gpc)
 {
 	struct page *page;
+
+	if (WARN_ON_ONCE(order && (pks_alloc_mode == PKS_ALLOC_MODE_GROUPED)))
+		return NULL;
 
 	if (pks_alloc_mode != PKS_ALLOC_MODE_GROUPED) {
 		gfp_t gfp = gpc->gfp | pks_alloc_gfp;

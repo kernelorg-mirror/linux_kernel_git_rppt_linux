@@ -70,6 +70,7 @@ static DEFINE_SPINLOCK(cpa_lock);
 #define CPA_ARRAY 2
 #define CPA_PAGES_ARRAY 4
 #define CPA_NO_CHECK_ALIAS 8 /* Do not search for aliases */
+#define CPA_PKS 0x10
 
 #ifdef CONFIG_PKS_PG_TABLES
 static LLIST_HEAD(tables_cache);
@@ -1822,7 +1823,8 @@ static int change_page_attr_set_clr(unsigned long *addr, int numpages,
 	/* Must avoid aliasing mappings in the highmem code */
 	kmap_flush_unused();
 
-	vm_unmap_aliases();
+	if (!(in_flag & CPA_PKS))
+		vm_unmap_aliases();
 
 	cpa.vaddr = addr;
 	cpa.pages = pages;
@@ -2009,9 +2011,11 @@ EXPORT_SYMBOL(set_memory_wb);
 
 int set_memory_pks(unsigned long addr, int numpages, int key)
 {
+	int cpa_flags = CPA_PKS;
+
 	return change_page_attr_set_clr(&addr, numpages, __pgprot(_PAGE_PKEY(key)),
 					__pgprot(_PAGE_PKEY(0xF & ~(unsigned int)key)),
-					0, 0, NULL);
+					0, cpa_flags, NULL);
 }
 
 int set_memory_x(unsigned long addr, int numpages)

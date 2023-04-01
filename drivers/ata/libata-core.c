@@ -5989,7 +5989,7 @@ struct ata_port *ata_port_alloc(struct ata_host *host)
 
 	DPRINTK("ENTER\n");
 
-	ap = kzalloc(sizeof(*ap), GFP_KERNEL);
+	ap = kzalloc(sizeof(*ap), GFP_KERNEL|___GFP_COF);
 	if (!ap)
 		return NULL;
 
@@ -6108,7 +6108,7 @@ struct ata_host *ata_host_alloc(struct device *dev, int max_ports)
 
 	/* alloc a container for our list of ATA ports (buses) */
 	sz = sizeof(struct ata_host) + (max_ports + 1) * sizeof(void *);
-	host = kzalloc(sz, GFP_KERNEL);
+	host = kzalloc(sz, GFP_KERNEL|___GFP_COF);
 	if (!host)
 		return NULL;
 

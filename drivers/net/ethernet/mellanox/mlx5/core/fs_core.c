@@ -620,10 +620,10 @@ static struct fs_fte *alloc_fte(struct mlx5_flow_table *ft,
 	struct mlx5_flow_steering *steering = get_steering(&ft->node);
 	struct fs_fte *fte;
 
-	fte = kmem_cache_zalloc(steering->ftes_cache, GFP_KERNEL);
+	fte = kmem_cache_zalloc(steering->ftes_cache, GFP_KERNEL|___GFP_COF);
 	if (!fte)
 		return ERR_PTR(-ENOMEM);
-
+	pr_info("COF mlx\n");
 	memcpy(fte->val, &spec->match_value, sizeof(fte->val));
 	fte->node.type =  FS_TYPE_FLOW_ENTRY;
 	fte->action = *flow_act;
@@ -650,10 +650,10 @@ static struct mlx5_flow_group *alloc_flow_group(struct mlx5_flow_steering *steer
 	struct mlx5_flow_group *fg;
 	int ret;
 
-	fg = kmem_cache_zalloc(steering->fgs_cache, GFP_KERNEL);
+	fg = kmem_cache_zalloc(steering->fgs_cache, GFP_KERNEL|___GFP_COF);
 	if (!fg)
 		return ERR_PTR(-ENOMEM);
-
+	pr_info("COF mlx\n");
 	ret = rhashtable_init(&fg->ftes_hash, &rhash_fte);
 	if (ret) {
 		kmem_cache_free(steering->fgs_cache, fg);

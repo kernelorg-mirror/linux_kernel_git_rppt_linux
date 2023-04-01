@@ -2746,9 +2746,9 @@ int mlx5_init_fs(struct mlx5_core_dev *dev)
 
 	steering->fgs_cache = kmem_cache_create("mlx5_fs_fgs",
 						sizeof(struct mlx5_flow_group), 0,
-						0, NULL);
+						SLAB_HWCACHE_ALIGN|SLAB_COF, NULL);
 	steering->ftes_cache = kmem_cache_create("mlx5_fs_ftes", sizeof(struct fs_fte), 0,
-						 0, NULL);
+						 SLAB_HWCACHE_ALIGN|SLAB_COF, NULL);
 	if (!steering->ftes_cache || !steering->fgs_cache) {
 		err = -ENOMEM;
 		goto err;

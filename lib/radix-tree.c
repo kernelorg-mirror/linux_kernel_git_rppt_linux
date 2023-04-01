@@ -260,7 +260,7 @@ radix_tree_node_alloc(gfp_t gfp_mask, struct radix_tree_node *parent,
 		 * cgroup.
 		 */
 		ret = kmem_cache_alloc(radix_tree_node_cachep,
-				       gfp_mask | __GFP_NOWARN);
+				       gfp_mask | __GFP_NOWARN | ___GFP_COF);
 		if (ret)
 			goto out;
 
@@ -282,7 +282,7 @@ radix_tree_node_alloc(gfp_t gfp_mask, struct radix_tree_node *parent,
 		kmemleak_update_trace(ret);
 		goto out;
 	}
-	ret = kmem_cache_alloc(radix_tree_node_cachep, gfp_mask);
+	ret = kmem_cache_alloc(radix_tree_node_cachep, gfp_mask | ___GFP_COF);
 out:
 	BUG_ON(radix_tree_is_internal_node(ret));
 	if (ret) {
@@ -344,7 +344,7 @@ static __must_check int __radix_tree_preload(gfp_t gfp_mask, unsigned nr)
 	rtp = this_cpu_ptr(&radix_tree_preloads);
 	while (rtp->nr < nr) {
 		preempt_enable();
-		node = kmem_cache_alloc(radix_tree_node_cachep, gfp_mask);
+		node = kmem_cache_alloc(radix_tree_node_cachep, gfp_mask | ___GFP_COF);
 		if (node == NULL)
 			goto out;
 		preempt_disable();

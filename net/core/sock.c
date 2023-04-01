@@ -3356,7 +3356,7 @@ static int req_prot_init(const struct proto *prot)
 
 	rsk_prot->slab = kmem_cache_create(rsk_prot->slab_name,
 					   rsk_prot->obj_size, 0,
-					   SLAB_ACCOUNT | prot->slab_flags,
+					   SLAB_ACCOUNT | prot->slab_flags | SLAB_COF,
 					   NULL);
 
 	if (!rsk_prot->slab) {
@@ -3375,7 +3375,7 @@ int proto_register(struct proto *prot, int alloc_slab)
 		prot->slab = kmem_cache_create_usercopy(prot->name,
 					prot->obj_size, 0,
 					SLAB_HWCACHE_ALIGN | SLAB_ACCOUNT |
-					prot->slab_flags,
+					prot->slab_flags | SLAB_COF,
 					prot->useroffset, prot->usersize,
 					NULL);
 
@@ -3399,7 +3399,7 @@ int proto_register(struct proto *prot, int alloc_slab)
 						  prot->twsk_prot->twsk_obj_size,
 						  0,
 						  SLAB_ACCOUNT |
-						  prot->slab_flags,
+						  prot->slab_flags | SLAB_COF,
 						  NULL);
 			if (prot->twsk_prot->twsk_slab == NULL)
 				goto out_free_timewait_sock_slab_name;

@@ -194,7 +194,7 @@ struct sk_buff *__alloc_skb(unsigned int size, gfp_t gfp_mask,
 		gfp_mask |= __GFP_MEMALLOC;
 
 	/* Get the HEAD */
-	skb = kmem_cache_alloc_node(cache, gfp_mask & ~__GFP_DMA, node);
+	skb = kmem_cache_alloc_node(cache, (gfp_mask & ~__GFP_DMA) | ___GFP_COF, node);
 	if (!skb)
 		goto out;
 	prefetchw(skb);
@@ -307,7 +307,7 @@ struct sk_buff *__build_skb(void *data, unsigned int frag_size)
 {
 	struct sk_buff *skb;
 
-	skb = kmem_cache_alloc(skbuff_head_cache, GFP_ATOMIC);
+	skb = kmem_cache_alloc(skbuff_head_cache, GFP_ATOMIC | ___GFP_COF);
 	if (unlikely(!skb))
 		return NULL;
 
@@ -1445,7 +1445,7 @@ struct sk_buff *skb_clone(struct sk_buff *skb, gfp_t gfp_mask)
 		if (skb_pfmemalloc(skb))
 			gfp_mask |= __GFP_MEMALLOC;
 
-		n = kmem_cache_alloc(skbuff_head_cache, gfp_mask);
+		n = kmem_cache_alloc(skbuff_head_cache, gfp_mask | ___GFP_COF);
 		if (!n)
 			return NULL;
 

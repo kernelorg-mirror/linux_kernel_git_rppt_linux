@@ -357,7 +357,7 @@ static struct key_vector *leaf_new(t_key key, struct fib_alias *fa)
 	struct key_vector *l;
 	struct tnode *kv;
 
-	kv = kmem_cache_alloc(trie_leaf_kmem, GFP_KERNEL);
+	kv = kmem_cache_alloc(trie_leaf_kmem, GFP_KERNEL/*|___GFP_COF*/);
 	if (!kv)
 		return NULL;
 
@@ -1201,7 +1201,7 @@ int fib_table_insert(struct net *net, struct fib_table *tb,
 				goto out;
 			}
 			err = -ENOBUFS;
-			new_fa = kmem_cache_alloc(fn_alias_kmem, GFP_KERNEL);
+			new_fa = kmem_cache_alloc(fn_alias_kmem, GFP_KERNEL/*|___GFP_COF*/);
 			if (!new_fa)
 				goto out;
 
@@ -1255,7 +1255,7 @@ int fib_table_insert(struct net *net, struct fib_table *tb,
 
 	nlflags |= NLM_F_CREATE;
 	err = -ENOBUFS;
-	new_fa = kmem_cache_alloc(fn_alias_kmem, GFP_KERNEL);
+	new_fa = kmem_cache_alloc(fn_alias_kmem, GFP_KERNEL/*|___GFP_COF*/);
 	if (!new_fa)
 		goto out;
 
@@ -1758,7 +1758,7 @@ struct fib_table *fib_trie_unmerge(struct fib_table *oldtb)
 				continue;
 
 			/* clone fa for new local table */
-			new_fa = kmem_cache_alloc(fn_alias_kmem, GFP_KERNEL);
+			new_fa = kmem_cache_alloc(fn_alias_kmem, GFP_KERNEL/*|___GFP_COF*/);
 			if (!new_fa)
 				goto out;
 

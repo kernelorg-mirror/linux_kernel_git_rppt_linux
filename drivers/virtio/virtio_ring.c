@@ -406,7 +406,7 @@ static struct vring_desc *alloc_indirect_split(struct virtqueue *_vq,
 	desc = kmalloc_array(total_sg, sizeof(struct vring_desc), gfp);
 	if (!desc)
 		return NULL;
-
+	//pr_info("alloc_indirect_split(): cof -- %d\n", is_vmalloc_addr(desc));
 	for (i = 0; i < total_sg; i++)
 		desc[i].next = cpu_to_virtio16(_vq->vdev, i + 1);
 	return desc;
@@ -972,7 +972,7 @@ static struct vring_packed_desc *alloc_indirect_packed(unsigned int total_sg,
 	gfp &= ~__GFP_HIGHMEM;
 
 	desc = kmalloc_array(total_sg, sizeof(struct vring_packed_desc), gfp);
-
+	pr_info("alloc_indirect_packed() -- cof\n");
 	return desc;
 }
 

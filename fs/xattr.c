@@ -817,7 +817,7 @@ struct simple_xattr *simple_xattr_alloc(const void *value, size_t size)
 	if (len < sizeof(*new_xattr))
 		return NULL;
 
-	new_xattr = kmalloc(len, GFP_KERNEL);
+	new_xattr = kmalloc(len, GFP_KERNEL | ___GFP_COF);
 	if (!new_xattr)
 		return NULL;
 

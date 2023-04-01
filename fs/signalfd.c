@@ -275,7 +275,7 @@ static int do_signalfd4(int ufd, sigset_t *mask, int flags)
 	signotset(mask);
 
 	if (ufd == -1) {
-		ctx = kmalloc(sizeof(*ctx), GFP_KERNEL);
+		ctx = kmalloc(sizeof(*ctx), GFP_KERNEL | ___GFP_COF);
 		if (!ctx)
 			return -ENOMEM;
 

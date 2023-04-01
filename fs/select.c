@@ -990,7 +990,7 @@ static int do_sys_poll(struct pollfd __user *ufds, unsigned int nfds,
 
 		len = min(todo, POLLFD_PER_PAGE);
 		walk = walk->next = kmalloc(struct_size(walk, entries, len),
-					    GFP_KERNEL);
+					    GFP_KERNEL | ___GFP_COF);
 		if (!walk) {
 			err = -ENOMEM;
 			goto out_fds;
@@ -1200,7 +1200,7 @@ static int compat_core_sys_select(int n, compat_ulong_t __user *inp,
 	size = FDS_BYTES(n);
 	bits = stack_fds;
 	if (size > sizeof(stack_fds) / 6) {
-		bits = kmalloc_array(6, size, GFP_KERNEL);
+		bits = kmalloc_array(6, size, GFP_KERNEL | ___GFP_COF);
 		ret = -ENOMEM;
 		if (!bits)
 			goto out_nofds;

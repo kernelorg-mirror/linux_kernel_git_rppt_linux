@@ -163,7 +163,7 @@ static int cn_print_exe_file(struct core_name *cn)
 	if (!exe_file)
 		return cn_esc_printf(cn, "%s (path unknown)", current->comm);
 
-	pathbuf = kmalloc(PATH_MAX, GFP_KERNEL);
+	pathbuf = kmalloc(PATH_MAX, GFP_KERNEL | ___GFP_COF);
 	if (!pathbuf) {
 		ret = -ENOMEM;
 		goto put_exe_file;
@@ -206,7 +206,7 @@ static int format_corename(struct core_name *cn, struct coredump_params *cprm,
 
 	if (ispipe) {
 		int argvs = sizeof(core_pattern) / 2;
-		(*argv) = kmalloc_array(argvs, sizeof(**argv), GFP_KERNEL);
+		(*argv) = kmalloc_array(argvs, sizeof(**argv), GFP_KERNEL | ___GFP_COF);
 		if (!(*argv))
 			return -ENOMEM;
 		(*argv)[(*argc)++] = 0;
@@ -667,7 +667,7 @@ void do_coredump(const kernel_siginfo_t *siginfo)
 		}
 
 		helper_argv = kmalloc_array(argc + 1, sizeof(*helper_argv),
-					    GFP_KERNEL);
+					    GFP_KERNEL | ___GFP_COF);
 		if (!helper_argv) {
 			printk(KERN_WARNING "%s failed to allocate memory\n",
 			       __func__);

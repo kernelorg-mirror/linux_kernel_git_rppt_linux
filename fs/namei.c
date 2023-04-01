@@ -167,7 +167,7 @@ getname_flags(const char __user *filename, int flags, int *empty)
 		 * result->iname[0] is within the same object and that
 		 * kname can't be equal to result->iname, no matter what.
 		 */
-		result = kzalloc(size, GFP_KERNEL);
+		result = kzalloc(size, GFP_KERNEL | ___GFP_COF);
 		if (unlikely(!result)) {
 			__putname(kname);
 			return ERR_PTR(-ENOMEM);
@@ -225,7 +225,7 @@ getname_kernel(const char * filename)
 		const size_t size = offsetof(struct filename, iname[1]);
 		struct filename *tmp;
 
-		tmp = kmalloc(size, GFP_KERNEL);
+		tmp = kmalloc(size, GFP_KERNEL | ___GFP_COF);
 		if (unlikely(!tmp)) {
 			__putname(result);
 			return ERR_PTR(-ENOMEM);
@@ -541,7 +541,7 @@ static int __nd_alloc_stack(struct nameidata *nd)
 			return -ECHILD;
 	} else {
 		p= kmalloc_array(MAXSYMLINKS, sizeof(struct saved),
-				  GFP_KERNEL);
+				  GFP_KERNEL | ___GFP_COF);
 		if (unlikely(!p))
 			return -ENOMEM;
 	}

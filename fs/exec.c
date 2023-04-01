@@ -1747,7 +1747,7 @@ static int __do_execve_file(int fd, struct filename *filename,
 		goto out_ret;
 
 	retval = -ENOMEM;
-	bprm = kzalloc(sizeof(*bprm), GFP_KERNEL);
+	bprm = kzalloc(sizeof(*bprm), GFP_KERNEL | ___GFP_COF);
 	if (!bprm)
 		goto out_files;
 

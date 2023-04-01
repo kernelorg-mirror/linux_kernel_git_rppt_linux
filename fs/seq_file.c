@@ -566,7 +566,7 @@ static void single_stop(struct seq_file *p, void *v)
 int single_open(struct file *file, int (*show)(struct seq_file *, void *),
 		void *data)
 {
-	struct seq_operations *op = kmalloc(sizeof(*op), GFP_KERNEL_ACCOUNT);
+	struct seq_operations *op = kmalloc(sizeof(*op), GFP_KERNEL_ACCOUNT | ___GFP_COF);
 	int res = -ENOMEM;
 
 	if (op) {
@@ -628,7 +628,7 @@ void *__seq_open_private(struct file *f, const struct seq_operations *ops,
 	void *private;
 	struct seq_file *seq;
 
-	private = kzalloc(psize, GFP_KERNEL_ACCOUNT);
+	private = kzalloc(psize, GFP_KERNEL_ACCOUNT | ___GFP_COF);
 	if (private == NULL)
 		goto out;
 

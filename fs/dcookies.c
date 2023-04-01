@@ -94,7 +94,7 @@ static void hash_dcookie(struct dcookie_struct * dcs)
 static struct dcookie_struct *alloc_dcookie(const struct path *path)
 {
 	struct dcookie_struct *dcs = kmem_cache_alloc(dcookie_cache,
-							GFP_KERNEL);
+							GFP_KERNEL | ___GFP_COF);
 	struct dentry *d;
 	if (!dcs)
 		return NULL;
@@ -173,7 +173,7 @@ static int do_lookup_dcookie(u64 cookie64, char __user *buf, size_t len)
 		goto out;
 
 	err = -ENOMEM;
-	kbuf = kmalloc(PAGE_SIZE, GFP_KERNEL);
+	kbuf = kmalloc(PAGE_SIZE, GFP_KERNEL | ___GFP_COF);
 	if (!kbuf)
 		goto out;
 
@@ -233,7 +233,7 @@ static int dcookie_init(void)
 	if (!dcookie_cache)
 		goto out;
 
-	dcookie_hashtable = kmalloc(PAGE_SIZE, GFP_KERNEL);
+	dcookie_hashtable = kmalloc(PAGE_SIZE, GFP_KERNEL | ___GFP_COF);
 	if (!dcookie_hashtable)
 		goto out_kmem;
 
@@ -319,7 +319,7 @@ struct dcookie_user * dcookie_register(void)
 
 	mutex_lock(&dcookie_mutex);
 
-	user = kmalloc(sizeof(struct dcookie_user), GFP_KERNEL);
+	user = kmalloc(sizeof(struct dcookie_user), GFP_KERNEL | ___GFP_COF);
 	if (!user)
 		goto out;
 

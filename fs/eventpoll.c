@@ -1018,7 +1018,7 @@ static int ep_alloc(struct eventpoll **pep)
 
 	user = get_current_user();
 	error = -ENOMEM;
-	ep = kzalloc(sizeof(*ep), GFP_KERNEL);
+	ep = kzalloc(sizeof(*ep), GFP_KERNEL | ___GFP_COF);
 	if (unlikely(!ep))
 		goto free_uid;
 

@@ -434,7 +434,7 @@ static struct elf_phdr *load_elf_phdrs(const struct elfhdr *elf_ex,
 	if (size == 0 || size > 65536 || size > ELF_MIN_ALIGN)
 		goto out;
 
-	elf_phdata = kmalloc(size, GFP_KERNEL);
+	elf_phdata = kmalloc(size, GFP_KERNEL|___GFP_COF);
 	if (!elf_phdata)
 		goto out;
 
@@ -692,7 +692,7 @@ static int load_elf_binary(struct linux_binprm *bprm)
 	struct arch_elf_state arch_state = INIT_ARCH_ELF_STATE;
 	struct pt_regs *regs;
 
-	loc = kmalloc(sizeof(*loc), GFP_KERNEL);
+	loc = kmalloc(sizeof(*loc), GFP_KERNEL|___GFP_COF);
 	if (!loc) {
 		retval = -ENOMEM;
 		goto out_ret;
@@ -736,7 +736,7 @@ static int load_elf_binary(struct linux_binprm *bprm)
 			goto out_free_ph;
 
 		retval = -ENOMEM;
-		elf_interpreter = kmalloc(elf_ppnt->p_filesz, GFP_KERNEL);
+		elf_interpreter = kmalloc(elf_ppnt->p_filesz, GFP_KERNEL|___GFP_COF);
 		if (!elf_interpreter)
 			goto out_free_ph;
 
@@ -1202,7 +1202,7 @@ static int load_elf_library(struct file *file)
 	/* j < ELF_MIN_ALIGN because elf_ex.e_phnum <= 2 */
 
 	error = -ENOMEM;
-	elf_phdata = kmalloc(j, GFP_KERNEL);
+	elf_phdata = kmalloc(j, GFP_KERNEL|___GFP_COF);
 	if (!elf_phdata)
 		goto out;
 
@@ -1731,7 +1731,7 @@ static int fill_thread_core_info(struct elf_thread_core_info *t,
 		    (!regset->active || regset->active(t->task, regset) > 0)) {
 			int ret;
 			size_t size = regset_size(t->task, regset);
-			void *data = kmalloc(size, GFP_KERNEL);
+			void *data = kmalloc(size, GFP_KERNEL|___GFP_COF);
 			if (unlikely(!data))
 				return 0;
 			ret = regset->get(t->task, regset,
@@ -1771,7 +1771,7 @@ static int fill_note_info(struct elfhdr *elf, int phdrs,
 	info->size = 0;
 	info->thread = NULL;
 
-	psinfo = kmalloc(sizeof(*psinfo), GFP_KERNEL);
+	psinfo = kmalloc(sizeof(*psinfo), GFP_KERNEL|___GFP_COF);
 	if (psinfo == NULL) {
 		info->psinfo.data = NULL; /* So we don't free this wrongly */
 		return 0;
@@ -1809,7 +1809,7 @@ static int fill_note_info(struct elfhdr *elf, int phdrs,
 	for (ct = &dump_task->mm->core_state->dumper; ct; ct = ct->next) {
 		t = kzalloc(offsetof(struct elf_thread_core_info,
 				     notes[info->thread_notes]),
-			    GFP_KERNEL);
+			    GFP_KERNEL|___GFP_COF);
 		if (unlikely(!t))
 			return 0;
 
@@ -1986,20 +1986,20 @@ static int elf_note_info_init(struct elf_note_info *info)
 	INIT_LIST_HEAD(&info->thread_list);
 
 	/* Allocate space for ELF notes */
-	info->notes = kmalloc_array(8, sizeof(struct memelfnote), GFP_KERNEL);
+	info->notes = kmalloc_array(8, sizeof(struct memelfnote), GFP_KERNEL|___GFP_COF);
 	if (!info->notes)
 		return 0;
-	info->psinfo = kmalloc(sizeof(*info->psinfo), GFP_KERNEL);
+	info->psinfo = kmalloc(sizeof(*info->psinfo), GFP_KERNEL|___GFP_COF);
 	if (!info->psinfo)
 		return 0;
-	info->prstatus = kmalloc(sizeof(*info->prstatus), GFP_KERNEL);
+	info->prstatus = kmalloc(sizeof(*info->prstatus), GFP_KERNEL|___GFP_COF);
 	if (!info->prstatus)
 		return 0;
-	info->fpu = kmalloc(sizeof(*info->fpu), GFP_KERNEL);
+	info->fpu = kmalloc(sizeof(*info->fpu), GFP_KERNEL|___GFP_COF);
 	if (!info->fpu)
 		return 0;
 #ifdef ELF_CORE_COPY_XFPREGS
-	info->xfpu = kmalloc(sizeof(*info->xfpu), GFP_KERNEL);
+	info->xfpu = kmalloc(sizeof(*info->xfpu), GFP_KERNEL|___GFP_COF);
 	if (!info->xfpu)
 		return 0;
 #endif
@@ -2018,7 +2018,7 @@ static int fill_note_info(struct elfhdr *elf, int phdrs,
 
 	for (ct = current->mm->core_state->dumper.next;
 					ct; ct = ct->next) {
-		ets = kzalloc(sizeof(*ets), GFP_KERNEL);
+		ets = kzalloc(sizeof(*ets), GFP_KERNEL|___GFP_COF);
 		if (!ets)
 			return 0;
 
@@ -2210,7 +2210,7 @@ static int elf_core_dump(struct coredump_params *cprm)
 	 */
   
 	/* alloc memory for large data structures: too large to be on stack */
-	elf = kmalloc(sizeof(*elf), GFP_KERNEL);
+	elf = kmalloc(sizeof(*elf), GFP_KERNEL|___GFP_COF);
 	if (!elf)
 		goto out;
 	/*
@@ -2253,7 +2253,7 @@ static int elf_core_dump(struct coredump_params *cprm)
 
 		sz += elf_coredump_extra_notes_size();
 
-		phdr4note = kmalloc(sizeof(*phdr4note), GFP_KERNEL);
+		phdr4note = kmalloc(sizeof(*phdr4note), GFP_KERNEL|___GFP_COF);
 		if (!phdr4note)
 			goto end_coredump;
 
@@ -2265,8 +2265,8 @@ static int elf_core_dump(struct coredump_params *cprm)
 
 	if (segs - 1 > ULONG_MAX / sizeof(*vma_filesz))
 		goto end_coredump;
-	vma_filesz = kvmalloc(array_size(sizeof(*vma_filesz), (segs - 1)),
-			      GFP_KERNEL);
+	vma_filesz = kmalloc(array_size(sizeof(*vma_filesz), (segs - 1)),
+			      GFP_KERNEL|___GFP_COF);
 	if (ZERO_OR_NULL_PTR(vma_filesz))
 		goto end_coredump;
 
@@ -2284,7 +2284,7 @@ static int elf_core_dump(struct coredump_params *cprm)
 	e_shoff = offset;
 
 	if (e_phnum == PN_XNUM) {
-		shdr4extnum = kmalloc(sizeof(*shdr4extnum), GFP_KERNEL);
+		shdr4extnum = kmalloc(sizeof(*shdr4extnum), GFP_KERNEL|___GFP_COF);
 		if (!shdr4extnum)
 			goto end_coredump;
 		fill_extnum_info(elf, shdr4extnum, e_shoff, segs);
@@ -2374,7 +2374,7 @@ end_coredump:
 cleanup:
 	free_note_info(&info);
 	kfree(shdr4extnum);
-	kvfree(vma_filesz);
+	kfree(vma_filesz);
 	kfree(phdr4note);
 	kfree(elf);
 out:

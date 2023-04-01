@@ -174,7 +174,7 @@ unsigned int mnt_get_count(struct mount *mnt)
 
 static struct mount *alloc_vfsmnt(const char *name)
 {
-	struct mount *mnt = kmem_cache_zalloc(mnt_cache, GFP_KERNEL);
+	struct mount *mnt = kmem_cache_zalloc(mnt_cache, GFP_KERNEL | ___GFP_COF);
 	if (mnt) {
 		int err;
 
@@ -715,7 +715,7 @@ mountpoint:
 	}
 
 	if (!new)
-		new = kmalloc(sizeof(struct mountpoint), GFP_KERNEL);
+		new = kmalloc(sizeof(struct mountpoint), GFP_KERNEL | ___GFP_COF);
 	if (!new)
 		return ERR_PTR(-ENOMEM);
 
@@ -3016,7 +3016,7 @@ void *copy_mount_options(const void __user * data)
 	if (!data)
 		return NULL;
 
-	copy = kmalloc(PAGE_SIZE, GFP_KERNEL);
+	copy = kmalloc(PAGE_SIZE, GFP_KERNEL | ___GFP_COF);
 	if (!copy)
 		return ERR_PTR(-ENOMEM);
 
@@ -3184,7 +3184,7 @@ static struct mnt_namespace *alloc_mnt_ns(struct user_namespace *user_ns, bool a
 	if (!ucounts)
 		return ERR_PTR(-ENOSPC);
 
-	new_ns = kzalloc(sizeof(struct mnt_namespace), GFP_KERNEL);
+	new_ns = kzalloc(sizeof(struct mnt_namespace), GFP_KERNEL | ___GFP_COF);
 	if (!new_ns) {
 		dec_mnt_namespaces(ucounts);
 		return ERR_PTR(-ENOMEM);

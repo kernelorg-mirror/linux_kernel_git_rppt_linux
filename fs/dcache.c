@@ -1685,7 +1685,7 @@ struct dentry *__d_alloc(struct super_block *sb, const struct qstr *name)
 	char *dname;
 	int err;
 
-	dentry = kmem_cache_alloc(dentry_cache, GFP_KERNEL);
+	dentry = kmem_cache_alloc(dentry_cache, GFP_KERNEL | ___GFP_COF);
 	if (!dentry)
 		return NULL;
 
@@ -1703,7 +1703,7 @@ struct dentry *__d_alloc(struct super_block *sb, const struct qstr *name)
 		size_t size = offsetof(struct external_name, name[1]);
 		struct external_name *p = kmalloc(size + name->len,
 						  GFP_KERNEL_ACCOUNT |
-						  __GFP_RECLAIMABLE);
+						  __GFP_RECLAIMABLE | ___GFP_COF);
 		if (!p) {
 			kmem_cache_free(dentry_cache, dentry); 
 			return NULL;

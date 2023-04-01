@@ -656,7 +656,7 @@ struct pipe_inode_info *alloc_pipe_info(void)
 	unsigned long user_bufs;
 	unsigned int max_size = READ_ONCE(pipe_max_size);
 
-	pipe = kzalloc(sizeof(struct pipe_inode_info), GFP_KERNEL_ACCOUNT);
+	pipe = kzalloc(sizeof(struct pipe_inode_info), GFP_KERNEL_ACCOUNT | ___GFP_COF);
 	if (pipe == NULL)
 		goto out_free_uid;
 
@@ -674,7 +674,7 @@ struct pipe_inode_info *alloc_pipe_info(void)
 		goto out_revert_acct;
 
 	pipe->bufs = kcalloc(pipe_bufs, sizeof(struct pipe_buffer),
-			     GFP_KERNEL_ACCOUNT);
+			     GFP_KERNEL_ACCOUNT | ___GFP_COF);
 
 	if (pipe->bufs) {
 		init_waitqueue_head(&pipe->wait);
@@ -1097,7 +1097,7 @@ static long pipe_set_size(struct pipe_inode_info *pipe, unsigned long arg)
 	}
 
 	bufs = kcalloc(nr_pages, sizeof(*bufs),
-		       GFP_KERNEL_ACCOUNT | __GFP_NOWARN);
+		       GFP_KERNEL_ACCOUNT | __GFP_NOWARN | ___GFP_COF);
 	if (unlikely(!bufs)) {
 		ret = -ENOMEM;
 		goto out_revert_acct;

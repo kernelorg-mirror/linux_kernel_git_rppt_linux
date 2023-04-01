@@ -229,7 +229,7 @@ static struct inode *alloc_inode(struct super_block *sb)
 	if (ops->alloc_inode)
 		inode = ops->alloc_inode(sb);
 	else
-		inode = kmem_cache_alloc(inode_cachep, GFP_KERNEL);
+		inode = kmem_cache_alloc(inode_cachep, GFP_KERNEL /*| ___GFP_COF*/);
 
 	if (!inode)
 		return NULL;

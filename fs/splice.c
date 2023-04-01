@@ -258,9 +258,9 @@ int splice_grow_spd(const struct pipe_inode_info *pipe, struct splice_pipe_desc 
 	if (buffers <= PIPE_DEF_BUFFERS)
 		return 0;
 
-	spd->pages = kmalloc_array(buffers, sizeof(struct page *), GFP_KERNEL);
+	spd->pages = kmalloc_array(buffers, sizeof(struct page *), GFP_KERNEL | ___GFP_COF);
 	spd->partial = kmalloc_array(buffers, sizeof(struct partial_page),
-				     GFP_KERNEL);
+				     GFP_KERNEL | ___GFP_COF);
 
 	if (spd->pages && spd->partial)
 		return 0;
@@ -393,7 +393,7 @@ static ssize_t default_file_splice_read(struct file *in, loff_t *ppos,
 
 	vec = __vec;
 	if (nr_pages > PIPE_DEF_BUFFERS) {
-		vec = kmalloc_array(nr_pages, sizeof(struct kvec), GFP_KERNEL);
+		vec = kmalloc_array(nr_pages, sizeof(struct kvec), GFP_KERNEL | ___GFP_COF);
 		if (unlikely(!vec)) {
 			res = -ENOMEM;
 			goto out;
@@ -688,7 +688,7 @@ iter_file_splice_write(struct pipe_inode_info *pipe, struct file *out,
 	};
 	int nbufs = pipe->buffers;
 	struct bio_vec *array = kcalloc(nbufs, sizeof(struct bio_vec),
-					GFP_KERNEL);
+					GFP_KERNEL | ___GFP_COF);
 	ssize_t ret;
 
 	if (unlikely(!array))
@@ -710,7 +710,7 @@ iter_file_splice_write(struct pipe_inode_info *pipe, struct file *out,
 			kfree(array);
 			nbufs = pipe->buffers;
 			array = kcalloc(nbufs, sizeof(struct bio_vec),
-					GFP_KERNEL);
+					GFP_KERNEL | ___GFP_COF);
 			if (!array) {
 				ret = -ENOMEM;
 				break;

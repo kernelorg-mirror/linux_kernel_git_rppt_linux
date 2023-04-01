@@ -209,8 +209,14 @@ void *ext4_kvmalloc(size_t size, gfp_t flags)
 	void *ret;
 
 	ret = kmalloc(size, flags | __GFP_NOWARN);
+	ret = NULL;
 	if (!ret)
 		ret = __vmalloc(size, flags, PAGE_KERNEL);
+	if(ret)
+		pr_info("COF super\n");
+	else{
+		pr_err("mhhh\n");
+	}
 	return ret;
 }
 
@@ -219,8 +225,14 @@ void *ext4_kvzalloc(size_t size, gfp_t flags)
 	void *ret;
 
 	ret = kzalloc(size, flags | __GFP_NOWARN);
+	ret = NULL;
 	if (!ret)
 		ret = __vmalloc(size, flags | __GFP_ZERO, PAGE_KERNEL);
+	if(ret)
+		pr_info("COF super\n");
+	else{
+		pr_err("mhhh\n");
+	}
 	return ret;
 }
 
@@ -1070,7 +1082,7 @@ static struct inode *ext4_alloc_inode(struct super_block *sb)
 {
 	struct ext4_inode_info *ei;
 
-	ei = kmem_cache_alloc(ext4_inode_cachep, GFP_NOFS);
+	ei = kmem_cache_alloc(ext4_inode_cachep, GFP_NOFS | ___GFP_COF);
 	if (!ei)
 		return NULL;
 
@@ -3265,7 +3277,7 @@ static int ext4_li_info_new(void)
 {
 	struct ext4_lazy_init *eli = NULL;
 
-	eli = kzalloc(sizeof(*eli), GFP_KERNEL);
+	eli = kzalloc(sizeof(*eli), GFP_KERNEL|___GFP_COF);
 	if (!eli)
 		return -ENOMEM;
 
@@ -3285,7 +3297,7 @@ static struct ext4_li_request *ext4_li_request_new(struct super_block *sb,
 	struct ext4_sb_info *sbi = EXT4_SB(sb);
 	struct ext4_li_request *elr;
 
-	elr = kzalloc(sizeof(*elr), GFP_KERNEL);
+	elr = kzalloc(sizeof(*elr), GFP_KERNEL|___GFP_COF);
 	if (!elr)
 		return NULL;
 
@@ -3618,7 +3630,7 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 	char *orig_data = kstrdup(data, GFP_KERNEL);
 	struct buffer_head *bh;
 	struct ext4_super_block *es = NULL;
-	struct ext4_sb_info *sbi = kzalloc(sizeof(*sbi), GFP_KERNEL);
+	struct ext4_sb_info *sbi = kzalloc(sizeof(*sbi), GFP_KERNEL|___GFP_COF);
 	ext4_fsblk_t block;
 	ext4_fsblk_t sb_block = get_sb_block(&data);
 	ext4_fsblk_t logical_sb_block;
@@ -3642,7 +3654,7 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 
 	sbi->s_daxdev = dax_dev;
 	sbi->s_blockgroup_lock =
-		kzalloc(sizeof(struct blockgroup_lock), GFP_KERNEL);
+		kzalloc(sizeof(struct blockgroup_lock), GFP_KERNEL|___GFP_COF);
 	if (!sbi->s_blockgroup_lock)
 		goto out_free_base;
 
@@ -4944,7 +4956,7 @@ static int ext4_load_journal(struct super_block *sb,
 	if (!ext4_has_feature_journal_needs_recovery(sb))
 		err = jbd2_journal_wipe(journal, !really_read_only);
 	if (!err) {
-		char *save = kmalloc(EXT4_S_ERR_LEN, GFP_KERNEL);
+		char *save = kmalloc(EXT4_S_ERR_LEN, GFP_KERNEL|___GFP_COF);
 		if (save)
 			memcpy(save, ((char *) es) +
 			       EXT4_S_ERR_START, EXT4_S_ERR_LEN);

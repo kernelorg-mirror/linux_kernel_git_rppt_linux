@@ -391,7 +391,7 @@ static struct io_ring_ctx *io_ring_ctx_alloc(struct io_uring_params *p)
 	struct io_ring_ctx *ctx;
 	int i;
 
-	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
+	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL | ___GFP_COF);
 	if (!ctx)
 		return NULL;
 
@@ -2023,7 +2023,7 @@ static int io_req_defer(struct io_ring_ctx *ctx, struct io_kiocb *req,
 	if (!io_sequence_defer(ctx, req) && list_empty(&ctx->defer_list))
 		return 0;
 
-	sqe_copy = kmalloc(sizeof(*sqe_copy), GFP_KERNEL);
+	sqe_copy = kmalloc(sizeof(*sqe_copy), GFP_KERNEL | ___GFP_COF);
 	if (!sqe_copy)
 		return -EAGAIN;
 
@@ -3027,7 +3027,7 @@ static int __io_sqe_files_scm(struct io_ring_ctx *ctx, int nr, int offset)
 			return -EMFILE;
 	}
 
-	fpl = kzalloc(sizeof(*fpl), GFP_KERNEL);
+	fpl = kzalloc(sizeof(*fpl), GFP_KERNEL | ___GFP_COF);
 	if (!fpl)
 		return -ENOMEM;
 
@@ -3110,7 +3110,7 @@ static int io_sqe_files_register(struct io_ring_ctx *ctx, void __user *arg,
 	if (nr_args > IORING_MAX_FIXED_FILES)
 		return -EMFILE;
 
-	ctx->user_files = kcalloc(nr_args, sizeof(struct file *), GFP_KERNEL);
+	ctx->user_files = kcalloc(nr_args, sizeof(struct file *), GFP_KERNEL | ___GFP_COF);
 	if (!ctx->user_files)
 		return -ENOMEM;
 
@@ -3381,7 +3381,7 @@ static int io_sqe_buffer_register(struct io_ring_ctx *ctx, void __user *arg,
 		return -EINVAL;
 
 	ctx->user_bufs = kcalloc(nr_args, sizeof(struct io_mapped_ubuf),
-					GFP_KERNEL);
+					GFP_KERNEL | ___GFP_COF);
 	if (!ctx->user_bufs)
 		return -ENOMEM;
 
@@ -3425,10 +3425,10 @@ static int io_sqe_buffer_register(struct io_ring_ctx *ctx, void __user *arg,
 			kfree(vmas);
 			kfree(pages);
 			pages = kvmalloc_array(nr_pages, sizeof(struct page *),
-						GFP_KERNEL);
+						GFP_KERNEL | ___GFP_COF);
 			vmas = kvmalloc_array(nr_pages,
 					sizeof(struct vm_area_struct *),
-					GFP_KERNEL);
+					GFP_KERNEL | ___GFP_COF);
 			if (!pages || !vmas) {
 				ret = -ENOMEM;
 				if (ctx->account_mem)
@@ -3439,7 +3439,7 @@ static int io_sqe_buffer_register(struct io_ring_ctx *ctx, void __user *arg,
 		}
 
 		imu->bvec = kvmalloc_array(nr_pages, sizeof(struct bio_vec),
-						GFP_KERNEL);
+						GFP_KERNEL | ___GFP_COF);
 		ret = -ENOMEM;
 		if (!imu->bvec) {
 			if (ctx->account_mem)

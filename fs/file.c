@@ -108,7 +108,7 @@ static struct fdtable * alloc_fdtable(unsigned int nr)
 	if (unlikely(nr > sysctl_nr_open))
 		nr = ((sysctl_nr_open - 1) | (BITS_PER_LONG - 1)) + 1;
 
-	fdt = kmalloc(sizeof(struct fdtable), GFP_KERNEL_ACCOUNT);
+	fdt = kmalloc(sizeof(struct fdtable), GFP_KERNEL_ACCOUNT | ___GFP_COF);
 	if (!fdt)
 		goto out;
 	fdt->max_fds = nr;

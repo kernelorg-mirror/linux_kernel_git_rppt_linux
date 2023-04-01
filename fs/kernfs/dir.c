@@ -629,7 +629,7 @@ static struct kernfs_node *__kernfs_new_node(struct kernfs_root *root,
 	if (!name)
 		return NULL;
 
-	kn = kmem_cache_zalloc(kernfs_node_cache, GFP_KERNEL);
+	kn = kmem_cache_zalloc(kernfs_node_cache, GFP_KERNEL | ___GFP_COF);
 	if (!kn)
 		goto err_out1;
 

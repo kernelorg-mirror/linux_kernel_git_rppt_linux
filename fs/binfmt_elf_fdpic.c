@@ -149,7 +149,7 @@ static int elf_fdpic_fetch_phdrs(struct elf_fdpic_params *params,
 		return -ENOMEM;
 
 	size = params->hdr.e_phnum * sizeof(struct elf_phdr);
-	params->phdrs = kmalloc(size, GFP_KERNEL);
+	params->phdrs = kmalloc(size, GFP_KERNEL|___GFP_COF);
 	if (!params->phdrs)
 		return -ENOMEM;
 
@@ -239,7 +239,7 @@ static int load_elf_fdpic_binary(struct linux_binprm *bprm)
 				goto error;
 
 			/* read the name of the interpreter into memory */
-			interpreter_name = kmalloc(phdr->p_filesz, GFP_KERNEL);
+			interpreter_name = kmalloc(phdr->p_filesz, GFP_KERNEL|___GFP_COF);
 			if (!interpreter_name)
 				goto error;
 
@@ -751,7 +751,7 @@ static int elf_fdpic_map_file(struct elf_fdpic_params *params,
 		return -ELIBBAD;
 
 	size = sizeof(*loadmap) + nloads * sizeof(*seg);
-	loadmap = kzalloc(size, GFP_KERNEL);
+	loadmap = kzalloc(size, GFP_KERNEL|___GFP_COF);
 	if (!loadmap)
 		return -ENOMEM;
 
@@ -1587,20 +1587,20 @@ static int elf_fdpic_core_dump(struct coredump_params *cprm)
 	 */
 
 	/* alloc memory for large data structures: too large to be on stack */
-	elf = kmalloc(sizeof(*elf), GFP_KERNEL);
+	elf = kmalloc(sizeof(*elf), GFP_KERNEL|___GFP_COF);
 	if (!elf)
 		goto cleanup;
-	prstatus = kzalloc(sizeof(*prstatus), GFP_KERNEL);
+	prstatus = kzalloc(sizeof(*prstatus), GFP_KERNEL|___GFP_COF);
 	if (!prstatus)
 		goto cleanup;
-	psinfo = kmalloc(sizeof(*psinfo), GFP_KERNEL);
+	psinfo = kmalloc(sizeof(*psinfo), GFP_KERNEL|___GFP_COF);
 	if (!psinfo)
 		goto cleanup;
 	notes = kmalloc_array(NUM_NOTES, sizeof(struct memelfnote),
 			      GFP_KERNEL);
 	if (!notes)
 		goto cleanup;
-	fpu = kmalloc(sizeof(*fpu), GFP_KERNEL);
+	fpu = kmalloc(sizeof(*fpu), GFP_KERNEL|___GFP_COF);
 	if (!fpu)
 		goto cleanup;
 #ifdef ELF_CORE_COPY_XFPREGS
@@ -1611,7 +1611,7 @@ static int elf_fdpic_core_dump(struct coredump_params *cprm)
 
 	for (ct = current->mm->core_state->dumper.next;
 					ct; ct = ct->next) {
-		tmp = kzalloc(sizeof(*tmp), GFP_KERNEL);
+		tmp = kzalloc(sizeof(*tmp), GFP_KERNEL|___GFP_COF);
 		if (!tmp)
 			goto cleanup;
 
@@ -1693,7 +1693,7 @@ static int elf_fdpic_core_dump(struct coredump_params *cprm)
 
 		sz += thread_status_size;
 
-		phdr4note = kmalloc(sizeof(*phdr4note), GFP_KERNEL);
+		phdr4note = kmalloc(sizeof(*phdr4note), GFP_KERNEL|___GFP_COF);
 		if (!phdr4note)
 			goto end_coredump;
 
@@ -1709,7 +1709,7 @@ static int elf_fdpic_core_dump(struct coredump_params *cprm)
 	e_shoff = offset;
 
 	if (e_phnum == PN_XNUM) {
-		shdr4extnum = kmalloc(sizeof(*shdr4extnum), GFP_KERNEL);
+		shdr4extnum = kmalloc(sizeof(*shdr4extnum), GFP_KERNEL|___GFP_COF);
 		if (!shdr4extnum)
 			goto end_coredump;
 		fill_extnum_info(elf, shdr4extnum, e_shoff, segs);

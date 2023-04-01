@@ -258,7 +258,7 @@ static struct fs_context *alloc_fs_context(struct file_system_type *fs_type,
 	struct fs_context *fc;
 	int ret = -ENOMEM;
 
-	fc = kzalloc(sizeof(struct fs_context), GFP_KERNEL);
+	fc = kzalloc(sizeof(struct fs_context), GFP_KERNEL | ___GFP_COF);
 	if (!fc)
 		return ERR_PTR(-ENOMEM);
 
@@ -593,7 +593,7 @@ static int legacy_parse_param(struct fs_context *fc, struct fs_parameter *param)
 		return invalf(fc, "VFS: Legacy: Option '%s' contained comma",
 			      param->key);
 	if (!ctx->legacy_data) {
-		ctx->legacy_data = kmalloc(PAGE_SIZE, GFP_KERNEL);
+		ctx->legacy_data = kmalloc(PAGE_SIZE, GFP_KERNEL | ___GFP_COF);
 		if (!ctx->legacy_data)
 			return -ENOMEM;
 	}
@@ -686,7 +686,7 @@ const struct fs_context_operations legacy_fs_context_ops = {
  */
 static int legacy_init_fs_context(struct fs_context *fc)
 {
-	fc->fs_private = kzalloc(sizeof(struct legacy_fs_context), GFP_KERNEL);
+	fc->fs_private = kzalloc(sizeof(struct legacy_fs_context), GFP_KERNEL | ___GFP_COF);
 	if (!fc->fs_private)
 		return -ENOMEM;
 	fc->ops = &legacy_fs_context_ops;

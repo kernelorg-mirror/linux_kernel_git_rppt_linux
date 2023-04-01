@@ -687,11 +687,11 @@ int dup_userfaultfd(struct vm_area_struct *vma, struct list_head *fcs)
 		}
 
 	if (!ctx) {
-		fctx = kmalloc(sizeof(*fctx), GFP_KERNEL);
+		fctx = kmalloc(sizeof(*fctx), GFP_KERNEL | ___GFP_COF);
 		if (!fctx)
 			return -ENOMEM;
 
-		ctx = kmem_cache_alloc(userfaultfd_ctx_cachep, GFP_KERNEL);
+		ctx = kmem_cache_alloc(userfaultfd_ctx_cachep, GFP_KERNEL | ___GFP_COF);
 		if (!ctx) {
 			kfree(fctx);
 			return -ENOMEM;
@@ -838,7 +838,7 @@ int userfaultfd_unmap_prep(struct vm_area_struct *vma,
 		    has_unmap_ctx(ctx, unmaps, start, end))
 			continue;
 
-		unmap_ctx = kzalloc(sizeof(*unmap_ctx), GFP_KERNEL);
+		unmap_ctx = kzalloc(sizeof(*unmap_ctx), GFP_KERNEL | ___GFP_COF);
 		if (!unmap_ctx)
 			return -ENOMEM;
 
@@ -1955,7 +1955,7 @@ SYSCALL_DEFINE1(userfaultfd, int, flags)
 	if (flags & ~UFFD_SHARED_FCNTL_FLAGS)
 		return -EINVAL;
 
-	ctx = kmem_cache_alloc(userfaultfd_ctx_cachep, GFP_KERNEL);
+	ctx = kmem_cache_alloc(userfaultfd_ctx_cachep, GFP_KERNEL | ___GFP_COF);
 	if (!ctx)
 		return -ENOMEM;
 

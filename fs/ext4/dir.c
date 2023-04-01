@@ -413,7 +413,7 @@ static struct dir_private_info *ext4_htree_create_dir_info(struct file *filp,
 {
 	struct dir_private_info *p;
 
-	p = kzalloc(sizeof(*p), GFP_KERNEL);
+	p = kzalloc(sizeof(*p), GFP_KERNEL|___GFP_COF);
 	if (!p)
 		return NULL;
 	p->curr_hash = pos2maj_hash(filp, pos);
@@ -449,7 +449,7 @@ int ext4_htree_store_dirent(struct file *dir_file, __u32 hash,
 
 	/* Create and allocate the fname structure */
 	len = sizeof(struct fname) + ent_name->len + 1;
-	new_fn = kzalloc(len, GFP_KERNEL);
+	new_fn = kzalloc(len, GFP_KERNEL|___GFP_COF);
 	if (!new_fn)
 		return -ENOMEM;
 	new_fn->hash = hash;

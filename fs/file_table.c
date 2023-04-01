@@ -98,7 +98,7 @@ static struct file *__alloc_file(int flags, const struct cred *cred)
 	struct file *f;
 	int error;
 
-	f = kmem_cache_zalloc(filp_cachep, GFP_KERNEL);
+	f = kmem_cache_zalloc(filp_cachep, GFP_KERNEL/*|___GFP_COF*/);
 	if (unlikely(!f))
 		return ERR_PTR(-ENOMEM);
 

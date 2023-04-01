@@ -789,7 +789,7 @@ ssize_t rw_copy_check_uvector(int type, const struct iovec __user * uvector,
 		goto out;
 	}
 	if (nr_segs > fast_segs) {
-		iov = kmalloc_array(nr_segs, sizeof(struct iovec), GFP_KERNEL);
+		iov = kmalloc_array(nr_segs, sizeof(struct iovec), GFP_KERNEL | ___GFP_COF);
 		if (iov == NULL) {
 			ret = -ENOMEM;
 			goto out;
@@ -860,7 +860,7 @@ ssize_t compat_rw_copy_check_uvector(int type,
 		goto out;
 	if (nr_segs > fast_segs) {
 		ret = -ENOMEM;
-		iov = kmalloc_array(nr_segs, sizeof(struct iovec), GFP_KERNEL);
+		iov = kmalloc_array(nr_segs, sizeof(struct iovec), GFP_KERNEL | ___GFP_COF);
 		if (iov == NULL)
 			goto out;
 	}

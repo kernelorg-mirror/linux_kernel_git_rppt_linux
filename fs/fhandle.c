@@ -38,7 +38,7 @@ static long do_sys_name_to_handle(struct path *path,
 		return -EINVAL;
 
 	handle = kmalloc(sizeof(struct file_handle) + f_handle.handle_bytes,
-			 GFP_KERNEL);
+			 GFP_KERNEL | ___GFP_COF);
 	if (!handle)
 		return -ENOMEM;
 
@@ -190,7 +190,7 @@ static int handle_to_path(int mountdirfd, struct file_handle __user *ufh,
 		goto out_err;
 	}
 	handle = kmalloc(sizeof(struct file_handle) + f_handle.handle_bytes,
-			 GFP_KERNEL);
+			 GFP_KERNEL | ___GFP_COF);
 	if (!handle) {
 		retval = -ENOMEM;
 		goto out_err;

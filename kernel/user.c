@@ -182,7 +182,7 @@ struct user_struct *alloc_uid(kuid_t uid)
 	spin_unlock_irq(&uidhash_lock);
 
 	if (!up) {
-		new = kmem_cache_zalloc(uid_cachep, GFP_KERNEL);
+		new = kmem_cache_zalloc(uid_cachep, GFP_KERNEL | ___GFP_COF);
 		if (!new)
 			return NULL;
 

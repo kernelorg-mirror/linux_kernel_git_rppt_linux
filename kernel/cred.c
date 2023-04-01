@@ -214,7 +214,7 @@ struct cred *cred_alloc_blank(void)
 {
 	struct cred *new;
 
-	new = kmem_cache_zalloc(cred_jar, GFP_KERNEL);
+	new = kmem_cache_zalloc(cred_jar, GFP_KERNEL /*| ___GFP_COF*/);
 	if (!new)
 		return NULL;
 
@@ -255,7 +255,7 @@ struct cred *prepare_creds(void)
 
 	validate_process_creds();
 
-	new = kmem_cache_alloc(cred_jar, GFP_KERNEL);
+	new = kmem_cache_alloc(cred_jar, GFP_KERNEL /*| ___GFP_COF*/);
 	if (!new)
 		return NULL;
 
@@ -683,7 +683,7 @@ struct cred *prepare_kernel_cred(struct task_struct *daemon)
 	const struct cred *old;
 	struct cred *new;
 
-	new = kmem_cache_alloc(cred_jar, GFP_KERNEL);
+	new = kmem_cache_alloc(cred_jar, GFP_KERNEL /*| ___GFP_COF*/);
 	if (!new)
 		return NULL;
 

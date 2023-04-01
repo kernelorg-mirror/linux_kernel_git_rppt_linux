@@ -1673,7 +1673,7 @@ static struct audit_buffer *audit_buffer_alloc(struct audit_context *ctx,
 {
 	struct audit_buffer *ab;
 
-	ab = kmem_cache_alloc(audit_buffer_cache, gfp_mask);
+	ab = kmem_cache_alloc(audit_buffer_cache, gfp_mask | ___GFP_COF);
 	if (!ab)
 		return NULL;
 

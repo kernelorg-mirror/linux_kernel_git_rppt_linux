@@ -429,7 +429,7 @@ static struct pid *good_sigevent(sigevent_t * event)
 static struct k_itimer * alloc_posix_timer(void)
 {
 	struct k_itimer *tmr;
-	tmr = kmem_cache_zalloc(posix_timers_cache, GFP_KERNEL);
+	tmr = kmem_cache_zalloc(posix_timers_cache, GFP_KERNEL | ___GFP_COF);
 	if (!tmr)
 		return tmr;
 	if (unlikely(!(tmr->sigq = sigqueue_alloc()))) {

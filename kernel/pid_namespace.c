@@ -95,7 +95,7 @@ static struct pid_namespace *create_pid_namespace(struct user_namespace *user_ns
 		goto out;
 
 	err = -ENOMEM;
-	ns = kmem_cache_zalloc(pid_ns_cachep, GFP_KERNEL);
+	ns = kmem_cache_zalloc(pid_ns_cachep, GFP_KERNEL | ___GFP_COF);
 	if (ns == NULL)
 		goto out_dec;
 

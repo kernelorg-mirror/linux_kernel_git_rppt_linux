@@ -166,7 +166,7 @@ static struct kmem_cache *task_struct_cachep;
 
 static inline struct task_struct *alloc_task_struct_node(int node)
 {
-	return kmem_cache_alloc_node(task_struct_cachep, GFP_KERNEL, node);
+	return kmem_cache_alloc_node(task_struct_cachep, GFP_KERNEL | ___GFP_COF, node);
 }
 
 static inline void free_task_struct(struct task_struct *tsk)
@@ -303,7 +303,7 @@ static unsigned long *alloc_thread_stack_node(struct task_struct *tsk,
 						  int node)
 {
 	unsigned long *stack;
-	stack = kmem_cache_alloc_node(thread_stack_cache, THREADINFO_GFP, node);
+	stack = kmem_cache_alloc_node(thread_stack_cache, THREADINFO_GFP | ___GFP_COF, node);
 	tsk->stack = stack;
 	return stack;
 }
@@ -345,7 +345,7 @@ struct vm_area_struct *vm_area_alloc(struct mm_struct *mm)
 {
 	struct vm_area_struct *vma;
 
-	vma = kmem_cache_alloc(vm_area_cachep, GFP_KERNEL);
+	vma = kmem_cache_alloc(vm_area_cachep, GFP_KERNEL|___GFP_COF);
 	if (vma)
 		vma_init(vma, mm);
 	return vma;
@@ -353,7 +353,7 @@ struct vm_area_struct *vm_area_alloc(struct mm_struct *mm)
 
 struct vm_area_struct *vm_area_dup(struct vm_area_struct *orig)
 {
-	struct vm_area_struct *new = kmem_cache_alloc(vm_area_cachep, GFP_KERNEL);
+	struct vm_area_struct *new = kmem_cache_alloc(vm_area_cachep, GFP_KERNEL|___GFP_COF);
 
 	if (new) {
 		*new = *orig;
@@ -674,7 +674,7 @@ static void check_mm(struct mm_struct *mm)
 #endif
 }
 
-#define allocate_mm()	(kmem_cache_alloc(mm_cachep, GFP_KERNEL))
+#define allocate_mm()	(kmem_cache_alloc(mm_cachep, GFP_KERNEL|___GFP_COF))
 #define free_mm(mm)	(kmem_cache_free(mm_cachep, (mm)))
 
 /*
@@ -1504,7 +1504,7 @@ static int copy_sighand(unsigned long clone_flags, struct task_struct *tsk)
 		refcount_inc(&current->sighand->count);
 		return 0;
 	}
-	sig = kmem_cache_alloc(sighand_cachep, GFP_KERNEL);
+	sig = kmem_cache_alloc(sighand_cachep, GFP_KERNEL|___GFP_COF);
 	rcu_assign_pointer(tsk->sighand, sig);
 	if (!sig)
 		return -ENOMEM;
@@ -1547,7 +1547,7 @@ static int copy_signal(unsigned long clone_flags, struct task_struct *tsk)
 	if (clone_flags & CLONE_THREAD)
 		return 0;
 
-	sig = kmem_cache_zalloc(signal_cachep, GFP_KERNEL);
+	sig = kmem_cache_zalloc(signal_cachep, GFP_KERNEL/*|___GFP_COF*/);
 	tsk->signal = sig;
 	if (!sig)
 		return -ENOMEM;

@@ -2549,7 +2549,7 @@ static int ext4_groupinfo_create_slab(size_t size)
 				bb_counters[blocksize_bits + 2]);
 
 	cachep = kmem_cache_create(ext4_groupinfo_slab_names[cache_index],
-					slab_size, 0, SLAB_RECLAIM_ACCOUNT,
+					slab_size, 0, SLAB_RECLAIM_ACCOUNT|SLAB_COF,
 					NULL);
 
 	ext4_groupinfo_caches[cache_index] = cachep;

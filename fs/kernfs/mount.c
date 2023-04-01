@@ -373,7 +373,7 @@ void __init kernfs_init(void)
 	kernfs_node_cache = kmem_cache_create("kernfs_node_cache",
 					      sizeof(struct kernfs_node),
 					      0,
-					      SLAB_PANIC | SLAB_TYPESAFE_BY_RCU,
+					      SLAB_PANIC | SLAB_TYPESAFE_BY_RCU | SLAB_COF,
 					      NULL);
 
 	/* Creates slab cache for kernfs inode attributes */

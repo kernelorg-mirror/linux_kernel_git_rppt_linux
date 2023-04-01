@@ -1579,7 +1579,7 @@ static int __init audit_init(void)
 
 	audit_buffer_cache = kmem_cache_create("audit_buffer",
 					       sizeof(struct audit_buffer),
-					       0, SLAB_PANIC, NULL);
+					       0, SLAB_PANIC|SLAB_COF, NULL);
 
 	skb_queue_head_init(&audit_queue);
 	skb_queue_head_init(&audit_retry_queue);

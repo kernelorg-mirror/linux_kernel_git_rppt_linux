@@ -100,7 +100,7 @@ static int __init cma_activate_area(struct cma *cma)
 	unsigned i = cma->count >> pageblock_order;
 	struct zone *zone;
 
-	cma->bitmap = kzalloc(bitmap_size, GFP_KERNEL);
+	cma->bitmap = kzalloc(bitmap_size, GFP_KERNEL | ___GFP_COF);
 
 	if (!cma->bitmap) {
 		cma->count = 0;

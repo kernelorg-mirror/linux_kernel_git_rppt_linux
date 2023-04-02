@@ -95,7 +95,7 @@ struct hugepage_subpool *hugepage_new_subpool(struct hstate *h, long max_hpages,
 {
 	struct hugepage_subpool *spool;
 
-	spool = kzalloc(sizeof(*spool), GFP_KERNEL);
+	spool = kzalloc(sizeof(*spool), GFP_KERNEL | ___GFP_COF);
 	if (!spool)
 		return NULL;
 
@@ -377,7 +377,7 @@ retry_locked:
 		resv->adds_in_progress--;
 		spin_unlock(&resv->lock);
 
-		trg = kmalloc(sizeof(*trg), GFP_KERNEL);
+		trg = kmalloc(sizeof(*trg), GFP_KERNEL | ___GFP_COF);
 		if (!trg) {
 			kfree(nrg);
 			return -ENOMEM;
@@ -401,7 +401,7 @@ retry_locked:
 		if (!nrg) {
 			resv->adds_in_progress--;
 			spin_unlock(&resv->lock);
-			nrg = kmalloc(sizeof(*nrg), GFP_KERNEL);
+			nrg = kmalloc(sizeof(*nrg), GFP_KERNEL | ___GFP_COF);
 			if (!nrg)
 				return -ENOMEM;
 
@@ -520,7 +520,7 @@ retry:
 
 			if (!nrg) {
 				spin_unlock(&resv->lock);
-				nrg = kmalloc(sizeof(*nrg), GFP_KERNEL);
+				nrg = kmalloc(sizeof(*nrg), GFP_KERNEL | ___GFP_COF);
 				if (!nrg)
 					return -ENOMEM;
 				goto retry;
@@ -697,8 +697,8 @@ static void set_vma_private_data(struct vm_area_struct *vma,
 
 struct resv_map *resv_map_alloc(void)
 {
-	struct resv_map *resv_map = kmalloc(sizeof(*resv_map), GFP_KERNEL);
-	struct file_region *rg = kmalloc(sizeof(*rg), GFP_KERNEL);
+	struct resv_map *resv_map = kmalloc(sizeof(*resv_map), GFP_KERNEL | ___GFP_COF);
+	struct file_region *rg = kmalloc(sizeof(*rg), GFP_KERNEL | ___GFP_COF);
 
 	if (!resv_map || !rg) {
 		kfree(resv_map);
@@ -2248,7 +2248,7 @@ static void __init hugetlb_hstate_alloc_pages(struct hstate *h)
 		 * time, we are likely in bigger trouble.
 		 */
 		node_alloc_noretry = kmalloc(sizeof(*node_alloc_noretry),
-						GFP_KERNEL);
+						GFP_KERNEL | ___GFP_COF);
 	} else {
 		/* allocations done at boot time */
 		node_alloc_noretry = NULL;
@@ -2930,7 +2930,7 @@ static int __init hugetlb_init(void)
 #endif
 	hugetlb_fault_mutex_table =
 		kmalloc_array(num_fault_mutexes, sizeof(struct mutex),
-			      GFP_KERNEL);
+			      GFP_KERNEL | ___GFP_COF);
 	BUG_ON(!hugetlb_fault_mutex_table);
 
 	for (i = 0; i < num_fault_mutexes; i++)

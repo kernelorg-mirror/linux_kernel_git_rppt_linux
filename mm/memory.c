@@ -409,6 +409,9 @@ int __pte_alloc(struct mm_struct *mm, pmd_t *pmd)
 	if (!new)
 		return -ENOMEM;
 
+	new->pt_mm = (unsigned long) pmd | 0x1; //cof
+    	set_bit(PG_ptp, &new->flags);
+    	//pr_info("pte_alloc\n");
 	/*
 	 * Ensure all pte setup (eg. pte page lock and page clearing) are
 	 * visible before the pte is made visible to other CPUs by being
@@ -4032,9 +4035,15 @@ EXPORT_SYMBOL_GPL(handle_mm_fault);
  */
 int __p4d_alloc(struct mm_struct *mm, pgd_t *pgd, unsigned long address)
 {
+	struct page *page;
 	p4d_t *new = p4d_alloc_one(mm, address);
 	if (!new)
 		return -ENOMEM;
+	
+	page = virt_to_page(new);                                                                         
+    	page->pt_mm = (unsigned long) pgd | 0x1;
+    	set_bit(PG_ptp, &page->flags);
+    	//pr_info("__p4d_alloc\n");
 
 	smp_wmb(); /* See comment in __pte_alloc */
 
@@ -4055,11 +4064,15 @@ int __p4d_alloc(struct mm_struct *mm, pgd_t *pgd, unsigned long address)
  */
 int __pud_alloc(struct mm_struct *mm, p4d_t *p4d, unsigned long address)
 {
+	struct page *page;
 	pud_t *new = pud_alloc_one(mm, address);
 	if (!new)
 		return -ENOMEM;
-
+	page = virt_to_page(new);
+    	page->pt_mm = (unsigned long) p4d | 0x1;
 	smp_wmb(); /* See comment in __pte_alloc */
+	set_bit(PG_ptp, &(page->flags));
+    	//pr_info("__pud_alloc\n");
 
 	spin_lock(&mm->page_table_lock);
 #ifndef __ARCH_HAS_5LEVEL_HACK
@@ -4087,10 +4100,16 @@ int __pud_alloc(struct mm_struct *mm, p4d_t *p4d, unsigned long address)
  */
 int __pmd_alloc(struct mm_struct *mm, pud_t *pud, unsigned long address)
 {
+	struct page *page;
 	spinlock_t *ptl;
 	pmd_t *new = pmd_alloc_one(mm, address);
 	if (!new)
 		return -ENOMEM;
+    	
+	page = virt_to_page(new);
+    	page->pt_mm = (unsigned long) pud | 0x1;
+    	set_bit(PG_ptp, &(page->flags));
+    	//pr_info("__pmd_alloc\n");
 
 	smp_wmb(); /* See comment in __pte_alloc */
 

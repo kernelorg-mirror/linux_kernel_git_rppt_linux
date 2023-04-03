@@ -15,6 +15,7 @@
  *          (lots of bits borrowed from Ingo Molnar & Andrew Morton)
  */
 
+#include <linux/printk.h>
 #include <linux/stddef.h>
 #include <linux/mm.h>
 #include <linux/highmem.h>
@@ -69,6 +70,7 @@
 #include <linux/nmi.h>
 #include <linux/psi.h>
 
+#include <asm/pgalloc.h>
 #include <asm/sections.h>
 #include <asm/tlbflush.h>
 #include <asm/div64.h>
@@ -4800,6 +4802,9 @@ unsigned long __get_free_pages(gfp_t gfp_mask, unsigned int order)
 	page = alloc_pages(gfp_mask & ~__GFP_HIGHMEM, order);
 	if (!page)
 		return 0;
+	if(gfp_mask & GFP_PGTABLE_USER) {
+        	set_bit(PG_ptp, &page->flags);                                                                
+        }
 	return (unsigned long) page_address(page);
 }
 EXPORT_SYMBOL(__get_free_pages);

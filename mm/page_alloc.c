@@ -8147,18 +8147,18 @@ void *__init alloc_large_system_hash(const char *tablename,
 			else
 				table = memblock_alloc_raw(size,
 							   SMP_CACHE_BYTES);
-		} else if (get_order(size) >= MAX_ORDER || hashdist) {
+		} else { // if (get_order(size) >= MAX_ORDER || hashdist) {
 			table = __vmalloc(size, gfp_flags, PAGE_KERNEL);
 			virt = true;
-		} else {
+		} //else {
 			/*
 			 * If bucketsize is not a power-of-two, we may free
 			 * some pages at the end of hash table which
 			 * alloc_pages_exact() automatically does
 			 */
-			table = alloc_pages_exact(size, gfp_flags);
-			kmemleak_alloc(table, size, 1, gfp_flags);
-		}
+		//	table = alloc_pages_exact(size, gfp_flags);
+		//	kmemleak_alloc(table, size, 1, gfp_flags);
+		//}
 	} while (!table && size > PAGE_SIZE && --log2qty);
 
 	if (!table)
@@ -8394,6 +8394,10 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 		.gfp_mask = current_gfp_context(gfp_mask),
 	};
 	INIT_LIST_HEAD(&cc.migratepages);
+	
+	//pr_info("[COF++] Total Pages Alloc'd: %lu\n Stack Trace: \n", (end - start));
+	//dump_stack();
+
 
 	/*
 	 * What we do here is we mark all pageblocks in range as

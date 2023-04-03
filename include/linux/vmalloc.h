@@ -9,6 +9,13 @@
 #include <asm/page.h>		/* pgprot_t */
 #include <linux/rbtree.h>
 #include <linux/overflow.h>
+//#include <linux/fs_context.h>
+#include <linux/mmzone.h>
+#include <linux/migrate_mode.h>
+//#include <linux/migrate.h>
+//#include <linux/fs.h>
+//#include <linux/mount.h>
+//#include <linux/pseudo_fs.h>
 
 struct vm_area_struct;		/* vma defining user mapping in mm_types.h */
 struct notifier_block;		/* in notifier.h */
@@ -47,6 +54,7 @@ struct vm_struct {
 	unsigned int		nr_pages;
 	phys_addr_t		phys_addr;
 	const void		*caller;
+	void			*cof_page;
 };
 
 struct vmap_area {
@@ -234,5 +242,29 @@ pcpu_free_vm_areas(struct vm_struct **vms, int nr_vms)
 
 int register_vmap_purge_notifier(struct notifier_block *nb);
 int unregister_vmap_purge_notifier(struct notifier_block *nb);
+
+
+/* 
+ * vmalloc_migration stuff cof.
+ */
+
+struct vmalloc_mig_struct {
+	struct inode *inode;
+};
+
+//extern enum migrate_mode_t;
+
+__must_check struct vm_struct *page_to_vm_struct(struct page *);
+//pte_t *walk_page_table_get_pte(struct mm_struct *, const unsigned long);
+int set_vmalloc_page_movable(struct page *, struct vmalloc_mig_struct *);
+//int vmalloc_init_fs_context(struct fs_context *);
+int vmalloc_mig_mount(void);
+void vmalloc_mig_unmount(void);
+bool vmalloc_mig_isolate(struct page *, isolate_mode_t);
+int vmalloc_mig_migrate(struct address_space *, struct page *, struct page *, enum migrate_mode);
+void vmalloc_mig_putback(struct page *);
+void __init vmalloc_mig_init(void);
+//int setup_migration(struct vmalloc_mig_struct *);
+
 
 #endif /* _LINUX_VMALLOC_H */

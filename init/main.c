@@ -776,6 +776,7 @@ asmlinkage __visible void __init start_kernel(void)
 	poking_init();
 	check_bugs();
 
+	vmalloc_mig_init();
 	acpi_subsystem_init();
 	arch_post_acpi_subsys_init();
 	sfi_init_late();

@@ -34,6 +34,12 @@
 #include <linux/llist.h>
 #include <linux/bitops.h>
 #include <linux/rbtree_augmented.h>
+#include <linux/gfp.h> //cof
+#include <asm/pgtable.h>
+#include <linux/mmu_notifier.h>
+#include <linux/migrate.h>
+#include <linux/pseudo_fs.h>
+#include <linux/mount.h>
 
 #include <linux/uaccess.h>
 #include <asm/tlbflush.h>
@@ -323,6 +329,270 @@ unsigned long vmalloc_to_pfn(const void *vmalloc_addr)
 }
 EXPORT_SYMBOL(vmalloc_to_pfn);
 
+
+/*
+ * vmalloc_migration stuff cof.
+ */
+
+#define VMALLOC_MIG_MAGIC 0x1DEADFAD
+static u8 vmalloc_mig_on = 0;
+static int vmalloc_init_fs_context(struct fs_context *fc)
+{
+	return init_pseudo(fc, VMALLOC_MIG_MAGIC) ? 0 : -ENOMEM;
+}
+
+struct file_system_type vmalloc_fs = {
+	.name = "vmallocmigfs",
+	.init_fs_context = vmalloc_init_fs_context,
+	.kill_sb = kill_anon_super,
+};
+//
+static struct vfsmount *vmalloc_mig_mnt;
+
+struct vmalloc_mig_struct vmalloc_mig;
+
+static const struct address_space_operations vmalloc_aops = {
+	.isolate_page = vmalloc_mig_isolate,
+	.migratepage = vmalloc_mig_migrate,
+	.putback_page = vmalloc_mig_putback,
+};
+
+static inline unsigned long get_vmalloc_addr_offset(const struct vm_struct *vm, const unsigned idx)
+{
+	return ((unsigned long) vm->addr) + (idx * PAGE_SIZE);
+}
+
+__must_check struct vm_struct *page_to_vm_struct(struct page *page)
+{
+	return (struct vm_struct *) page_private(page);
+}
+
+pte_t *walk_page_table_get_pte(struct mm_struct *mm, const unsigned long addr)
+{
+	pgd_t *pgd;
+	p4d_t *p4d;
+	pud_t *pud;
+	pmd_t *pmd;
+	pte_t *pte;
+	spin_lock(&mm->page_table_lock);
+	pgd = pgd_offset(mm, addr);
+	if(pgd_none(*pgd) || unlikely(pgd_bad(*pgd))) {
+		pr_info("PGD BAD\n");
+		goto out_bad;
+	}
+	p4d = p4d_offset(pgd, addr);
+	if(p4d_none(*p4d) || unlikely(p4d_bad(*p4d))) {
+		pr_info("P4D BAD\n");
+		goto out_bad;
+	}
+	pud = pud_offset(p4d, addr);
+	if(pud_none(*pud) || unlikely(pud_bad(*pud))) {
+		pr_info("PUD BAD\n");
+		goto out_bad;
+	}
+	pmd = pmd_offset(pud, addr);
+	if(pmd_none(*pmd) || unlikely(pmd_bad(*pmd))) {
+		pr_info("PMD BAD\n");
+		goto out_bad;
+	}
+
+	pte = pte_offset_map(pmd, addr);
+
+	spin_unlock(&mm->page_table_lock);
+	pte_unmap(pte);
+	return pte;
+
+out_bad:
+	spin_unlock(&mm->page_table_lock);
+	return NULL;
+}
+
+int set_vmalloc_page_movable(struct page *page, struct vmalloc_mig_struct *vmalloc_mig)
+{
+      int rv = 0;
+      if(!trylock_page(page)) {
+      	pr_err("Cannot lock page\n");
+      	rv = -1;
+      	goto out;
+      }
+      __SetPageMovable(page, vmalloc_mig->inode->i_mapping);
+      unlock_page(page);
+out:
+      return rv;
+}
+
+
+
+
+
+
+int vmalloc_mig_mount(void)
+{
+	int rv = 0;
+
+	vmalloc_mig_mnt = kern_mount(&vmalloc_fs);
+	if(!vmalloc_mig_mnt) {
+		pr_err("kern_mount for vfs failed!\n");
+		rv = -1;
+	}
+
+	return rv;
+}
+
+void vmalloc_mig_unmount(void)
+{
+	kern_unmount(vmalloc_mig_mnt);
+}
+
+bool vmalloc_mig_isolate(struct page *page, isolate_mode_t mode)
+{
+	bool rv;
+	rv = true;
+	/*
+	 * If page has not been set to movable, bail out and crash.
+	 * If page has already been isolated, bail out and crash.
+	 */
+	VM_BUG_ON_PAGE(PageIsolated(page), page);
+	VM_BUG_ON_PAGE(!PageMovable(page), page);
+
+	SetPageReclaim(page); // set isolation flag
+
+	return rv;
+}
+
+int vmalloc_mig_migrate(struct address_space *mapping, struct page *new_page, struct page *page, enum migrate_mode mode)
+{
+	int rv;
+	unsigned i;
+	unsigned long page_addr;
+	void *src_addr, *dst_addr;
+	pte_t *pte, new_pte;
+	struct mm_struct *init_mm_alias;
+	struct vm_struct *vm;
+
+	rv = MIGRATEPAGE_SUCCESS;
+	pr_info("Vmalloc migration\n");
+	page_addr = 0;
+	if(!page || !new_page) {
+		pr_err("Invalid page for migration or invalid destination page\n");
+		rv = -1;
+		goto out;
+	}
+
+	VM_BUG_ON_PAGE(!PageMovable(page), page);
+	VM_BUG_ON_PAGE(!PageIsolated(page), page);
+
+	vm = page_to_vm_struct(page);
+
+	init_mm_alias = (struct mm_struct *) kallsyms_lookup_name("init_mm");
+	if(!init_mm_alias) {
+		pr_err("Can't find init_mm symbol\n");
+		rv = -1;
+		goto out;
+	}
+
+	/*
+	 * Get correct address of underlying page.
+	 */
+	for(i = 0; i < vm->nr_pages; ++i) {
+		if(page == vm->pages[i]) {
+			page_addr = get_vmalloc_addr_offset(vm, i);
+			if(!page_addr) {
+				pr_err("Can't get Page Addr\n");
+				rv = -1;
+				goto out;
+			}
+		}
+	}
+
+	pte = walk_page_table_get_pte(init_mm_alias, page_addr); // get PTE for old page
+	if(!pte) {
+		pr_err("Cannot find PTE for page\n");
+		rv = -1;
+		goto out;
+	}
+	pr_info("OLD PFN PTE: %lx @ PTE: %lx\n", pte_pfn(*pte), pte->pte);
+	//dump_pagetable_fp(page_addr);
+
+	/*
+	 * Copy page data to the new page.
+	 * Use kmap to get the page virt address
+	 * Zero out the contents of the old page.
+	 */
+	src_addr = kmap_atomic(page);
+	dst_addr = kmap_atomic(new_page);
+	memcpy(dst_addr, src_addr, PAGE_SIZE);
+	memset(src_addr, 0, PAGE_SIZE);
+	kunmap_atomic(dst_addr);
+	kunmap_atomic(src_addr);
+
+	/*
+	 * Copy old page metadata to the new page and invalidate old
+	 */
+	new_page->index = page->index;
+	set_page_private(new_page, (unsigned long) vm);
+	__SetPageMovable(new_page, page_mapping(page));
+	page->mapping = NULL;
+	page->private = 0;
+
+	/*
+	 * Replace underlying page in the vm_struct.
+	 */
+	for(i = 0; i < vm->nr_pages; ++i) {
+		if(page == vm->pages[i]) {
+			//pr_info("[COF++] FOUND PAGE IN VM_STRUCT at index %u\n", i);
+			vm->pages[i] = new_page;
+		}
+	}
+
+	get_page(new_page); //increase the refcount of the page
+
+
+	spin_lock(&init_mm_alias->page_table_lock); // grab ptable lock
+
+	if(!pte) {
+		spin_unlock(&init_mm_alias->page_table_lock);
+		rv = -EBUSY;
+		goto out;
+	}
+
+	new_pte = mk_pte(new_page, pte_pgprot(*pte)); // get PTE for new page
+	if(pte_none(new_pte)) {
+		pr_err("Cannot get new PTE\n");
+		rv = -1;
+		goto out;
+	}
+	set_pte_at(init_mm_alias, page_addr, pte, new_pte); // Replace PTEs
+	__flush_tlb_one_kernel(page_addr); //flush TLB entry for that addr
+	pte_unmap(pte);
+	pte_unmap(&new_pte);
+	spin_unlock(&init_mm_alias->page_table_lock); //release page table lock
+
+	pr_info("NEW PFN PTE: %lx @ PTE: %lx\n", pte_pfn(new_pte), new_pte.pte);
+	//dump_pagetable_fp(page_addr);
+
+out:
+	return rv;
+}
+
+void vmalloc_mig_putback(struct page *page)
+{
+
+}
+
+int setup_migration(struct vmalloc_mig_struct *vmalloc_mig)
+{
+	int rv = 0;
+	vmalloc_mig->inode = alloc_anon_inode(vmalloc_mig_mnt->mnt_sb);
+	if(!vmalloc_mig->inode) {
+		pr_err("Can't allocate anon inode for vmalloc mig struct\n");
+		rv = -1;
+		goto out;
+	}
+	vmalloc_mig->inode->i_mapping->a_ops = &vmalloc_aops;
+out:
+	return rv;
+}
 
 /*** Global kva allocator ***/
 
@@ -1053,6 +1323,7 @@ static struct vmap_area *alloc_vmap_area(unsigned long size,
 {
 	struct vmap_area *va, *pva;
 	unsigned long addr;
+	unsigned long lock_flags;
 	int purged = 0;
 
 	BUG_ON(!size);
@@ -1077,31 +1348,34 @@ static struct vmap_area *alloc_vmap_area(unsigned long size,
 
 retry:
 	/*
-	 * Preload this CPU with one extra vmap_area object to ensure
-	 * that we have it available when fit type of free area is
-	 * NE_FIT_TYPE.
+	 * Preload this CPU with one extra vmap_area object. It is used
+	 * when fit type of free area is NE_FIT_TYPE. Please note, it
+	 * does not guarantee that an allocation occurs on a CPU that
+	 * is preloaded, instead we minimize the case when it is not.
+	 * It can happen because of cpu migration, because there is a
+	 * race until the below spinlock is taken.
 	 *
 	 * The preload is done in non-atomic context, thus it allows us
 	 * to use more permissive allocation masks to be more stable under
-	 * low memory condition and high memory pressure.
+	 * low memory condition and high memory pressure. In rare case,
+	 * if not preloaded, GFP_NOWAIT is used.
 	 *
-	 * Even if it fails we do not really care about that. Just proceed
-	 * as it is. "overflow" path will refill the cache we allocate from.
+	 * Set "pva" to NULL here, because of "retry" path.
 	 */
-	preempt_disable();
-	if (!__this_cpu_read(ne_fit_preload_node)) {
-		preempt_enable();
+	pva = NULL;
+
+	if (!this_cpu_read(ne_fit_preload_node))
+		/*
+		 * Even if it fails we do not really care about that.
+		 * Just proceed as it is. If needed "overflow" path
+		 * will refill the cache we allocate from.
+		 */
 		pva = kmem_cache_alloc_node(vmap_area_cachep, GFP_KERNEL, node);
-		preempt_disable();
 
-		if (__this_cpu_cmpxchg(ne_fit_preload_node, NULL, pva)) {
-			if (pva)
-				kmem_cache_free(vmap_area_cachep, pva);
-		}
-	}
+	spin_lock_irqsave(&vmap_area_lock, lock_flags);
 
-	spin_lock(&vmap_area_lock);
-	preempt_enable();
+	if (pva && __this_cpu_cmpxchg(ne_fit_preload_node, NULL, pva))
+		kmem_cache_free(vmap_area_cachep, pva);
 
 	/*
 	 * If an allocation fails, the "vend" address is
@@ -1116,7 +1390,7 @@ retry:
 	va->vm = NULL;
 	insert_vmap_area(va, &vmap_area_root, &vmap_area_list);
 
-	spin_unlock(&vmap_area_lock);
+	spin_unlock_irqrestore(&vmap_area_lock, lock_flags);
 
 	BUG_ON(!IS_ALIGNED(va->va_start, align));
 	BUG_ON(va->va_start < vstart);
@@ -1125,7 +1399,7 @@ retry:
 	return va;
 
 overflow:
-	spin_unlock(&vmap_area_lock);
+	spin_unlock_irqrestore(&vmap_area_lock, lock_flags);
 	if (!purged) {
 		purge_vmap_area_lazy();
 		purged = 1;
@@ -1180,9 +1454,10 @@ static void __free_vmap_area(struct vmap_area *va)
  */
 static void free_vmap_area(struct vmap_area *va)
 {
-	spin_lock(&vmap_area_lock);
+	unsigned long lock_flags;
+	spin_lock_irqsave(&vmap_area_lock, lock_flags);
 	__free_vmap_area(va);
-	spin_unlock(&vmap_area_lock);
+	spin_unlock_irqrestore(&vmap_area_lock, lock_flags);
 }
 
 /*
@@ -1248,6 +1523,7 @@ static bool __purge_vmap_area_lazy(unsigned long start, unsigned long end)
 	struct llist_node *valist;
 	struct vmap_area *va;
 	struct vmap_area *n_va;
+	unsigned long lock_flags;
 
 	lockdep_assert_held(&vmap_purge_lock);
 
@@ -1275,7 +1551,7 @@ static bool __purge_vmap_area_lazy(unsigned long start, unsigned long end)
 	flush_tlb_kernel_range(start, end);
 	resched_threshold = lazy_max_pages() << 1;
 
-	spin_lock(&vmap_area_lock);
+	spin_lock_irqsave(&vmap_area_lock, lock_flags);
 	llist_for_each_entry_safe(va, n_va, valist, purge_list) {
 		unsigned long nr = (va->va_end - va->va_start) >> PAGE_SHIFT;
 
@@ -1289,10 +1565,10 @@ static bool __purge_vmap_area_lazy(unsigned long start, unsigned long end)
 
 		atomic_long_sub(nr, &vmap_lazy_nr);
 
-		if (atomic_long_read(&vmap_lazy_nr) < resched_threshold)
-			cond_resched_lock(&vmap_area_lock);
+		//if (atomic_long_read(&vmap_lazy_nr) < resched_threshold)
+			//cond_resched_lock(&vmap_area_lock);
 	}
-	spin_unlock(&vmap_area_lock);
+	spin_unlock_irqrestore(&vmap_area_lock, lock_flags);
 	return true;
 }
 
@@ -1327,10 +1603,11 @@ static void purge_vmap_area_lazy(void)
 static void free_vmap_area_noflush(struct vmap_area *va)
 {
 	unsigned long nr_lazy;
+	unsigned long lock_flags;
 
-	spin_lock(&vmap_area_lock);
+	spin_lock_irqsave(&vmap_area_lock, lock_flags);
 	unlink_va(va, &vmap_area_root);
-	spin_unlock(&vmap_area_lock);
+	spin_unlock_irqrestore(&vmap_area_lock, lock_flags);
 
 	nr_lazy = atomic_long_add_return((va->va_end - va->va_start) >>
 				PAGE_SHIFT, &vmap_lazy_nr);
@@ -1358,10 +1635,11 @@ static void free_unmap_vmap_area(struct vmap_area *va)
 static struct vmap_area *find_vmap_area(unsigned long addr)
 {
 	struct vmap_area *va;
+	unsigned long lock_flags;
 
-	spin_lock(&vmap_area_lock);
+	spin_lock_irqsave(&vmap_area_lock, lock_flags);
 	va = __find_vmap_area(addr);
-	spin_unlock(&vmap_area_lock);
+	spin_unlock_irqrestore(&vmap_area_lock, lock_flags);
 
 	return va;
 }
@@ -1897,11 +2175,14 @@ static void vmap_init_free_space(void)
 	}
 }
 
+
 void __init vmalloc_init(void)
 {
 	struct vmap_area *va;
 	struct vm_struct *tmp;
-	int i;
+	int i, rv;
+
+	rv = 0;
 
 	/*
 	 * Create the cache for vmap_area objects.
@@ -1937,7 +2218,33 @@ void __init vmalloc_init(void)
 	 */
 	vmap_init_free_space();
 	vmap_initialized = true;
+
+	/*
+	 * setup vmalloc migration
+	 */
+
+
+
+
+
+
+
+
 }
+
+void __init vmalloc_mig_init(void)
+{
+	int rv;
+	pr_info("VMALLOC MIG INIT CALLED!!!!\n");
+	rv = vmalloc_mig_mount();
+	rv |= setup_migration(&vmalloc_mig);
+	if(rv) {
+		pr_err("Cannot setup migration for vmalloc\n");
+	}
+	vmalloc_mig_on = 1;
+	pr_info("[COF] vmalloc_mig_init: vmalloc migration is now setup.\n");
+}
+
 
 /**
  * map_kernel_range_noflush - map kernel VM area with the specified pages
@@ -2017,13 +2324,15 @@ EXPORT_SYMBOL_GPL(map_vm_area);
 static void setup_vmalloc_vm(struct vm_struct *vm, struct vmap_area *va,
 			      unsigned long flags, const void *caller)
 {
-	spin_lock(&vmap_area_lock);
+	unsigned long lock_flags;
+
+	spin_lock_irqsave(&vmap_area_lock, lock_flags);
 	vm->flags = flags;
 	vm->addr = (void *)va->va_start;
 	vm->size = va->va_end - va->va_start;
 	vm->caller = caller;
 	va->vm = vm;
-	spin_unlock(&vmap_area_lock);
+	spin_unlock_irqrestore(&vmap_area_lock, lock_flags);
 }
 
 static void clear_vm_uninitialized_flag(struct vm_struct *vm)
@@ -2044,7 +2353,7 @@ static struct vm_struct *__get_vm_area_node(unsigned long size,
 	struct vmap_area *va;
 	struct vm_struct *area;
 
-	BUG_ON(in_interrupt());
+	//BUG_ON(in_interrupt());
 	size = PAGE_ALIGN(size);
 	if (unlikely(!size))
 		return NULL;
@@ -2146,16 +2455,16 @@ struct vm_struct *find_vm_area(const void *addr)
 struct vm_struct *remove_vm_area(const void *addr)
 {
 	struct vmap_area *va;
+	unsigned long lock_flags;
+	//might_sleep();
 
-	might_sleep();
-
-	spin_lock(&vmap_area_lock);
+	spin_lock_irqsave(&vmap_area_lock, lock_flags);
 	va = __find_vmap_area((unsigned long)addr);
 	if (va && va->vm) {
 		struct vm_struct *vm = va->vm;
 
 		va->vm = NULL;
-		spin_unlock(&vmap_area_lock);
+		spin_unlock_irqrestore(&vmap_area_lock, lock_flags);
 
 		kasan_free_shadow(vm);
 		free_unmap_vmap_area(va);
@@ -2163,7 +2472,7 @@ struct vm_struct *remove_vm_area(const void *addr)
 		return vm;
 	}
 
-	spin_unlock(&vmap_area_lock);
+	spin_unlock_irqrestore(&vmap_area_lock, lock_flags);
 	return NULL;
 }
 
@@ -2327,7 +2636,7 @@ void vfree(const void *addr)
 
 	kmemleak_free(addr);
 
-	might_sleep_if(!in_interrupt());
+	//might_sleep_if(!in_interrupt());
 
 	if (!addr)
 		return;
@@ -2386,7 +2695,7 @@ void *vmap(struct page **pages, unsigned int count,
 		vunmap(area->addr);
 		return NULL;
 	}
-
+	area->cof_page = NULL;
 	return area->addr;
 }
 EXPORT_SYMBOL(vmap);
@@ -2404,6 +2713,14 @@ static void *__vmalloc_area_node(struct vm_struct *area, gfp_t gfp_mask,
 	const gfp_t highmem_mask = (gfp_mask & (GFP_DMA | GFP_DMA32)) ?
 					0 :
 					__GFP_HIGHMEM;
+
+
+	if(alloc_mask & __GFP_ATOMIC || nested_gfp & __GFP_ATOMIC) {
+	//	pr_info("__vmalloc_area_node: alloc_mask/nested_gfp has atomic flag\n");
+	}
+	if(gfp_mask & __GFP_ATOMIC) {
+	//	pr_info("__vmalloc_area_node: gfp_mask has atomic flag\n");
+	}
 
 	nr_pages = get_vm_area_size(area) >> PAGE_SHIFT;
 	array_size = (nr_pages * sizeof(struct page *));
@@ -2440,6 +2757,10 @@ static void *__vmalloc_area_node(struct vm_struct *area, gfp_t gfp_mask,
 			goto fail;
 		}
 		area->pages[i] = page;
+		if(vmalloc_mig_on){
+			set_page_private(page, (unsigned long) area); //cof mod -- store vm_struct in private field of struct page for reverse mapping of vmalloc page.
+			set_vmalloc_page_movable(page, &vmalloc_mig);
+		}
 		if (gfpflags_allow_blocking(gfp_mask|highmem_mask))
 			cond_resched();
 	}
@@ -2485,6 +2806,9 @@ void *__vmalloc_node_range(unsigned long size, unsigned long align,
 	unsigned long real_size = size;
 
 	size = PAGE_ALIGN(size);
+	if(!vmap_initialized) {
+		return ERR_PTR(-EBUSY);
+	}
 	if (!size || (size >> PAGE_SHIFT) > totalram_pages())
 		goto fail;
 
@@ -3221,6 +3545,7 @@ struct vm_struct **pcpu_get_vm_areas(const unsigned long *offsets,
 	unsigned long base, start, size, end, last_end;
 	bool purged = false;
 	enum fit_type type;
+	unsigned long lock_flags;
 
 	/* verify parameters and allocate data structures */
 	BUG_ON(offset_in_page(align) || !is_power_of_2(align));
@@ -3262,7 +3587,7 @@ struct vm_struct **pcpu_get_vm_areas(const unsigned long *offsets,
 			goto err_free;
 	}
 retry:
-	spin_lock(&vmap_area_lock);
+	spin_lock_irqsave(&vmap_area_lock, lock_flags);
 
 	/* start scanning - we scan from the top, begin with the last area */
 	area = term_area = last_area;
@@ -3348,7 +3673,7 @@ retry:
 		insert_vmap_area(va, &vmap_area_root, &vmap_area_list);
 	}
 
-	spin_unlock(&vmap_area_lock);
+	spin_unlock_irqrestore(&vmap_area_lock, lock_flags);
 
 	/* insert all vm's */
 	for (area = 0; area < nr_vms; area++)
@@ -3366,7 +3691,7 @@ recovery:
 	}
 
 overflow:
-	spin_unlock(&vmap_area_lock);
+	spin_unlock_irqrestore(&vmap_area_lock, lock_flags);
 	if (!purged) {
 		purge_vmap_area_lazy();
 		purged = true;

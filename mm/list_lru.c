@@ -124,11 +124,20 @@ list_lru_from_kmem(struct list_lru_node *nlru, void *ptr,
 
 bool list_lru_add(struct list_lru *lru, struct list_head *item)
 {
-	int nid = page_to_nid(virt_to_page(item));
-	struct list_lru_node *nlru = &lru->node[nid];
+	//pr_info("IN LIST_LRU_ADD\n");
+	int nid;// = page_to_nid(virt_to_page(item));
+	//pr_info("NID = %d\n", nid);
+	struct list_lru_node *nlru;// = &lru->node[nid];
 	struct mem_cgroup *memcg;
 	struct list_lru_one *l;
-
+	if(is_vmalloc_addr(item)) {
+		//pr_info("LIST_ADD_LRU: vmalloc_addr\n");
+		nid = page_to_nid(vmalloc_to_page(item));
+	}
+	else {
+		nid = page_to_nid(virt_to_page(item));
+	}
+	nlru = &lru->node[nid];
 	spin_lock(&nlru->lock);
 	if (list_empty(item)) {
 		l = list_lru_from_kmem(nlru, item, &memcg);
@@ -148,9 +157,18 @@ EXPORT_SYMBOL_GPL(list_lru_add);
 
 bool list_lru_del(struct list_lru *lru, struct list_head *item)
 {
-	int nid = page_to_nid(virt_to_page(item));
-	struct list_lru_node *nlru = &lru->node[nid];
+	int nid;//= page_to_nid(virt_to_page(item));
+	struct list_lru_node *nlru;// = &lru->node[nid];
 	struct list_lru_one *l;
+
+	if(is_vmalloc_addr(item)) {
+		//pr_info("LIST_ADD_LRU: vmalloc_addr\n");
+		nid = page_to_nid(vmalloc_to_page(item));
+	}
+	else {
+		nid = page_to_nid(virt_to_page(item));
+	}
+	nlru = &lru->node[nid];
 
 	spin_lock(&nlru->lock);
 	if (!list_empty(item)) {

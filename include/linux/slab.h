@@ -120,6 +120,11 @@
 /* Slab deactivation flag */
 #define SLAB_DEACTIVATED	((slab_flags_t __force)0x10000000U)
 
+/* cof flag */
+#define SLAB_COF 		((slab_flags_t __force)0x20000000U) 
+
+
+
 /*
  * ZERO_SIZE_PTR will be returned for zero sized kmalloc requests.
  *
@@ -309,6 +314,7 @@ static inline void __check_heap_object(const void *ptr, unsigned long n,
 enum kmalloc_cache_type {
 	KMALLOC_NORMAL = 0,
 	KMALLOC_RECLAIM,
+	KMALLOC_COF,
 #ifdef CONFIG_ZONE_DMA
 	KMALLOC_DMA,
 #endif
@@ -326,13 +332,22 @@ static __always_inline enum kmalloc_cache_type kmalloc_type(gfp_t flags)
 	 * The most common case is KMALLOC_NORMAL, so test for it
 	 * with a single branch for both flags.
 	 */
-	if (likely((flags & (__GFP_DMA | __GFP_RECLAIMABLE)) == 0))
+	if (likely((flags & (__GFP_DMA | __GFP_RECLAIMABLE | ___GFP_COF)) == 0))
 		return KMALLOC_NORMAL;
 
 	/*
 	 * At least one of the flags has to be set. If both are, __GFP_DMA
 	 * is more important.
 	 */
+	if((flags & ___GFP_COF) && ((flags & __GFP_ATOMIC) == 0)) {
+		//pr_info("kmalloc_type(): cofmm\n");
+		return KMALLOC_COF;
+	}
+	else {
+		//pr_info("kmalloc_type(): COF AND ATOMICCC\n");
+		return KMALLOC_NORMAL;
+	}
+	pr_info("not normal but not cof???\n");
 	return flags & __GFP_DMA ? KMALLOC_DMA : KMALLOC_RECLAIM;
 #else
 	return flags & __GFP_RECLAIMABLE ? KMALLOC_RECLAIM : KMALLOC_NORMAL;

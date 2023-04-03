@@ -39,6 +39,8 @@
 
 #include "internal.h"
 
+#include <linux/cof_types.h>
+
 /*
  * Lock order:
  *   1. slab_mutex (Global Mutex)
@@ -225,6 +227,10 @@ static inline int sysfs_slab_alias(struct kmem_cache *s, const char *p)
 static inline void memcg_propagate_slab_attrs(struct kmem_cache *s) { }
 static inline void sysfs_slab_remove(struct kmem_cache *s) { }
 #endif
+
+static unsigned atomic_pages_count = 0;
+static unsigned compound_pages_count = 0;
+static unsigned total_cmp_pages = 0;
 
 static inline void stat(const struct kmem_cache *s, enum stat_item si)
 {
@@ -450,7 +456,7 @@ static inline bool cmpxchg_double_slab(struct kmem_cache *s, struct page *page,
 static void get_map(struct kmem_cache *s, struct page *page, unsigned long *map)
 {
 	void *p;
-	void *addr = page_address(page);
+	void *addr = cof_page_address(s, page);
 
 	for (p = page->freelist; p; p = get_freepointer(s, p))
 		set_bit(slab_index(p, s, addr), map);
@@ -513,7 +519,7 @@ static inline int check_valid_pointer(struct kmem_cache *s,
 	if (!object)
 		return 1;
 
-	base = page_address(page);
+	base = cof_page_address(s, page);
 	object = kasan_reset_tag(object);
 	object = restore_red_left(s, object);
 	if (object < base || object >= base + page->objects * s->size ||
@@ -647,7 +653,7 @@ static void slab_fix(struct kmem_cache *s, char *fmt, ...)
 static void print_trailer(struct kmem_cache *s, struct page *page, u8 *p)
 {
 	unsigned int off;	/* Offset of last byte */
-	u8 *addr = page_address(page);
+	u8 *addr = cof_page_address(s, page);
 
 	print_tracking(s, p);
 
@@ -828,7 +834,7 @@ static int slab_pad_check(struct kmem_cache *s, struct page *page)
 	if (!(s->flags & SLAB_POISON))
 		return 1;
 
-	start = page_address(page);
+	start = cof_page_address(s, page);
 	length = page_size(page);
 	end = start + length;
 	remainder = length % s->size;
@@ -918,7 +924,7 @@ static int check_slab(struct kmem_cache *s, struct page *page)
 		return 0;
 	}
 
-	maxobj = order_objects(compound_order(page), s->size);
+	maxobj = order_objects(cof_compound_order(s, page), s->size);
 	if (page->objects > maxobj) {
 		slab_err(s, page, "objects %u > max %u",
 			page->objects, maxobj);
@@ -968,7 +974,7 @@ static int on_freelist(struct kmem_cache *s, struct page *page, void *search)
 		nr++;
 	}
 
-	max_objects = order_objects(compound_order(page), s->size);
+	max_objects = order_objects(cof_compound_order(s, page), s->size);
 	if (max_objects > MAX_OBJS_PER_PAGE)
 		max_objects = MAX_OBJS_PER_PAGE;
 
@@ -1489,18 +1495,53 @@ static inline struct page *alloc_slab_page(struct kmem_cache *s,
 		gfp_t flags, int node, struct kmem_cache_order_objects oo)
 {
 	struct page *page;
+	struct cof_page *cof_page;
 	unsigned int order = oo_order(oo);
+	void *v_addr;
+	uint64_t n_pages;
+	gfp_t alloc_flags;
+	
+	alloc_flags = __GFP_ZERO | GFP_KERNEL;	
+	
+	
+	if(flags & __GFP_ATOMIC) {
+		alloc_flags |= __GFP_ATOMIC;
+	}	
 
+
+	if(flags & ___GFP_COF) {
+		n_pages = 1 << order;
+		v_addr = __vmalloc(PAGE_SIZE * n_pages, alloc_flags, PAGE_KERNEL);
+		if(!v_addr) {
+			pr_err("vmalloc() failed for n_pages %lu\n", n_pages);
+		}
+
+		cof_page = kzalloc(sizeof(struct cof_page), GFP_KERNEL);
+		cof_page->vm_area = find_vm_area(v_addr);
+		cof_page->vm_area->cof_page = cof_page;
+		page = (struct page *) cof_page;
+		page->flags = cof_page->vm_area->pages[0]->flags;
+		set_bit(PG_cof, &page->flags);
+		//pr_info("page ptr = %p, vm_area ptr = %p\n", page, cof_page->vm_area);
+		//pr_info("Used vmalloc() backend for SLUB\n");
+		if(page && charge_slab_page(cof_page->vm_area->pages[0], flags, order, s)) {
+			//pr_warn("charge_slab failed\n");
+			page = NULL;
+		}
+		goto out;
+	}
+buddy:
 	if (node == NUMA_NO_NODE)
 		page = alloc_pages(flags, order);
 	else
 		page = __alloc_pages_node(node, flags, order);
-
+charge:
 	if (page && charge_slab_page(page, flags, order, s)) {
+		pr_warn("charge_slab failed\n");
 		__free_pages(page, order);
 		page = NULL;
 	}
-
+out:
 	return page;
 }
 
@@ -1582,7 +1623,7 @@ static bool shuffle_freelist(struct kmem_cache *s, struct page *page)
 	pos = get_random_int() % freelist_count;
 
 	page_limit = page->objects * s->size;
-	start = fixup_red_left(s, page_address(page));
+	start = fixup_red_left(s, cof_page_address(s, page));
 
 	/* First entry is used as the base of the freelist */
 	cur = next_freelist_entry(s, page, &pos, start, page_limit,
@@ -1660,7 +1701,7 @@ static struct page *allocate_slab(struct kmem_cache *s, gfp_t flags, int node)
 
 	kasan_poison_slab(page);
 
-	start = page_address(page);
+	start = cof_page_address(s, page);
 
 	setup_page_debug(s, page, start);
 
@@ -1709,14 +1750,14 @@ static struct page *new_slab(struct kmem_cache *s, gfp_t flags, int node)
 
 static void __free_slab(struct kmem_cache *s, struct page *page)
 {
-	int order = compound_order(page);
+	int order = cof_compound_order(s, page);
 	int pages = 1 << order;
 
 	if (s->flags & SLAB_CONSISTENCY_CHECKS) {
 		void *p;
 
 		slab_pad_check(s, page);
-		for_each_object(p, s, page_address(page),
+		for_each_object(p, s, cof_page_address(s, page),
 						page->objects)
 			check_object(s, page, p, SLUB_RED_INACTIVE);
 	}
@@ -1728,7 +1769,8 @@ static void __free_slab(struct kmem_cache *s, struct page *page)
 	if (current->reclaim_state)
 		current->reclaim_state->reclaimed_slab += pages;
 	uncharge_slab_page(page, order, s);
-	__free_pages(page, order);
+	//__free_pages(page, order);
+	cof_free_pages(s, page);	
 }
 
 static void rcu_free_slab(struct rcu_head *h)
@@ -2051,7 +2093,6 @@ static void deactivate_slab(struct kmem_cache *s, struct page *page,
 		stat(s, DEACTIVATE_REMOTE_FREES);
 		tail = DEACTIVATE_TO_TAIL;
 	}
-
 	/*
 	 * Stage one: Free all available per cpu objects back
 	 * to the page freelist while it is still frozen. Leave the
@@ -2133,6 +2174,7 @@ redo:
 			 * slabs from diagnostic functions will not see
 			 * any frozen slabs.
 			 */
+
 			spin_lock(&n->list_lock);
 		}
 	}
@@ -2541,7 +2583,6 @@ static void *___slab_alloc(struct kmem_cache *s, gfp_t gfpflags, int node,
 {
 	void *freelist;
 	struct page *page;
-
 	page = c->page;
 	if (!page)
 		goto new_slab;
@@ -3017,7 +3058,7 @@ void kmem_cache_free(struct kmem_cache *s, void *x)
 	s = cache_from_obj(s, x);
 	if (!s)
 		return;
-	slab_free(s, virt_to_head_page(x), x, NULL, 1, _RET_IP_);
+	slab_free(s, cof_virt_to_head_page(s, x), x, NULL, 1, _RET_IP_);
 	trace_kmem_cache_free(_RET_IP_, x);
 }
 EXPORT_SYMBOL(kmem_cache_free);
@@ -3062,7 +3103,7 @@ int build_detached_freelist(struct kmem_cache *s, size_t size,
 	if (!object)
 		return 0;
 
-	page = virt_to_head_page(object);
+	page = cof_virt_to_head_page(s, object);
 	if (!s) {
 		/* Handle kalloc'ed objects */
 		if (unlikely(!PageSlab(page))) {
@@ -3092,7 +3133,7 @@ int build_detached_freelist(struct kmem_cache *s, size_t size,
 			continue; /* Skip processed objects */
 
 		/* df->page is always set at this point */
-		if (df->page == virt_to_head_page(object)) {
+		if (df->page == cof_virt_to_head_page(s, object)) {
 			/* Opportunity build freelist */
 			set_freepointer(df->s, object, df->freelist);
 			df->freelist = object;
@@ -3672,7 +3713,7 @@ static void list_slab_objects(struct kmem_cache *s, struct page *page,
 							const char *text)
 {
 #ifdef CONFIG_SLUB_DEBUG
-	void *addr = page_address(page);
+	void *addr = cof_page_address(s, page);
 	void *p;
 	unsigned long *map = bitmap_zalloc(page->objects, GFP_ATOMIC);
 	if (!map)
@@ -3789,12 +3830,13 @@ void *__kmalloc(size_t size, gfp_t flags)
 
 	if (unlikely(size > KMALLOC_MAX_CACHE_SIZE))
 		return kmalloc_large(size, flags);
-
+	
 	s = kmalloc_slab(size, flags);
 
 	if (unlikely(ZERO_OR_NULL_PTR(s)))
 		return s;
 
+//	pr_info("%s\n", s->name);
 	ret = slab_alloc(s, flags, _RET_IP_);
 
 	trace_kmalloc(_RET_IP_, ret, size, s->size, flags);
@@ -3936,13 +3978,23 @@ void kfree(const void *x)
 {
 	struct page *page;
 	void *object = (void *)x;
-
+	struct vm_struct *vm_area;
+	struct cof_page* cof_page;
 	trace_kfree(_RET_IP_, x);
 
 	if (unlikely(ZERO_OR_NULL_PTR(x)))
 		return;
+	
+	if(is_vmalloc_addr(x)) {
+		page = cof_virt_to_head_page(NULL, x);
+		if(page == NULL) { //kmalloc_order() allocation
+			pr_info("kfree() -- vmalloc_addr just vfree()\n");
+			vfree(x);
+			return;
+		}
+	}
 
-	page = virt_to_head_page(x);
+	page = cof_virt_to_head_page(NULL, x);
 	if (unlikely(!PageSlab(page))) {
 		unsigned int order = compound_order(page);
 
@@ -4387,7 +4439,7 @@ static int validate_slab(struct kmem_cache *s, struct page *page,
 						unsigned long *map)
 {
 	void *p;
-	void *addr = page_address(page);
+	void *addr = cof_page_address(s, page);
 
 	if (!check_slab(s, page) ||
 			!on_freelist(s, page, NULL))
@@ -4597,7 +4649,7 @@ static void process_slab(struct loc_track *t, struct kmem_cache *s,
 		struct page *page, enum track_item alloc,
 		unsigned long *map)
 {
-	void *addr = page_address(page);
+	void *addr = cof_page_address(s, page);
 	void *p;
 
 	bitmap_zero(map, page->objects);
@@ -4697,7 +4749,7 @@ static int list_locations(struct kmem_cache *s, char *buf,
 static void __init resiliency_test(void)
 {
 	u8 *p;
-	int type = KMALLOC_NORMAL;
+	int type = KMALLOC_COF;
 
 	BUILD_BUG_ON(KMALLOC_MIN_SIZE > 16 || KMALLOC_SHIFT_HIGH < 10);
 

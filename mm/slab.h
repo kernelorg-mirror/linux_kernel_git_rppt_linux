@@ -109,7 +109,7 @@ struct memcg_cache_params {
 #include <linux/kmemleak.h>
 #include <linux/random.h>
 #include <linux/sched/mm.h>
-
+#include <linux/cof_types.h>
 /*
  * State of the slab allocator.
  *
@@ -192,7 +192,7 @@ static inline slab_flags_t kmem_cache_flags(unsigned int object_size,
 /* Legal flag mask for kmem_cache_create(), for various configurations */
 #define SLAB_CORE_FLAGS (SLAB_HWCACHE_ALIGN | SLAB_CACHE_DMA | \
 			 SLAB_CACHE_DMA32 | SLAB_PANIC | \
-			 SLAB_TYPESAFE_BY_RCU | SLAB_DEBUG_OBJECTS )
+			 SLAB_TYPESAFE_BY_RCU | SLAB_DEBUG_OBJECTS | SLAB_COF )
 
 #if defined(CONFIG_DEBUG_SLAB)
 #define SLAB_DEBUG_FLAGS (SLAB_RED_ZONE | SLAB_POISON | SLAB_STORE_USER)
@@ -271,7 +271,7 @@ int __kmem_cache_alloc_bulk(struct kmem_cache *, gfp_t, size_t, void **);
 
 static inline int cache_vmstat_idx(struct kmem_cache *s)
 {
-	return (s->flags & SLAB_RECLAIM_ACCOUNT) ?
+	return (/*s->flags & SLAB_RECLAIM_ACCOUNT || */ s->flags & SLAB_COF) ?
 		NR_SLAB_RECLAIMABLE : NR_SLAB_UNRECLAIMABLE;
 }
 
@@ -469,7 +469,7 @@ static inline struct kmem_cache *virt_to_cache(const void *obj)
 {
 	struct page *page;
 
-	page = virt_to_head_page(obj);
+	page = cof_virt_to_head_page(NULL, obj);
 	if (WARN_ONCE(!PageSlab(page), "%s: Object is not a Slab page!\n",
 					__func__))
 		return NULL;

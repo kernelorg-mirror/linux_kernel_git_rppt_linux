@@ -1135,7 +1135,9 @@ struct kmem_cache *kmalloc_slab(size_t size, gfp_t flags)
 			return NULL;
 		index = fls(size - 1);
 	}
-
+	
+	//if(kmalloc_type(flags) == KMALLOC_COF)
+		//pr_info("KMALLOC_COF\n");
 	return kmalloc_caches[kmalloc_type(flags)][index];
 }
 
@@ -1233,7 +1235,13 @@ new_kmalloc_cache(int idx, int type, slab_flags_t flags)
 		name = kmalloc_cache_name("kmalloc-rcl",
 						kmalloc_info[idx].size);
 		BUG_ON(!name);
-	} else {
+	} 
+	else if(type == KMALLOC_COF) {
+		flags |= SLAB_COF;
+		name = kmalloc_cache_name("kmalloc-cof", kmalloc_info[idx].size);
+		BUG_ON(!name);
+	}
+	else {
 		name = kmalloc_info[idx].name;
 	}
 
@@ -1251,7 +1259,7 @@ void __init create_kmalloc_caches(slab_flags_t flags)
 {
 	int i, type;
 
-	for (type = KMALLOC_NORMAL; type <= KMALLOC_RECLAIM; type++) {
+	for (type = KMALLOC_NORMAL; type <= KMALLOC_COF; type++) {
 		for (i = KMALLOC_SHIFT_LOW; i <= KMALLOC_SHIFT_HIGH; i++) {
 			if (!kmalloc_caches[type][i])
 				new_kmalloc_cache(i, type, flags);
@@ -1300,12 +1308,26 @@ void *kmalloc_order(size_t size, gfp_t flags, unsigned int order)
 	void *ret = NULL;
 	struct page *page;
 
-	flags |= __GFP_COMP;
-	page = alloc_pages(flags, order);
-	if (likely(page)) {
-		ret = page_address(page);
-		mod_node_page_state(page_pgdat(page), NR_SLAB_UNRECLAIMABLE,
-				    1 << order);
+	if((flags & ___GFP_COF) == 0) {
+		pr_info("COF FLAG -> allocating with vmalloc()\n");
+		//dump_stack();
+		ret = vzalloc((1 << order) * PAGE_SIZE);
+		if(ret == NULL) {
+			pr_err("Couldn't back large alloc with vmalloc\n");
+		}
+		//vmalloc_sync_all();
+	}
+	else {	
+		pr_info("KMALLOC ORDER order = %d\n", order);
+		//dump_stack();
+		flags |= __GFP_COMP;
+		page = alloc_pages(flags, order);
+
+		if (likely(page)) {
+			ret = page_address(page);
+			mod_node_page_state(page_pgdat(page), NR_SLAB_UNRECLAIMABLE,
+				    	1 << order);
+		}
 	}
 	ret = kasan_kmalloc_large(ret, size, flags);
 	/* As ret might get tagged, call kmemleak hook after KASAN. */

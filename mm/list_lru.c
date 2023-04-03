@@ -364,7 +364,7 @@ static int __memcg_init_list_lru_node(struct list_lru_memcg *memcg_lrus,
 	for (i = begin; i < end; i++) {
 		struct list_lru_one *l;
 
-		l = kmalloc(sizeof(struct list_lru_one), GFP_KERNEL);
+		l = kmalloc(sizeof(struct list_lru_one), GFP_KERNEL | ___GFP_COF);
 		if (!l)
 			goto fail;
 
@@ -629,7 +629,7 @@ int __list_lru_init(struct list_lru *lru, bool memcg_aware,
 #endif
 	memcg_get_cache_ids();
 
-	lru->node = kcalloc(nr_node_ids, sizeof(*lru->node), GFP_KERNEL);
+	lru->node = kcalloc(nr_node_ids, sizeof(*lru->node), GFP_KERNEL | ___GFP_COF);
 	if (!lru->node)
 		goto out;
 

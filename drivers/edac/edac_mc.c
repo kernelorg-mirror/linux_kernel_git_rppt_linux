@@ -29,6 +29,9 @@
 #include <linux/edac.h>
 #include <linux/bitops.h>
 #include <linux/uaccess.h>
+#include <linux/cof.h>
+#include <linux/mm.h>
+#include <linux/freezer.h>
 #include <asm/page.h>
 #include "edac_mc.h"
 #include "edac_module.h"
@@ -1096,6 +1099,7 @@ void edac_mc_handle_error(const enum hw_event_mc_err_type type,
 	int i, n_labels = 0;
 	u8 grain_bits;
 	struct edac_raw_error_desc *e = &mci->error_desc;
+	struct page *vuln_page;
 
 	edac_dbg(3, "MC%d\n", mci->mc_idx);
 
@@ -1247,6 +1251,24 @@ void edac_mc_handle_error(const enum hw_event_mc_err_type type,
 			       e->low_layer,
 			       (e->page_frame_number << PAGE_SHIFT) | e->offset_in_page,
 			       grain_bits, e->syndrome, e->other_detail);
+
+	if (type == HW_EVENT_ERR_CORRECTED) {
+		vuln_page = pfn_to_page(page_frame_number);
+		if(unlikely(vuln_page == NULL)) {
+			pr_err("[COF EDAC] Cannot get page from pfn\n");
+		}
+
+		if(test_bit(PG_flip, &vuln_page->flags)) {
+			freeze_processes();
+			bitflip_migrate(page_frame_number);
+			SetPageHWPoison(vuln_page);
+			pr_info("[COF EDAC] Page @PFN %#lx  already has PG_flip set -> Migrating and Poisoning Page\n", page_frame_number);
+			thaw_processes();
+		} else {
+			set_bit(PG_flip, &vuln_page->flags);
+			pr_info("[COF EDAC] Page @PFN %#lx had correctable error, possible templating -> Setting PG_flip\n", page_frame_number);
+		}
+	}
 
 	edac_raw_mc_handle_error(type, mci, e);
 }

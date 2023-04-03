@@ -131,6 +131,9 @@ enum pageflags {
 	PG_young,
 	PG_idle,
 #endif
+	PG_cof,
+	PG_flip,
+	PG_ptp,
 	__NR_PAGEFLAGS,
 
 	/* Filesystems */

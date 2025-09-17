@@ -341,7 +341,7 @@ static struct tracing_map_array *tracing_map_array_alloc(unsigned int n_elts,
 		goto free;
 
 	for (i = 0; i < a->n_pages; i++) {
-		a->pages[i] = (void *)get_zeroed_page(GFP_KERNEL);
+		a->pages[i] = get_zeroed_page(GFP_KERNEL);
 		if (!a->pages[i])
 			goto free;
 		kmemleak_alloc(a->pages[i], PAGE_SIZE, 1, GFP_KERNEL);

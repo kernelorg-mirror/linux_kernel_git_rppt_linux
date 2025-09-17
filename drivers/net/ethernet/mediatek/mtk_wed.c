@@ -544,7 +544,7 @@ mtk_wed_amsdu_buffer_alloc(struct mtk_wed_device *dev)
 		void *ptr;
 
 		/* each segment is 64K */
-		ptr = (void *)__get_free_pages(GFP_KERNEL | __GFP_NOWARN |
+		ptr = __get_free_pages(GFP_KERNEL | __GFP_NOWARN |
 					       __GFP_ZERO | __GFP_COMP |
 					       GFP_DMA32,
 					       get_order(MTK_WED_AMSDU_BUF_SIZE));

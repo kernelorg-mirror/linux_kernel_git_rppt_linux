@@ -698,7 +698,7 @@ static int omap_sham_copy_sgs(struct omap_sham_reqctx *ctx,
 
 	pages = get_order(new_len);
 
-	buf = (void *)__get_free_pages(GFP_ATOMIC, pages);
+	buf = __get_free_pages(GFP_ATOMIC, pages);
 	if (!buf) {
 		pr_err("Couldn't allocate pages for unaligned cases.\n");
 		return -ENOMEM;

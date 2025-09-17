@@ -195,7 +195,7 @@ static int hotplug_tests(void)
 	nb_cpu_group = alloc_init_cpu_groups(&cpu_groups);
 	if (nb_cpu_group < 0)
 		goto out_free_cpus;
-	page_buf = (char *)__get_free_page(GFP_KERNEL);
+	page_buf = __get_free_page(GFP_KERNEL);
 	if (!page_buf)
 		goto out_free_cpu_groups;
 

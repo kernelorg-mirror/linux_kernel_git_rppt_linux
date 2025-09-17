@@ -4210,17 +4210,17 @@ static int mmu_alloc_special_roots(struct kvm_vcpu *vcpu)
 	 * Unlike 32-bit NPT, the PDP table doesn't need to be in low mem, and
 	 * doesn't need to be decrypted.
 	 */
-	pae_root = (void *)get_zeroed_page(GFP_KERNEL_ACCOUNT);
+	pae_root = get_zeroed_page(GFP_KERNEL_ACCOUNT);
 	if (!pae_root)
 		return -ENOMEM;
 
 #ifdef CONFIG_X86_64
-	pml4_root = (void *)get_zeroed_page(GFP_KERNEL_ACCOUNT);
+	pml4_root = get_zeroed_page(GFP_KERNEL_ACCOUNT);
 	if (!pml4_root)
 		goto err_pml4;
 
 	if (need_pml5) {
-		pml5_root = (void *)get_zeroed_page(GFP_KERNEL_ACCOUNT);
+		pml5_root = get_zeroed_page(GFP_KERNEL_ACCOUNT);
 		if (!pml5_root)
 			goto err_pml5;
 	}

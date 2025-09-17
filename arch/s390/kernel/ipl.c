@@ -1290,7 +1290,7 @@ static int __init reipl_nss_init(void)
 	if (!machine_is_vm())
 		return 0;
 
-	reipl_block_nss = (void *) get_zeroed_page(GFP_KERNEL);
+	reipl_block_nss = get_zeroed_page(GFP_KERNEL);
 	if (!reipl_block_nss)
 		return -ENOMEM;
 
@@ -1332,7 +1332,7 @@ static int __init reipl_fcp_init(void)
 {
 	int rc;
 
-	reipl_block_fcp = (void *) get_zeroed_page(GFP_KERNEL);
+	reipl_block_fcp = get_zeroed_page(GFP_KERNEL);
 	if (!reipl_block_fcp)
 		return -ENOMEM;
 
@@ -1388,7 +1388,7 @@ static int __init reipl_nvme_init(void)
 {
 	int rc;
 
-	reipl_block_nvme = (void *) get_zeroed_page(GFP_KERNEL);
+	reipl_block_nvme = get_zeroed_page(GFP_KERNEL);
 	if (!reipl_block_nvme)
 		return -ENOMEM;
 
@@ -1447,7 +1447,7 @@ static int __init reipl_eckd_init(void)
 	if (!sclp.has_sipl_eckd)
 		return 0;
 
-	reipl_block_eckd = (void *)get_zeroed_page(GFP_KERNEL);
+	reipl_block_eckd = get_zeroed_page(GFP_KERNEL);
 	if (!reipl_block_eckd)
 		return -ENOMEM;
 
@@ -1780,7 +1780,7 @@ static int __init dump_ccw_init(void)
 {
 	int rc;
 
-	dump_block_ccw = (void *) get_zeroed_page(GFP_KERNEL);
+	dump_block_ccw = get_zeroed_page(GFP_KERNEL);
 	if (!dump_block_ccw)
 		return -ENOMEM;
 	rc = sysfs_create_group(&dump_kset->kobj, &dump_ccw_attr_group);
@@ -1802,7 +1802,7 @@ static int __init dump_fcp_init(void)
 
 	if (!sclp_ipl_info.has_dump)
 		return 0; /* LDIPL DUMP is not installed */
-	dump_block_fcp = (void *) get_zeroed_page(GFP_KERNEL);
+	dump_block_fcp = get_zeroed_page(GFP_KERNEL);
 	if (!dump_block_fcp)
 		return -ENOMEM;
 	rc = sysfs_create_group(&dump_kset->kobj, &dump_fcp_attr_group);
@@ -1825,7 +1825,7 @@ static int __init dump_nvme_init(void)
 
 	if (!sclp_ipl_info.has_dump)
 		return 0; /* LDIPL DUMP is not installed */
-	dump_block_nvme = (void *) get_zeroed_page(GFP_KERNEL);
+	dump_block_nvme = get_zeroed_page(GFP_KERNEL);
 	if (!dump_block_nvme)
 		return -ENOMEM;
 	rc = sysfs_create_group(&dump_kset->kobj, &dump_nvme_attr_group);
@@ -1848,7 +1848,7 @@ static int __init dump_eckd_init(void)
 
 	if (!sclp_ipl_info.has_dump || !sclp.has_sipl_eckd)
 		return 0; /* LDIPL DUMP is not installed */
-	dump_block_eckd = (void *)get_zeroed_page(GFP_KERNEL);
+	dump_block_eckd = get_zeroed_page(GFP_KERNEL);
 	if (!dump_block_eckd)
 		return -ENOMEM;
 	rc = sysfs_create_group(&dump_kset->kobj, &dump_eckd_attr_group);

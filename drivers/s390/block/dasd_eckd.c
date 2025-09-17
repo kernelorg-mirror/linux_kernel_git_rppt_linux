@@ -5580,7 +5580,7 @@ static void dasd_eckd_dump_sense_ccw(struct dasd_device *device,
 
 	dev = &device->cdev->dev;
 
-	page = (char *) get_zeroed_page(GFP_ATOMIC);
+	page = get_zeroed_page(GFP_ATOMIC);
 	if (page == NULL) {
 		DBF_DEV_EVENT(DBF_WARNING, device, "%s",
 			      "No memory to dump sense data\n");
@@ -5670,7 +5670,7 @@ static void dasd_eckd_dump_sense_tcw(struct dasd_device *device,
 	struct tsb *tsb;
 	u8 *sense, *rcq;
 
-	page = (char *) get_zeroed_page(GFP_ATOMIC);
+	page = get_zeroed_page(GFP_ATOMIC);
 	if (page == NULL) {
 		DBF_DEV_EVENT(DBF_WARNING, device, " %s",
 			    "No memory to dump sense data");
@@ -6932,7 +6932,7 @@ dasd_eckd_init(void)
 		kfree(dasd_vol_info_req);
 		return -ENOMEM;
 	}
-	rawpadpage = (void *)__get_free_page(GFP_KERNEL);
+	rawpadpage = __get_free_page(GFP_KERNEL);
 	if (!rawpadpage) {
 		kfree(pe_handler_worker);
 		kfree(dasd_reserve_req);

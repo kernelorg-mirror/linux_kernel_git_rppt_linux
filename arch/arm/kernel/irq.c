@@ -58,7 +58,7 @@ static void __init init_irq_stacks(void)
 
 	for_each_possible_cpu(cpu) {
 		if (!IS_ENABLED(CONFIG_VMAP_STACK))
-			stack = (u8 *)__get_free_pages(GFP_KERNEL,
+			stack = __get_free_pages(GFP_KERNEL,
 						       THREAD_SIZE_ORDER);
 		else
 			stack = __vmalloc_node(THREAD_SIZE, THREAD_ALIGN,

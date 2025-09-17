@@ -2195,7 +2195,7 @@ static __be32 nfsd_buffered_readdir(struct file *file, struct svc_fh *fhp,
 	loff_t offset;
 	struct readdir_data buf = {
 		.ctx.actor = nfsd_buffered_filldir,
-		.dirent = (void *)__get_free_page(GFP_KERNEL)
+		.dirent = __get_free_page(GFP_KERNEL)
 	};
 
 	if (!buf.dirent)

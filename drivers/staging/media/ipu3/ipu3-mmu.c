@@ -123,7 +123,7 @@ static u32 *imgu_mmu_alloc_page_table(u32 pteval)
 	u32 *pt;
 	int pte;
 
-	pt = (u32 *)__get_free_page(GFP_KERNEL);
+	pt = __get_free_page(GFP_KERNEL);
 	if (!pt)
 		return NULL;
 
@@ -444,7 +444,7 @@ struct imgu_mmu_info *imgu_mmu_init(struct device *parent, void __iomem *base)
 	 * The MMU does not have a "valid" bit, so we have to use a dummy
 	 * page for invalid entries.
 	 */
-	mmu->dummy_page = (void *)__get_free_page(GFP_KERNEL);
+	mmu->dummy_page = __get_free_page(GFP_KERNEL);
 	if (!mmu->dummy_page)
 		goto fail_group;
 	pteval = IPU3_ADDR2PTE(virt_to_phys(mmu->dummy_page));

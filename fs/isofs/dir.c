@@ -254,7 +254,7 @@ static int isofs_readdir(struct file *file, struct dir_context *ctx)
 	struct iso_directory_record *tmpde;
 	struct inode *inode = file_inode(file);
 
-	tmpname = (char *)__get_free_page(GFP_KERNEL);
+	tmpname = __get_free_page(GFP_KERNEL);
 	if (tmpname == NULL)
 		return -ENOMEM;
 

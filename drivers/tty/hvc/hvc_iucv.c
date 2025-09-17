@@ -1061,7 +1061,7 @@ static int __init hvc_iucv_alloc(int id, unsigned int is_console)
 	INIT_DELAYED_WORK(&priv->sndbuf_work, hvc_iucv_sndbuf_work);
 	init_waitqueue_head(&priv->sndbuf_waitq);
 
-	priv->sndbuf = (void *) get_zeroed_page(GFP_KERNEL);
+	priv->sndbuf = get_zeroed_page(GFP_KERNEL);
 	if (!priv->sndbuf) {
 		kfree(priv);
 		return -ENOMEM;

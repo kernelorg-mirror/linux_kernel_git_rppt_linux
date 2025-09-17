@@ -120,7 +120,7 @@ EXPORT_SYMBOL(paddr_vmcoreinfo_note);
 
 static int __init crash_save_vmcoreinfo_init(void)
 {
-	vmcoreinfo_data = (unsigned char *)get_zeroed_page(GFP_KERNEL);
+	vmcoreinfo_data = get_zeroed_page(GFP_KERNEL);
 	if (!vmcoreinfo_data) {
 		pr_warn("Memory allocation for vmcoreinfo_data failed\n");
 		return -ENOMEM;

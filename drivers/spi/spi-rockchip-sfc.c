@@ -698,7 +698,7 @@ static int rockchip_sfc_probe(struct platform_device *pdev)
 	pm_runtime_get_noresume(dev);
 
 	if (sfc->use_dma) {
-		sfc->buffer = (u8 *)__get_free_pages(GFP_KERNEL | GFP_DMA32,
+		sfc->buffer = __get_free_pages(GFP_KERNEL | GFP_DMA32,
 						     get_order(sfc->max_iosize));
 		if (!sfc->buffer) {
 			ret = -ENOMEM;

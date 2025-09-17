@@ -156,7 +156,7 @@ static int eip93_make_sg_copy(struct scatterlist *src, struct scatterlist **dst,
 	if (!*dst)
 		return -ENOMEM;
 
-	pages = (void *)__get_free_pages(GFP_KERNEL | GFP_DMA,
+	pages = __get_free_pages(GFP_KERNEL | GFP_DMA,
 					 get_order(len));
 	if (!pages) {
 		kfree(*dst);

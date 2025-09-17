@@ -76,7 +76,7 @@ static void vmcp_response_alloc(struct vmcp_session *session)
 		session->cma_alloc = 1;
 		return;
 	}
-	session->response = (char *)__get_free_pages(GFP_KERNEL | __GFP_RETRY_MAYFAIL, order);
+	session->response = __get_free_pages(GFP_KERNEL | __GFP_RETRY_MAYFAIL, order);
 }
 
 static void vmcp_response_free(struct vmcp_session *session)

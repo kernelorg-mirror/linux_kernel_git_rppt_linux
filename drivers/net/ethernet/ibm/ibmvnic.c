@@ -4060,7 +4060,7 @@ static struct ibmvnic_sub_crq_queue *init_sub_crq_queue(struct ibmvnic_adapter
 		return NULL;
 
 	scrq->msgs =
-		(union sub_crq *)__get_free_pages(GFP_KERNEL | __GFP_ZERO, 2);
+		__get_free_pages(GFP_KERNEL | __GFP_ZERO, 2);
 	if (!scrq->msgs) {
 		dev_warn(dev, "Couldn't allocate crq queue messages page\n");
 		goto zero_page_failed;
@@ -6278,7 +6278,7 @@ static int init_crq_queue(struct ibmvnic_adapter *adapter)
 	if (crq->msgs)
 		return 0;
 
-	crq->msgs = (union ibmvnic_crq *)get_zeroed_page(GFP_KERNEL);
+	crq->msgs = get_zeroed_page(GFP_KERNEL);
 	/* Should we allocate more than one page? */
 
 	if (!crq->msgs)

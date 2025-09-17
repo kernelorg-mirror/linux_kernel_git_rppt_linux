@@ -112,8 +112,8 @@ void *nx842_crypto_alloc_ctx(struct nx842_driver *driver)
 	spin_lock_init(&ctx->lock);
 	ctx->driver = driver;
 	ctx->wmem = kmalloc(driver->workmem_size, GFP_KERNEL);
-	ctx->sbounce = (u8 *)__get_free_pages(GFP_KERNEL, BOUNCE_BUFFER_ORDER);
-	ctx->dbounce = (u8 *)__get_free_pages(GFP_KERNEL, BOUNCE_BUFFER_ORDER);
+	ctx->sbounce = __get_free_pages(GFP_KERNEL, BOUNCE_BUFFER_ORDER);
+	ctx->dbounce = __get_free_pages(GFP_KERNEL, BOUNCE_BUFFER_ORDER);
 	if (!ctx->wmem || !ctx->sbounce || !ctx->dbounce) {
 		kfree(ctx->wmem);
 		free_page((unsigned long)ctx->sbounce);

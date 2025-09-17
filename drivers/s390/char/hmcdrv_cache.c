@@ -218,7 +218,7 @@ int hmcdrv_cache_startup(size_t cachesize)
 	if (cachesize > 0) { /* perform caching ? */
 		hmcdrv_cache_order = get_order(cachesize);
 		hmcdrv_cache_file.content =
-			(void *) __get_free_pages(GFP_KERNEL | GFP_DMA,
+			__get_free_pages(GFP_KERNEL | GFP_DMA,
 						  hmcdrv_cache_order);
 
 		if (!hmcdrv_cache_file.content) {

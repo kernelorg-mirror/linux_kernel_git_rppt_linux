@@ -504,7 +504,7 @@ static int s5p_make_sg_cpy(struct s5p_aes_dev *dev, struct scatterlist *src,
 		return -ENOMEM;
 
 	len = ALIGN(dev->req->cryptlen, AES_BLOCK_SIZE);
-	pages = (void *)__get_free_pages(GFP_ATOMIC, get_order(len));
+	pages = __get_free_pages(GFP_ATOMIC, get_order(len));
 	if (!pages) {
 		kfree(*dst);
 		*dst = NULL;
@@ -1010,7 +1010,7 @@ static int s5p_hash_copy_sgs(struct s5p_hash_reqctx *ctx,
 	len = new_len + ctx->bufcnt;
 	pages = get_order(len);
 
-	buf = (void *)__get_free_pages(GFP_ATOMIC, pages);
+	buf = __get_free_pages(GFP_ATOMIC, pages);
 	if (!buf) {
 		dev_err(ctx->dd->dev, "alloc pages for unaligned case.\n");
 		ctx->error = true;

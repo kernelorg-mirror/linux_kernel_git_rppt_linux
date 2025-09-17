@@ -252,7 +252,7 @@ static int uart_alloc_xmit_buf(struct tty_port *port)
 	 * Initialise and allocate the transmit and temporary
 	 * buffer.
 	 */
-	page = get_zeroed_page(GFP_KERNEL);
+	page = (unsigned long)get_zeroed_page(GFP_KERNEL);
 	if (!page)
 		return -ENOMEM;
 

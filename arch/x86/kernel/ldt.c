@@ -170,7 +170,7 @@ static struct ldt_struct *alloc_ldt_struct(unsigned int num_entries)
 	if (alloc_size > PAGE_SIZE)
 		new_ldt->entries = __vmalloc(alloc_size, GFP_KERNEL_ACCOUNT | __GFP_ZERO);
 	else
-		new_ldt->entries = (void *)get_zeroed_page(GFP_KERNEL_ACCOUNT);
+		new_ldt->entries = get_zeroed_page(GFP_KERNEL_ACCOUNT);
 
 	if (!new_ldt->entries) {
 		kfree(new_ldt);

@@ -1238,7 +1238,7 @@ char *simple_transaction_get(struct file *file, const char __user *buf, size_t s
 	if (size > SIMPLE_TRANSACTION_LIMIT - 1)
 		return ERR_PTR(-EFBIG);
 
-	ar = (struct simple_transaction_argresp *)get_zeroed_page(GFP_KERNEL);
+	ar = get_zeroed_page(GFP_KERNEL);
 	if (!ar)
 		return ERR_PTR(-ENOMEM);
 

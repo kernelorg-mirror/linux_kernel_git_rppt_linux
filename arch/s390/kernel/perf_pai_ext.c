@@ -289,9 +289,11 @@ static int paiext_event_init(struct perf_event *event)
 		return -EINVAL;
 	/* Get a page to store last counter values for sampling */
 	if (a->sample_period) {
-		PAI_SAVE_AREA(event) = get_zeroed_page(GFP_KERNEL);
-		if (!PAI_SAVE_AREA(event))
+		void *save_area = get_zeroed_page(GFP_KERNEL);
+
+		if (!save_area)
 			return -ENOMEM;
+		PAI_SAVE_AREA(event) = (unsigned long)save_area;
 	}
 
 	if (event->cpu >= 0)

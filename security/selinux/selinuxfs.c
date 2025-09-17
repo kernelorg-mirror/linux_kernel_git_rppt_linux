@@ -1347,7 +1347,7 @@ static int sel_make_bools(struct selinux_policy *newpolicy, struct dentry *bool_
 	char **names, *page;
 	u32 i, num;
 
-	page = (char *)get_zeroed_page(GFP_KERNEL);
+	page = get_zeroed_page(GFP_KERNEL);
 	if (!page)
 		return -ENOMEM;
 
@@ -1458,7 +1458,7 @@ static ssize_t sel_read_avc_hash_stats(struct file *filp, char __user *buf,
 	char *page;
 	ssize_t length;
 
-	page = (char *)__get_free_page(GFP_KERNEL);
+	page = __get_free_page(GFP_KERNEL);
 	if (!page)
 		return -ENOMEM;
 
@@ -1476,7 +1476,7 @@ static ssize_t sel_read_sidtab_hash_stats(struct file *filp, char __user *buf,
 	char *page;
 	ssize_t length;
 
-	page = (char *)__get_free_page(GFP_KERNEL);
+	page = __get_free_page(GFP_KERNEL);
 	if (!page)
 		return -ENOMEM;
 

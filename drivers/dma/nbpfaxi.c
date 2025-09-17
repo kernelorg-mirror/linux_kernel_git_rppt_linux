@@ -689,7 +689,7 @@ static dma_cookie_t nbpf_tx_submit(struct dma_async_tx_descriptor *tx)
 static int nbpf_desc_page_alloc(struct nbpf_channel *chan)
 {
 	struct dma_chan *dchan = &chan->dma_chan;
-	struct nbpf_desc_page *dpage = (void *)get_zeroed_page(GFP_KERNEL | GFP_DMA);
+	struct nbpf_desc_page *dpage = get_zeroed_page(GFP_KERNEL | GFP_DMA);
 	struct nbpf_link_desc *ldesc;
 	struct nbpf_link_reg *hwdesc;
 	struct nbpf_desc *desc;

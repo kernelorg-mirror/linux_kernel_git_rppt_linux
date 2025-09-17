@@ -516,7 +516,7 @@ static void *mlx5r_umr_alloc_xlt(size_t *nents, size_t ent_size, gfp_t gfp_mask)
 	size = min_t(size_t, ent_size * ALIGN(*nents, xlt_chunk_align),
 		     MLX5_MAX_UMR_CHUNK);
 	*nents = size / ent_size;
-	res = (void *)__get_free_pages(gfp_mask | __GFP_NOWARN,
+	res = __get_free_pages(gfp_mask | __GFP_NOWARN,
 				       get_order(size));
 	if (res)
 		return res;
@@ -524,14 +524,14 @@ static void *mlx5r_umr_alloc_xlt(size_t *nents, size_t ent_size, gfp_t gfp_mask)
 	if (size > MLX5_SPARE_UMR_CHUNK) {
 		size = MLX5_SPARE_UMR_CHUNK;
 		*nents = size / ent_size;
-		res = (void *)__get_free_pages(gfp_mask | __GFP_NOWARN,
+		res = __get_free_pages(gfp_mask | __GFP_NOWARN,
 					       get_order(size));
 		if (res)
 			return res;
 	}
 
 	*nents = PAGE_SIZE / ent_size;
-	res = (void *)__get_free_page(gfp_mask);
+	res = __get_free_page(gfp_mask);
 	if (res)
 		return res;
 

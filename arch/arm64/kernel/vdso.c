@@ -189,7 +189,7 @@ static int aarch32_alloc_kuser_vdso_page(void)
 	if (!IS_ENABLED(CONFIG_KUSER_HELPERS))
 		return 0;
 
-	vdso_page = get_zeroed_page(GFP_KERNEL);
+	vdso_page = (unsigned long)get_zeroed_page(GFP_KERNEL);
 	if (!vdso_page)
 		return -ENOMEM;
 
@@ -207,7 +207,7 @@ static int aarch32_alloc_sigpage(void)
 	__le32 poison = cpu_to_le32(COMPAT_SIGPAGE_POISON_WORD);
 	void *sigpage;
 
-	sigpage = (void *)__get_free_page(GFP_KERNEL);
+	sigpage = __get_free_page(GFP_KERNEL);
 	if (!sigpage)
 		return -ENOMEM;
 

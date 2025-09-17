@@ -119,7 +119,7 @@ int zpci_report_status(struct zpci_dev *zdev, const char *operation, const char 
 	if (prot_virt_guest)
 		return -ENODATA;
 
-	report = (void *)get_zeroed_page(GFP_KERNEL);
+	report = get_zeroed_page(GFP_KERNEL);
 	if (!report)
 		return -ENOMEM;
 	if (zdev->zbus->bus)

@@ -163,16 +163,18 @@ int kvm_s390_pv_create_cpu(struct kvm_vcpu *vcpu, u16 *rc, u16 *rrc)
 		.header.cmd = UVC_CMD_CREATE_SEC_CPU,
 		.header.len = sizeof(uvcb),
 	};
+	void *stor_base;
 	void *sida_addr;
 	int cc;
 
 	if (kvm_s390_pv_cpu_get_handle(vcpu))
 		return -EINVAL;
 
-	vcpu->arch.pv.stor_base = __get_free_pages(GFP_KERNEL_ACCOUNT,
-						   get_order(uv_info.guest_cpu_stor_len));
-	if (!vcpu->arch.pv.stor_base)
+	stor_base = __get_free_pages(GFP_KERNEL_ACCOUNT,
+				     get_order(uv_info.guest_cpu_stor_len));
+	if (!stor_base)
 		return -ENOMEM;
+	vcpu->arch.pv.stor_base = (unsigned long)stor_base;
 
 	/* Input */
 	uvcb.guest_handle = kvm_s390_pv_get_handle(vcpu->kvm);
@@ -181,7 +183,7 @@ int kvm_s390_pv_create_cpu(struct kvm_vcpu *vcpu, u16 *rc, u16 *rrc)
 	uvcb.stor_origin = virt_to_phys((void *)vcpu->arch.pv.stor_base);
 
 	/* Alloc Secure Instruction Data Area Designation */
-	sida_addr = (void *)__get_free_page(GFP_KERNEL_ACCOUNT | __GFP_ZERO);
+	sida_addr = __get_free_page(GFP_KERNEL_ACCOUNT | __GFP_ZERO);
 	if (!sida_addr) {
 		free_pages(vcpu->arch.pv.stor_base,
 			   get_order(uv_info.guest_cpu_stor_len));
@@ -227,12 +229,13 @@ static int kvm_s390_pv_alloc_vm(struct kvm *kvm)
 	unsigned long base = uv_info.guest_base_stor_len;
 	unsigned long virt = uv_info.guest_virt_var_stor_len;
 	unsigned long npages = 0, vlen = 0;
+	void *stor_base;
 
 	kvm->arch.pv.stor_var = NULL;
-	kvm->arch.pv.stor_base = __get_free_pages(GFP_KERNEL_ACCOUNT, get_order(base));
-	if (!kvm->arch.pv.stor_base)
+	stor_base = __get_free_pages(GFP_KERNEL_ACCOUNT, get_order(base));
+	if (!stor_base)
 		return -ENOMEM;
-
+	kvm->arch.pv.stor_base = (unsigned long)stor_base;
 	/*
 	 * Calculate current guest storage for allocation of the
 	 * variable storage, which is based on the length in MB.

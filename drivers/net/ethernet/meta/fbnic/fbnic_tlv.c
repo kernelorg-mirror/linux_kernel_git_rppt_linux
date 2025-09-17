@@ -24,7 +24,7 @@ struct fbnic_tlv_msg *fbnic_tlv_msg_alloc(u16 msg_id)
 	struct fbnic_tlv_hdr hdr = { 0 };
 	struct fbnic_tlv_msg *msg;
 
-	msg = (struct fbnic_tlv_msg *)__get_free_page(GFP_KERNEL);
+	msg = __get_free_page(GFP_KERNEL);
 	if (!msg)
 		return NULL;
 

@@ -313,7 +313,7 @@ static int __init cfag12864b_init(void)
 	}
 	BUILD_BUG_ON(PAGE_SIZE < CFAG12864B_SIZE);
 
-	cfag12864b_buffer = (unsigned char *) get_zeroed_page(GFP_KERNEL);
+	cfag12864b_buffer = get_zeroed_page(GFP_KERNEL);
 	if (cfag12864b_buffer == NULL) {
 		printk(KERN_ERR CFAG12864B_NAME ": ERROR: "
 			"can't get a free page\n");

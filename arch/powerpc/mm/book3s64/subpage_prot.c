@@ -238,7 +238,7 @@ SYSCALL_DEFINE3(subpage_prot, unsigned long, addr,
 		} else {
 			spm = spt->protptrs[addr >> SBP_L3_SHIFT];
 			if (!spm) {
-				spm = (u32 **)get_zeroed_page(GFP_KERNEL);
+				spm = get_zeroed_page(GFP_KERNEL);
 				if (!spm)
 					goto out;
 				spt->protptrs[addr >> SBP_L3_SHIFT] = spm;
@@ -247,7 +247,7 @@ SYSCALL_DEFINE3(subpage_prot, unsigned long, addr,
 		spm += (addr >> SBP_L2_SHIFT) & (SBP_L2_COUNT - 1);
 		spp = *spm;
 		if (!spp) {
-			spp = (u32 *)get_zeroed_page(GFP_KERNEL);
+			spp = get_zeroed_page(GFP_KERNEL);
 			if (!spp)
 				goto out;
 			*spm = spp;

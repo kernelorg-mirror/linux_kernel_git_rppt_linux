@@ -357,7 +357,7 @@ static int alloc_active_ring(struct sock_mapping *map)
 {
 	void *bytes;
 
-	map->active.ring = (struct pvcalls_data_intf *)
+	map->active.ring =
 		get_zeroed_page(GFP_KERNEL);
 	if (!map->active.ring)
 		goto out;
@@ -1194,7 +1194,7 @@ static int pvcalls_front_probe(struct xenbus_device *dev,
 	for (i = 0; i < PVCALLS_NR_RSP_PER_RING; i++)
 		bedata->rsp[i].req_id = PVCALLS_INVALID_ID;
 
-	sring = (struct xen_pvcalls_sring *) __get_free_page(GFP_KERNEL |
+	sring = __get_free_page(GFP_KERNEL |
 							     __GFP_ZERO);
 	if (!sring)
 		goto error;

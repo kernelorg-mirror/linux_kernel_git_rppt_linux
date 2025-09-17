@@ -1588,7 +1588,7 @@ static __init int sctp_init(void)
 	 * reduce the order and try again
 	 */
 	do {
-		sctp_port_hashtable = (struct sctp_bind_hashbucket *)
+		sctp_port_hashtable =
 			__get_free_pages(GFP_KERNEL | __GFP_NOWARN, order);
 	} while (!sctp_port_hashtable && --order > 0);
 

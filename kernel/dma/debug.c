@@ -608,7 +608,7 @@ static int dma_debug_create_entries(gfp_t gfp)
 	struct dma_debug_entry *entry;
 	int i;
 
-	entry = (void *)get_zeroed_page(gfp);
+	entry = get_zeroed_page(gfp);
 	if (!entry)
 		return -ENOMEM;
 

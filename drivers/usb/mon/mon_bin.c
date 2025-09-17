@@ -1341,7 +1341,7 @@ static int mon_alloc_buff(struct mon_pgmap *map, int npages)
 	unsigned long vaddr;
 
 	for (n = 0; n < npages; n++) {
-		vaddr = get_zeroed_page(GFP_KERNEL);
+		vaddr = (unsigned long)get_zeroed_page(GFP_KERNEL);
 		if (vaddr == 0) {
 			while (n-- != 0)
 				free_page((unsigned long) map[n].ptr);

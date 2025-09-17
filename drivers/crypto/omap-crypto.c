@@ -62,7 +62,7 @@ static int omap_crypto_copy_sgs(int total, int bs, struct scatterlist **sg,
 	new_len = ALIGN(total, bs);
 	pages = get_order(new_len);
 
-	buf = (void *)__get_free_pages(GFP_ATOMIC, pages);
+	buf = __get_free_pages(GFP_ATOMIC, pages);
 	if (!buf) {
 		pr_err("%s: Couldn't allocate pages for unaligned cases.\n",
 		       __func__);

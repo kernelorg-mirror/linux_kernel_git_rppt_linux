@@ -2998,7 +2998,7 @@ int kvm_create_lapic(struct kvm_vcpu *vcpu)
 	if (kvm_x86_ops.alloc_apic_backing_page)
 		apic->regs = kvm_x86_call(alloc_apic_backing_page)(vcpu);
 	else
-		apic->regs = (void *)get_zeroed_page(GFP_KERNEL_ACCOUNT);
+		apic->regs = get_zeroed_page(GFP_KERNEL_ACCOUNT);
 	if (!apic->regs) {
 		printk(KERN_ERR "malloc apic regs error for vcpu %x\n",
 		       vcpu->vcpu_id);

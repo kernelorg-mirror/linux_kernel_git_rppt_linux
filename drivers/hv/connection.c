@@ -219,7 +219,7 @@ int vmbus_connect(void)
 	 * abstraction stuff
 	 */
 	vmbus_connection.int_page =
-		(void *)__get_free_page(GFP_KERNEL | __GFP_ZERO);
+		__get_free_page(GFP_KERNEL | __GFP_ZERO);
 	if (vmbus_connection.int_page == NULL) {
 		ret = -ENOMEM;
 		goto cleanup;
@@ -234,8 +234,8 @@ int vmbus_connect(void)
 	 * Setup the monitor notification facility. The 1st page for
 	 * parent->child and the 2nd page for child->parent
 	 */
-	vmbus_connection.monitor_pages[0] = (void *)__get_free_page(GFP_KERNEL);
-	vmbus_connection.monitor_pages[1] = (void *)__get_free_page(GFP_KERNEL);
+	vmbus_connection.monitor_pages[0] = __get_free_page(GFP_KERNEL);
+	vmbus_connection.monitor_pages[1] = __get_free_page(GFP_KERNEL);
 	if ((vmbus_connection.monitor_pages[0] == NULL) ||
 	    (vmbus_connection.monitor_pages[1] == NULL)) {
 		ret = -ENOMEM;

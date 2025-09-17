@@ -22,7 +22,7 @@ struct hlist_head *xfrm_hash_alloc(unsigned int sz)
 	else if (hashdist)
 		n = vzalloc(sz);
 	else
-		n = (struct hlist_head *)
+		n =
 			__get_free_pages(GFP_KERNEL | __GFP_NOWARN | __GFP_ZERO,
 					 get_order(sz));
 

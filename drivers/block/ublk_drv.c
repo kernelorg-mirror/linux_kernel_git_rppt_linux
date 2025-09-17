@@ -2691,7 +2691,7 @@ static int ublk_init_queue(struct ublk_device *ub, int q_id)
 	ubq->q_depth = ub->dev_info.queue_depth;
 	size = ublk_queue_cmd_buf_size(ub);
 
-	ptr = (void *) __get_free_pages(gfp_flags, get_order(size));
+	ptr = __get_free_pages(gfp_flags, get_order(size));
 	if (!ptr)
 		return -ENOMEM;
 

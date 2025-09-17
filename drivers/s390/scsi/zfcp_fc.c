@@ -665,7 +665,7 @@ static int zfcp_fc_sg_setup_table(struct scatterlist *sg, int count)
 
 	sg_init_table(sg, count);
 	for (i = 0; i < count; i++, sg = sg_next(sg)) {
-		addr = (void *) get_zeroed_page(GFP_KERNEL);
+		addr = get_zeroed_page(GFP_KERNEL);
 		if (!addr) {
 			zfcp_fc_sg_free_table(sg, i);
 			return -ENOMEM;

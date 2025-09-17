@@ -560,7 +560,7 @@ static int qeth_l2_pnso(struct qeth_card *card, u8 oc, int cnc,
 	int i, size, elems;
 	int rc;
 
-	rr = (struct chsc_pnso_area *)get_zeroed_page(GFP_KERNEL);
+	rr = get_zeroed_page(GFP_KERNEL);
 	if (rr == NULL)
 		return -ENOMEM;
 	do {

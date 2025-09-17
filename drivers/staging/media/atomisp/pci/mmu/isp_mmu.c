@@ -89,7 +89,7 @@ static phys_addr_t alloc_page_table(struct isp_mmu *mmu)
 	phys_addr_t page;
 	void *virt;
 
-	virt = (void *)__get_free_page(GFP_KERNEL | GFP_DMA32);
+	virt = __get_free_page(GFP_KERNEL | GFP_DMA32);
 
 	if (!virt)
 		return (phys_addr_t)NULL_PAGE;

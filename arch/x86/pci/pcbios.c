@@ -372,7 +372,7 @@ struct irq_routing_table * pcibios_get_irq_routing_table(void)
 
 	if (!pci_bios_present)
 		return NULL;
-	page = __get_free_page(GFP_KERNEL);
+	page = (unsigned long)__get_free_page(GFP_KERNEL);
 	if (!page)
 		return NULL;
 	opt.table = (struct irq_info *) page;

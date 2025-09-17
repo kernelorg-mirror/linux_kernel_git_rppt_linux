@@ -163,7 +163,7 @@ void *xlate_dev_mem_ptr(phys_addr_t addr)
 		if (cpu < 0)
 			goto out;
 	}
-	bounce = (void *)__get_free_page(GFP_ATOMIC);
+	bounce = __get_free_page(GFP_ATOMIC);
 	if (!bounce)
 		goto out;
 	size = PAGE_SIZE - (addr & ~PAGE_MASK);

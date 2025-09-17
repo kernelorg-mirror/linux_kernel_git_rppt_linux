@@ -902,7 +902,7 @@ void __init cheetah_ecache_flush_init(void)
 		if ((PAGE_SIZE << order) >= sz)
 			break;
 	}
-	cheetah_error_log = (struct cheetah_err_info *)
+	cheetah_error_log =
 		__get_free_pages(GFP_KERNEL, order);
 	if (!cheetah_error_log) {
 		prom_printf("cheetah_ecache_flush_init: Failed to allocate "

@@ -798,7 +798,7 @@ static int sbefifo_user_open(struct inode *inode, struct file *file)
 
 	file->private_data = user;
 	user->sbefifo = sbefifo;
-	user->cmd_page = (void *)__get_free_page(GFP_KERNEL);
+	user->cmd_page = __get_free_page(GFP_KERNEL);
 	if (!user->cmd_page) {
 		kfree(user);
 		return -ENOMEM;

@@ -94,7 +94,7 @@ static int sclp_ftp_et7(const struct hmcdrv_ftp_cmdspec *ftp)
 	int rc;
 
 	req = kzalloc(sizeof(*req), GFP_KERNEL);
-	sccb = (void *) get_zeroed_page(GFP_KERNEL | GFP_DMA);
+	sccb = get_zeroed_page(GFP_KERNEL | GFP_DMA);
 	if (!req || !sccb) {
 		rc = -ENOMEM;
 		goto out_free;
@@ -251,7 +251,7 @@ int sclp_ftp_startup(void)
 		return rc;
 
 #ifdef DEBUG
-	info = get_zeroed_page(GFP_KERNEL);
+	info = (unsigned long)get_zeroed_page(GFP_KERNEL);
 
 	if (info != 0) {
 		struct sysinfo_2_2_2 *info222 = (struct sysinfo_2_2_2 *)info;

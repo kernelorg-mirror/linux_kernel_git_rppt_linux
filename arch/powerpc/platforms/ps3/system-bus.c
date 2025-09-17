@@ -513,7 +513,7 @@ static void * ps3_alloc_coherent(struct device *_dev, size_t size,
 	flag &= ~(__GFP_DMA | __GFP_HIGHMEM);
 	flag |= __GFP_ZERO;
 
-	virt_addr = __get_free_pages(flag, get_order(size));
+	virt_addr = (unsigned long)__get_free_pages(flag, get_order(size));
 
 	if (!virt_addr) {
 		pr_debug("%s:%d: get_free_pages failed\n", __func__, __LINE__);

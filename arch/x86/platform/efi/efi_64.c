@@ -73,7 +73,7 @@ int __init efi_alloc_page_tables(void)
 	gfp_t gfp_mask;
 
 	gfp_mask = GFP_KERNEL | __GFP_ZERO;
-	efi_pgd = (pgd_t *)__get_free_pages(gfp_mask, pgd_allocation_order());
+	efi_pgd = __get_free_pages(gfp_mask, pgd_allocation_order());
 	if (!efi_pgd)
 		goto fail;
 

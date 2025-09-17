@@ -147,7 +147,7 @@ static inline struct idal_buffer *idal_buffer_alloc(size_t size, int page_order)
 			ib->data[i] = dma64_add(ib->data[i - 1], IDA_BLOCK_SIZE);
 			continue;
 		}
-		vaddr = (void *)__get_free_pages(GFP_KERNEL, page_order);
+		vaddr = __get_free_pages(GFP_KERNEL, page_order);
 		if (!vaddr)
 			goto error;
 		ib->data[i] = virt_to_dma64(vaddr);

@@ -924,7 +924,7 @@ static int kaweth_probe(
 	} else {
 		/* Download the firmware */
 		dev_info(dev, "Downloading firmware...\n");
-		kaweth->firmware_buf = (__u8 *)__get_free_page(GFP_KERNEL);
+		kaweth->firmware_buf = __get_free_page(GFP_KERNEL);
 		if (!kaweth->firmware_buf) {
 			rv = -ENOMEM;
 			goto err_free_netdev;

@@ -1397,7 +1397,7 @@ static struct iw_statistics *gelic_wl_get_wireless_stats(
 
 	pr_debug("%s: <-\n", __func__);
 
-	buf = (void *)__get_free_page(GFP_KERNEL);
+	buf = __get_free_page(GFP_KERNEL);
 	if (!buf)
 		return NULL;
 
@@ -1457,7 +1457,7 @@ static int gelic_wl_start_scan(struct gelic_wl_info *wl, int always_scan,
 
 	/* ESSID scan ? */
 	if (essid_len && essid) {
-		buf = (void *)__get_free_page(GFP_KERNEL);
+		buf = __get_free_page(GFP_KERNEL);
 		if (!buf) {
 			ret = -ENOMEM;
 			goto out;
@@ -1508,7 +1508,7 @@ static void gelic_wl_scan_complete_event(struct gelic_wl_info *wl)
 	pr_debug("%s:start\n", __func__);
 	mutex_lock(&wl->scan_lock);
 
-	buf = (void *)__get_free_page(GFP_KERNEL);
+	buf = __get_free_page(GFP_KERNEL);
 	if (!buf) {
 		pr_info("%s: scan buffer alloc failed\n", __func__);
 		goto out;
@@ -1749,7 +1749,7 @@ static int gelic_wl_do_wep_setup(struct gelic_wl_info *wl)
 
 	pr_debug("%s: <-\n", __func__);
 	/* we can assume no one should uses the buffer */
-	wep = (struct gelic_eurus_wep_cfg *)__get_free_page(GFP_KERNEL);
+	wep = __get_free_page(GFP_KERNEL);
 	if (!wep)
 		return -ENOMEM;
 
@@ -1839,7 +1839,7 @@ static int gelic_wl_do_wpa_setup(struct gelic_wl_info *wl)
 
 	pr_debug("%s: <-\n", __func__);
 	/* we can assume no one should uses the buffer */
-	wpa = (struct gelic_eurus_wpa_cfg *)__get_free_page(GFP_KERNEL);
+	wpa = __get_free_page(GFP_KERNEL);
 	if (!wpa)
 		return -ENOMEM;
 
@@ -1920,7 +1920,7 @@ static int gelic_wl_associate_bss(struct gelic_wl_info *wl,
 	pr_debug("%s: <-\n", __func__);
 
 	/* do common config */
-	common = (struct gelic_eurus_common_cfg *)__get_free_page(GFP_KERNEL);
+	common = __get_free_page(GFP_KERNEL);
 	if (!common)
 		return -ENOMEM;
 

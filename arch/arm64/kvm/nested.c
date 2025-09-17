@@ -76,7 +76,7 @@ int kvm_vcpu_init_nested(struct kvm_vcpu *vcpu)
 		return -EINVAL;
 
 	if (!vcpu->arch.ctxt.vncr_array)
-		vcpu->arch.ctxt.vncr_array = (u64 *)__get_free_page(GFP_KERNEL_ACCOUNT |
+		vcpu->arch.ctxt.vncr_array = __get_free_page(GFP_KERNEL_ACCOUNT |
 								    __GFP_ZERO);
 
 	if (!vcpu->arch.ctxt.vncr_array)

@@ -58,14 +58,14 @@ static void machine_kexec_free_page_tables(struct kimage *image)
 
 static int machine_kexec_alloc_page_tables(struct kimage *image)
 {
-	image->arch.pgd = (pgd_t *)__get_free_pages(GFP_KERNEL | __GFP_ZERO,
+	image->arch.pgd = __get_free_pages(GFP_KERNEL | __GFP_ZERO,
 						    pgd_allocation_order());
 #ifdef CONFIG_X86_PAE
-	image->arch.pmd0 = (pmd_t *)get_zeroed_page(GFP_KERNEL);
-	image->arch.pmd1 = (pmd_t *)get_zeroed_page(GFP_KERNEL);
+	image->arch.pmd0 = get_zeroed_page(GFP_KERNEL);
+	image->arch.pmd1 = get_zeroed_page(GFP_KERNEL);
 #endif
-	image->arch.pte0 = (pte_t *)get_zeroed_page(GFP_KERNEL);
-	image->arch.pte1 = (pte_t *)get_zeroed_page(GFP_KERNEL);
+	image->arch.pte0 = get_zeroed_page(GFP_KERNEL);
+	image->arch.pte1 = get_zeroed_page(GFP_KERNEL);
 	if (!image->arch.pgd ||
 #ifdef CONFIG_X86_PAE
 	    !image->arch.pmd0 || !image->arch.pmd1 ||

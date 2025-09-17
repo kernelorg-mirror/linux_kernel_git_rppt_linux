@@ -293,7 +293,7 @@ static void snp_cleanup_vmsa(struct sev_es_save_area *vmsa)
 
 int hv_snp_boot_ap(u32 apic_id, unsigned long start_ip, unsigned int cpu)
 {
-	struct sev_es_save_area *vmsa = (struct sev_es_save_area *)
+	struct sev_es_save_area *vmsa =
 		__get_free_page(GFP_KERNEL | __GFP_ZERO);
 	struct sev_es_save_area *cur_vmsa;
 	struct desc_ptr gdtr;

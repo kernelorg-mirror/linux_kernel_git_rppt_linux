@@ -12548,7 +12548,6 @@ static int bnx2x_init_mcast_macs_list(struct bnx2x *bp,
 	netdev_for_each_mc_addr(ha, bp->dev) {
 		if (!offset) {
 			current_mcast_group =
-				(struct bnx2x_mcast_list_elem_group *)
 				__get_free_page(GFP_ATOMIC);
 			if (!current_mcast_group) {
 				bnx2x_free_mcast_macs_list(mcast_group_list);

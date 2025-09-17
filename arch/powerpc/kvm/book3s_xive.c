@@ -945,7 +945,7 @@ static int xive_provision_queue(struct kvm_vcpu *vcpu, u8 prio)
 		return 0;
 
 	/* Allocate the queue and retrieve infos on current node for now */
-	qpage = (__be32 *)__get_free_pages(GFP_KERNEL, xive->q_page_order);
+	qpage = __get_free_pages(GFP_KERNEL, xive->q_page_order);
 	if (!qpage) {
 		pr_err("Failed to allocate queue %d for VCPU %d\n",
 		       prio, xc->server_num);

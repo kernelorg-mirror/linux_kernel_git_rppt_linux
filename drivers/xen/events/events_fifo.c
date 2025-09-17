@@ -155,7 +155,7 @@ static int evtchn_fifo_setup(evtchn_port_t port)
 		/* Might already have a page if we've resumed. */
 		array_page = event_array[event_array_pages];
 		if (!array_page) {
-			array_page = (void *)__get_free_page(GFP_KERNEL);
+			array_page = __get_free_page(GFP_KERNEL);
 			if (array_page == NULL) {
 				ret = -ENOMEM;
 				goto error;
@@ -377,7 +377,7 @@ static int evtchn_fifo_alloc_control_block(unsigned cpu)
 	void *control_block = NULL;
 	int ret = -ENOMEM;
 
-	control_block = (void *)__get_free_page(GFP_KERNEL);
+	control_block = __get_free_page(GFP_KERNEL);
 	if (control_block == NULL)
 		goto error;
 

@@ -201,7 +201,7 @@ static int paicrypt_alloc_cpu(struct perf_event *event, int cpu)
 		 * Only the first counting event has to allocate a page.
 		 */
 		mp->mapptr = cpump;
-		cpump->page = (unsigned long *)get_zeroed_page(GFP_KERNEL);
+		cpump->page = get_zeroed_page(GFP_KERNEL);
 		cpump->save = kvmalloc_array(paicrypt_cnt + 1,
 					     sizeof(struct pai_userdata),
 					     GFP_KERNEL);
@@ -279,11 +279,13 @@ static int paicrypt_event_init(struct perf_event *event)
 		return -EINVAL;
 	/* Get a page to store last counter values for sampling */
 	if (a->sample_period) {
-		PAI_SAVE_AREA(event) = get_zeroed_page(GFP_KERNEL);
-		if (!PAI_SAVE_AREA(event)) {
+		void *save_area = get_zeroed_page(GFP_KERNEL);
+
+		if (!save_area) {
 			rc = -ENOMEM;
 			goto out;
 		}
+		PAI_SAVE_AREA(event) = (unsigned long)save_area;
 	}
 
 	if (event->cpu >= 0)

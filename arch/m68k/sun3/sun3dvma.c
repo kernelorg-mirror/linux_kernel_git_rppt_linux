@@ -326,7 +326,7 @@ void *dvma_malloc_align(unsigned long len, unsigned long align)
 	pr_debug("dvma_malloc request %lx bytes\n", len);
 	len = ((len + (DVMA_PAGE_SIZE-1)) & DVMA_PAGE_MASK);
 
-        if((kaddr = __get_free_pages(GFP_ATOMIC, get_order(len))) == 0)
+        if((kaddr = (unsigned long)__get_free_pages(GFP_ATOMIC, get_order(len))) == 0)
 		return NULL;
 
 	if((baddr = (unsigned long)dvma_map_align(kaddr, len, align)) == 0) {

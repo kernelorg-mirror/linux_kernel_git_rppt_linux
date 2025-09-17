@@ -463,7 +463,7 @@ int extcon_sync(struct extcon_dev *edev, unsigned int id)
 
 	spin_lock_irqsave(&edev->lock, flags);
 	/* This could be in interrupt handler */
-	prop_buf = (char *)get_zeroed_page(GFP_ATOMIC);
+	prop_buf = get_zeroed_page(GFP_ATOMIC);
 	if (!prop_buf) {
 		/* Unlock early before uevent */
 		spin_unlock_irqrestore(&edev->lock, flags);

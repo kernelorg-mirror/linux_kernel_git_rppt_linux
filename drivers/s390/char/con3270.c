@@ -1122,7 +1122,7 @@ tty3270_create_view(int index, struct tty3270 **newtp)
 		goto out_put_view;
 	}
 
-	tp->converted_line = (void *)__get_free_page(GFP_KERNEL);
+	tp->converted_line = __get_free_page(GFP_KERNEL);
 	if (!tp->converted_line) {
 		rc = -ENOMEM;
 		goto out_free_screen;

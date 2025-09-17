@@ -1262,8 +1262,8 @@ static void *mtk_max_lro_buf_alloc(gfp_t gfp_mask)
 	unsigned int size = mtk_max_frag_size(MTK_MAX_LRO_RX_LENGTH);
 	unsigned long data;
 
-	data = __get_free_pages(gfp_mask | __GFP_COMP | __GFP_NOWARN,
-				get_order(size));
+	data = (unsigned long)__get_free_pages(gfp_mask | __GFP_COMP | __GFP_NOWARN,
+					       get_order(size));
 
 	return (void *)data;
 }

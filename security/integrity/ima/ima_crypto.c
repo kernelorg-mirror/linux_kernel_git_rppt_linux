@@ -246,7 +246,7 @@ static void *ima_alloc_pages(loff_t max_size, size_t *allocated_size,
 		order = min(get_order(max_size), order);
 
 	for (; order; order--) {
-		ptr = (void *)__get_free_pages(gfp_mask, order);
+		ptr = __get_free_pages(gfp_mask, order);
 		if (ptr) {
 			*allocated_size = PAGE_SIZE << order;
 			return ptr;
@@ -260,7 +260,7 @@ static void *ima_alloc_pages(loff_t max_size, size_t *allocated_size,
 	if (!last_warn)
 		gfp_mask |= __GFP_NOWARN;
 
-	ptr = (void *)__get_free_pages(gfp_mask, 0);
+	ptr = __get_free_pages(gfp_mask, 0);
 	if (ptr) {
 		*allocated_size = PAGE_SIZE;
 		return ptr;

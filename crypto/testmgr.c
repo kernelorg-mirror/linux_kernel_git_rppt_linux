@@ -174,7 +174,7 @@ static int __testmgr_alloc_buf(char *buf[XBUFSIZE], int order)
 	int i;
 
 	for (i = 0; i < XBUFSIZE; i++) {
-		buf[i] = (char *)__get_free_pages(GFP_KERNEL, order);
+		buf[i] = __get_free_pages(GFP_KERNEL, order);
 		if (!buf[i])
 			goto err_free_buf;
 	}

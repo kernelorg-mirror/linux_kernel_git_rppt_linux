@@ -1646,8 +1646,7 @@ static inline int megasas_allocate_raid_maps(struct megasas_instance *instance)
 	for (i = 0; i < 2; i++) {
 		fusion->ld_map[i] = NULL;
 
-		fusion->ld_drv_map[i] = (void *)
-			__get_free_pages(__GFP_ZERO | GFP_KERNEL,
+		fusion->ld_drv_map[i] =	__get_free_pages(__GFP_ZERO | GFP_KERNEL,
 					 fusion->drv_map_pages);
 
 		if (!fusion->ld_drv_map[i]) {
@@ -5326,8 +5325,7 @@ megasas_alloc_fusion_context(struct megasas_instance *instance)
 
 	fusion->load_balance_info_pages = get_order(MAX_LOGICAL_DRIVES_EXT *
 		sizeof(struct LD_LOAD_BALANCE_INFO));
-	fusion->load_balance_info =
-		(struct LD_LOAD_BALANCE_INFO *)__get_free_pages(GFP_KERNEL | __GFP_ZERO,
+	fusion->load_balance_info = __get_free_pages(GFP_KERNEL | __GFP_ZERO,
 		fusion->load_balance_info_pages);
 	if (!fusion->load_balance_info) {
 		fusion->load_balance_info =

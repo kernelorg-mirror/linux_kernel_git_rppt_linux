@@ -899,8 +899,7 @@ static int mock_viommu_init(struct iommufd_viommu *viommu,
 			return rc;
 
 		/* Allocate two pages */
-		mock_viommu->page =
-			(u32 *)__get_free_pages(GFP_KERNEL | __GFP_ZERO, 1);
+		mock_viommu->page = __get_free_pages(GFP_KERNEL | __GFP_ZERO, 1);
 		if (!mock_viommu->page)
 			return -ENOMEM;
 

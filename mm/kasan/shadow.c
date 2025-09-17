@@ -361,7 +361,7 @@ static int __kasan_populate_vmalloc_do(unsigned long start, unsigned long end, g
 	unsigned int flags;
 	int ret = 0;
 
-	data.pages = (struct page **)__get_free_page(gfp_mask | __GFP_ZERO);
+	data.pages = __get_free_page(gfp_mask | __GFP_ZERO);
 	if (!data.pages)
 		return -ENOMEM;
 

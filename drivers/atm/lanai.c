@@ -1440,7 +1440,7 @@ static int vcc_table_allocate(struct lanai_dev *lanai)
 #ifdef VCCTABLE_GETFREEPAGE
 	APRINTK((lanai->num_vci) * sizeof(struct lanai_vcc *) <= PAGE_SIZE,
 	    "vcc table > PAGE_SIZE!");
-	lanai->vccs = (struct lanai_vcc **) get_zeroed_page(GFP_KERNEL);
+	lanai->vccs = get_zeroed_page(GFP_KERNEL);
 	return (lanai->vccs == NULL) ? -ENOMEM : 0;
 #else
 	int bytes = (lanai->num_vci) * sizeof(struct lanai_vcc *);

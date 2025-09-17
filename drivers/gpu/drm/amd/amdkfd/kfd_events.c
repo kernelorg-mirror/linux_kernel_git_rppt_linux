@@ -71,7 +71,7 @@ static struct kfd_signal_page *allocate_signal_page(struct kfd_process *p)
 	if (!page)
 		return NULL;
 
-	backing_store = (void *) __get_free_pages(GFP_KERNEL,
+	backing_store = __get_free_pages(GFP_KERNEL,
 					get_order(KFD_SIGNAL_EVENT_LIMIT * 8));
 	if (!backing_store)
 		goto fail_alloc_signal_store;

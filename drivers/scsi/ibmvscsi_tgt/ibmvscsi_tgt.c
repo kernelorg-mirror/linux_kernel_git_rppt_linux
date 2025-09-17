@@ -3002,8 +3002,7 @@ static long ibmvscsis_create_command_q(struct scsi_info *vscsi, int num_cmds)
 
 	vscsi->cmd_q.size = pages;
 
-	vscsi->cmd_q.base_addr =
-		(struct viosrp_crq *)get_zeroed_page(GFP_KERNEL);
+	vscsi->cmd_q.base_addr = get_zeroed_page(GFP_KERNEL);
 	if (!vscsi->cmd_q.base_addr)
 		return -ENOMEM;
 

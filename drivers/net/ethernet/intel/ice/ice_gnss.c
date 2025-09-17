@@ -124,7 +124,7 @@ static void ice_gnss_read(struct kthread_work *work)
 
 	data_len = min_t(typeof(data_len), data_len, PAGE_SIZE);
 
-	buf = (char *)get_zeroed_page(GFP_KERNEL);
+	buf = get_zeroed_page(GFP_KERNEL);
 	if (!buf) {
 		err = -ENOMEM;
 		goto requeue;

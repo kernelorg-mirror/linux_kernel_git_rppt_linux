@@ -224,7 +224,7 @@ int intel_vgpu_init_opregion(struct intel_vgpu *vgpu)
 	struct vbt v;
 
 	gvt_dbg_core("init vgpu%d opregion\n", vgpu->id);
-	vgpu_opregion(vgpu)->va = (void *)__get_free_pages(GFP_KERNEL |
+	vgpu_opregion(vgpu)->va = __get_free_pages(GFP_KERNEL |
 			__GFP_ZERO,
 			get_order(INTEL_GVT_OPREGION_SIZE));
 	if (!vgpu_opregion(vgpu)->va) {

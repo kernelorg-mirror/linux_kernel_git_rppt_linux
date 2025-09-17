@@ -204,7 +204,7 @@ static int copy_ta_binary(struct tee_context *ctx, void *ptr, void **ta,
 	}
 
 	*ta_size = roundup(fw->size, PAGE_SIZE);
-	*ta = (void *)__get_free_pages(GFP_KERNEL, get_order(*ta_size));
+	*ta = __get_free_pages(GFP_KERNEL, get_order(*ta_size));
 	if (!*ta) {
 		pr_err("%s: get_free_pages failed\n", __func__);
 		rc = -ENOMEM;

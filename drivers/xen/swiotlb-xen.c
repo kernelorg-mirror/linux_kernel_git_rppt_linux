@@ -151,7 +151,7 @@ xen_swiotlb_alloc_coherent(struct device *dev, size_t size,
 	/* Align the allocation to the Xen page size */
 	size = ALIGN(size, XEN_PAGE_SIZE);
 
-	ret = (void *)__get_free_pages(flags, get_order(size));
+	ret = __get_free_pages(flags, get_order(size));
 	if (!ret)
 		return ret;
 	phys = virt_to_phys(ret);

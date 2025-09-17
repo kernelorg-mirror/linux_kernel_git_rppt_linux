@@ -19,7 +19,7 @@ static int pool_op_alloc(struct tee_shm_pool *pool, struct tee_shm *shm,
 	 * Ignore alignment since this is already going to be page aligned
 	 * and there's no need for any larger alignment.
 	 */
-	va = __get_free_pages(GFP_KERNEL | __GFP_ZERO, order);
+	va = (unsigned long)__get_free_pages(GFP_KERNEL | __GFP_ZERO, order);
 	if (!va)
 		return -ENOMEM;
 

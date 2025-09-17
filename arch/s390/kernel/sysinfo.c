@@ -254,7 +254,7 @@ static void stsi_3_2_2(struct seq_file *m, struct sysinfo_3_2_2 *info)
 
 static int sysinfo_show(struct seq_file *m, void *v)
 {
-	void *info = (void *)get_zeroed_page(GFP_KERNEL);
+	void *info = get_zeroed_page(GFP_KERNEL);
 	int level;
 
 	if (!info)
@@ -394,7 +394,7 @@ void s390_adjust_jiffies(void)
 	struct sysinfo_1_2_2 *info;
 	unsigned long capability;
 
-	info = (void *) get_zeroed_page(GFP_KERNEL);
+	info = get_zeroed_page(GFP_KERNEL);
 	if (!info)
 		return;
 

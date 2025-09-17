@@ -2571,7 +2571,8 @@ static int __init init_hyp_mode(void)
 	for_each_possible_cpu(cpu) {
 		unsigned long stack_base;
 
-		stack_base = __get_free_pages(GFP_KERNEL, NVHE_STACK_SHIFT - PAGE_SHIFT);
+		stack_base = (unsigned long)__get_free_pages(GFP_KERNEL,
+							     NVHE_STACK_SHIFT - PAGE_SHIFT);
 		if (!stack_base) {
 			err = -ENOMEM;
 			goto out_err;

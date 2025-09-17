@@ -575,7 +575,7 @@ static int ep93xx_spi_setup_dma(struct device *dev, struct ep93xx_spi *espi)
 {
 	int ret;
 
-	espi->zeropage = (void *)get_zeroed_page(GFP_KERNEL);
+	espi->zeropage = get_zeroed_page(GFP_KERNEL);
 	if (!espi->zeropage)
 		return -ENOMEM;
 

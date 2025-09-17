@@ -12547,9 +12547,7 @@ static int bnx2x_init_mcast_macs_list(struct bnx2x *bp,
 	INIT_LIST_HEAD(&p->mcast_list);
 	netdev_for_each_mc_addr(ha, bp->dev) {
 		if (!offset) {
-			current_mcast_group =
-				(struct bnx2x_mcast_list_elem_group *)
-				__get_free_page(GFP_ATOMIC);
+			current_mcast_group = __get_free_page(GFP_ATOMIC);
 			if (!current_mcast_group) {
 				bnx2x_free_mcast_macs_list(mcast_group_list);
 				BNX2X_ERR("Failed to allocate mc MAC list\n");

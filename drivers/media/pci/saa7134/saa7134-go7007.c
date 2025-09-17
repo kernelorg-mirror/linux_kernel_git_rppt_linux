@@ -434,10 +434,10 @@ static int saa7134_go7007_init(struct saa7134_dev *dev)
 	strscpy(sd->name, "saa7134-go7007", sizeof(sd->name));
 
 	/* Allocate a couple pages for receiving the compressed stream */
-	saa->top = (u8 *)get_zeroed_page(GFP_KERNEL);
+	saa->top = get_zeroed_page(GFP_KERNEL);
 	if (!saa->top)
 		goto allocfail;
-	saa->bottom = (u8 *)get_zeroed_page(GFP_KERNEL);
+	saa->bottom = get_zeroed_page(GFP_KERNEL);
 	if (!saa->bottom)
 		goto allocfail;
 

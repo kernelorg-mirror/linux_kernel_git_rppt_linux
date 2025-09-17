@@ -56,7 +56,7 @@ static struct vm_special_mapping vdso_mapping = {
 
 int __init vsyscall_init(void)
 {
-	void *syscall_page = (void *)get_zeroed_page(GFP_ATOMIC);
+	void *syscall_page = get_zeroed_page(GFP_ATOMIC);
 	syscall_pages[0] = virt_to_page(syscall_page);
 
 	/*

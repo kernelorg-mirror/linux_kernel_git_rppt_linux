@@ -549,10 +549,10 @@ int nfs4_replace_transport(struct nfs_server *server,
 		goto out;
 
 	error = -ENOMEM;
-	page = (char *) __get_free_page(GFP_USER);
+	page = __get_free_page(GFP_USER);
 	if (!page)
 		goto out;
-	page2 = (char *) __get_free_page(GFP_USER);
+	page2 = __get_free_page(GFP_USER);
 	if (!page2)
 		goto out;
 

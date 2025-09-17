@@ -2303,7 +2303,7 @@ static int alloc_scratch_pages(struct intel_vgpu *vgpu,
 			type < GTT_TYPE_PPGTT_PTE_PT || type >= GTT_TYPE_MAX))
 		return -EINVAL;
 
-	scratch_pt = (void *)get_zeroed_page(GFP_KERNEL);
+	scratch_pt = get_zeroed_page(GFP_KERNEL);
 	if (!scratch_pt) {
 		gvt_vgpu_err("fail to allocate scratch page\n");
 		return -ENOMEM;
@@ -2504,7 +2504,7 @@ static int setup_spt_oos(struct intel_gvt *gvt)
 			ret = -ENOMEM;
 			goto fail;
 		}
-		oos_page->mem = (void *)__get_free_pages(GFP_KERNEL, 0);
+		oos_page->mem = __get_free_pages(GFP_KERNEL, 0);
 		if (!oos_page->mem) {
 			ret = -ENOMEM;
 			kfree(oos_page);
@@ -2633,7 +2633,7 @@ int intel_gvt_init_gtt(struct intel_gvt *gvt)
 	gvt->gtt.pte_ops = &gen8_gtt_pte_ops;
 	gvt->gtt.gma_ops = &gen8_gtt_gma_ops;
 
-	page = (void *)get_zeroed_page(GFP_KERNEL);
+	page = get_zeroed_page(GFP_KERNEL);
 	if (!page) {
 		gvt_err("fail to allocate scratch ggtt page\n");
 		return -ENOMEM;

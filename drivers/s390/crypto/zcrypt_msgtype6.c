@@ -965,7 +965,7 @@ static long zcrypt_msgtype6_modexpo(struct zcrypt_queue *zq,
 	struct ap_response_type *resp_type = &ap_msg->response;
 	int rc;
 
-	ap_msg->msg = (void *)get_zeroed_page(GFP_KERNEL);
+	ap_msg->msg = get_zeroed_page(GFP_KERNEL);
 	if (!ap_msg->msg)
 		return -ENOMEM;
 	ap_msg->bufsize = PAGE_SIZE;
@@ -1012,7 +1012,7 @@ static long zcrypt_msgtype6_modexpo_crt(struct zcrypt_queue *zq,
 	struct ap_response_type *resp_type = &ap_msg->response;
 	int rc;
 
-	ap_msg->msg = (void *)get_zeroed_page(GFP_KERNEL);
+	ap_msg->msg = get_zeroed_page(GFP_KERNEL);
 	if (!ap_msg->msg)
 		return -ENOMEM;
 	ap_msg->bufsize = PAGE_SIZE;

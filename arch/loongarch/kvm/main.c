@@ -366,7 +366,7 @@ static int kvm_loongarch_env_init(void)
 	 * need to copy world switch code to DMW area.
 	 */
 	order = get_order(kvm_exception_size + kvm_enter_guest_size);
-	addr = (void *)__get_free_pages(GFP_KERNEL, order);
+	addr = __get_free_pages(GFP_KERNEL, order);
 	if (!addr) {
 		free_percpu(vmcs);
 		vmcs = NULL;

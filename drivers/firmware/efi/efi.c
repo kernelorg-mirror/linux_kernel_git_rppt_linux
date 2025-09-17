@@ -1131,7 +1131,7 @@ int __ref efi_mem_reserve_persistent(phys_addr_t addr, u64 size)
 	}
 
 	/* no slot found - allocate a new linked list entry */
-	rsv = (struct linux_efi_memreserve *)__get_free_page(GFP_ATOMIC);
+	rsv = __get_free_page(GFP_ATOMIC);
 	if (!rsv)
 		return -ENOMEM;
 

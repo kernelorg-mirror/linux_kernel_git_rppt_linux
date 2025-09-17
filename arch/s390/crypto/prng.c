@@ -150,7 +150,7 @@ static int generate_entropy(u8 *ebuf, size_t nbytes)
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00 };
 
 	/* allocate one page stckf buffer */
-	pg = (u8 *) __get_free_page(GFP_KERNEL);
+	pg = __get_free_page(GFP_KERNEL);
 	if (!pg) {
 		prng_errorflag = PRNG_GEN_ENTROPY_FAILED;
 		return -ENOMEM;

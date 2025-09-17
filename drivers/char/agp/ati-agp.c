@@ -57,7 +57,7 @@ static int ati_create_page_map(struct ati_page_map *page_map)
 {
 	int i, err;
 
-	page_map->real = (unsigned long *) __get_free_page(GFP_KERNEL);
+	page_map->real = __get_free_page(GFP_KERNEL);
 	if (page_map->real == NULL)
 		return -ENOMEM;
 

@@ -698,7 +698,7 @@ static void *bnx2x_frag_alloc(const struct bnx2x_fastpath *fp, gfp_t gfp_mask)
 	if (fp->rx_frag_size) {
 		/* GFP_KERNEL allocations are used only during initialization */
 		if (unlikely(gfpflags_allow_blocking(gfp_mask)))
-			return (void *)__get_free_page(gfp_mask);
+			return __get_free_page(gfp_mask);
 
 		return napi_alloc_frag(fp->rx_frag_size);
 	}

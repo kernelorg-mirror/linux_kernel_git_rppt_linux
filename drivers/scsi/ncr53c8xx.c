@@ -351,7 +351,7 @@ static void __m_free(m_pool_s *mp, void *ptr, int size, char *name)
 
 static m_addr_t ___mp0_getp(m_pool_s *mp)
 {
-	m_addr_t m = __get_free_pages(MEMO_GFP_FLAGS, MEMO_PAGE_ORDER);
+	m_addr_t m = (m_addr_t)__get_free_pages(MEMO_GFP_FLAGS,	MEMO_PAGE_ORDER);
 	if (m)
 		++mp->nump;
 	return m;

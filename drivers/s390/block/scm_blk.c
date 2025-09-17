@@ -74,7 +74,7 @@ static int __scm_alloc_rq(void)
 		return -ENOMEM;
 
 	scmrq = (void *) aobrq->data;
-	scmrq->aob = (void *) get_zeroed_page(GFP_DMA);
+	scmrq->aob = get_zeroed_page(GFP_DMA);
 	if (!scmrq->aob)
 		goto free;
 

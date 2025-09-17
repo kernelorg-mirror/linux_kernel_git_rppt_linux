@@ -499,7 +499,7 @@ void xen_pmu_init(int cpu)
 	if (xen_hvm_domain() || (cpu != 0 && !is_xen_pmu))
 		return;
 
-	xenpmu_data = (struct xen_pmu_data *)get_zeroed_page(GFP_KERNEL);
+	xenpmu_data = get_zeroed_page(GFP_KERNEL);
 	if (!xenpmu_data) {
 		pr_err("VPMU init: No memory\n");
 		return;

@@ -125,7 +125,7 @@ int hv_synic_alloc(void)
 			     vmbus_on_msg_dpc, (unsigned long)hv_cpu);
 
 		if (ms_hyperv.paravisor_present && hv_isolation_type_tdx()) {
-			hv_cpu->post_msg_page = (void *)get_zeroed_page(GFP_ATOMIC);
+			hv_cpu->post_msg_page = get_zeroed_page(GFP_ATOMIC);
 			if (!hv_cpu->post_msg_page) {
 				pr_err("Unable to allocate post msg page\n");
 				goto err;
@@ -147,15 +147,13 @@ int hv_synic_alloc(void)
 		 * Skip these pages allocation here.
 		 */
 		if (!ms_hyperv.paravisor_present && !hv_root_partition()) {
-			hv_cpu->synic_message_page =
-				(void *)get_zeroed_page(GFP_ATOMIC);
+			hv_cpu->synic_message_page = get_zeroed_page(GFP_ATOMIC);
 			if (!hv_cpu->synic_message_page) {
 				pr_err("Unable to allocate SYNIC message page\n");
 				goto err;
 			}
 
-			hv_cpu->synic_event_page =
-				(void *)get_zeroed_page(GFP_ATOMIC);
+			hv_cpu->synic_event_page = get_zeroed_page(GFP_ATOMIC);
 			if (!hv_cpu->synic_event_page) {
 				pr_err("Unable to allocate SYNIC event page\n");
 

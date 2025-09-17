@@ -227,7 +227,7 @@ static int __init zcore_reipl_init(void)
 		return rc;
 	if (ipib_info.ipib == 0)
 		return 0;
-	zcore_ipl_block = (void *) __get_free_page(GFP_KERNEL);
+	zcore_ipl_block = __get_free_page(GFP_KERNEL);
 	if (!zcore_ipl_block)
 		return -ENOMEM;
 	if (ipib_info.ipib < sclp.hsa_size)
@@ -247,7 +247,7 @@ static int __init zcore_reipl_init(void)
 	 * to continue dump processing, considering that os_info could be
 	 * corrupted on the panicked system.
 	 */
-	os_info = (void *)__get_free_page(GFP_KERNEL);
+	os_info = __get_free_page(GFP_KERNEL);
 	if (!os_info)
 		return -ENOMEM;
 	rc = memcpy_hsa_kernel(&os_info_addr, __LC_OS_INFO, sizeof(os_info_addr));

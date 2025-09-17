@@ -68,7 +68,7 @@ static ssize_t trng_read(struct file *file, char __user *ubuf,
 	 */
 
 	if (nbytes > sizeof(buf)) {
-		p = (u8 *) __get_free_page(GFP_KERNEL);
+		p = __get_free_page(GFP_KERNEL);
 		if (!p)
 			return -ENOMEM;
 	}

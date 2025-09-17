@@ -4079,7 +4079,7 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 	bool on, map;
 	int i;
 
-	buf = (char *)__get_free_page(GFP_KERNEL);
+	buf = __get_free_page(GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
 

@@ -86,7 +86,7 @@ static int occ_open(struct inode *inode, struct file *file)
 	if (!client)
 		return -ENOMEM;
 
-	client->buffer = (u8 *)__get_free_page(GFP_KERNEL);
+	client->buffer = __get_free_page(GFP_KERNEL);
 	if (!client->buffer) {
 		kfree(client);
 		return -ENOMEM;

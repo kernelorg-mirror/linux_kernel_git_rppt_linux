@@ -1241,7 +1241,7 @@ static int __init parse_crash_elf64_headers(void)
 	elfcorebuf_sz_orig = sizeof(Elf64_Ehdr) +
 				ehdr.e_phnum * sizeof(Elf64_Phdr);
 	elfcorebuf_sz = elfcorebuf_sz_orig;
-	elfcorebuf = (void *)__get_free_pages(GFP_KERNEL | __GFP_ZERO,
+	elfcorebuf = __get_free_pages(GFP_KERNEL | __GFP_ZERO,
 					      get_order(elfcorebuf_sz_orig));
 	if (!elfcorebuf)
 		return -ENOMEM;
@@ -1296,7 +1296,7 @@ static int __init parse_crash_elf32_headers(void)
 	/* Read in all elf headers. */
 	elfcorebuf_sz_orig = sizeof(Elf32_Ehdr) + ehdr.e_phnum * sizeof(Elf32_Phdr);
 	elfcorebuf_sz = elfcorebuf_sz_orig;
-	elfcorebuf = (void *)__get_free_pages(GFP_KERNEL | __GFP_ZERO,
+	elfcorebuf = __get_free_pages(GFP_KERNEL | __GFP_ZERO,
 					      get_order(elfcorebuf_sz_orig));
 	if (!elfcorebuf)
 		return -ENOMEM;
@@ -1551,7 +1551,7 @@ static int vmcore_realloc_elfcore_buffer_elf64(size_t new_size)
 		return 0;
 	}
 
-	elfcorebuf_new = (void *)__get_free_pages(GFP_KERNEL | __GFP_ZERO,
+	elfcorebuf_new = __get_free_pages(GFP_KERNEL | __GFP_ZERO,
 						  get_order(new_size));
 	if (!elfcorebuf_new)
 		return -ENOMEM;

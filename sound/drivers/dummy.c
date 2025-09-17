@@ -611,7 +611,7 @@ static int alloc_fake_buffer(void)
 	if (!fake_buffer)
 		return 0;
 	for (i = 0; i < 2; i++) {
-		dummy_page[i] = (void *)get_zeroed_page(GFP_KERNEL);
+		dummy_page[i] = get_zeroed_page(GFP_KERNEL);
 		if (!dummy_page[i]) {
 			free_fake_buffer();
 			return -ENOMEM;

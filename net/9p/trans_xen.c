@@ -328,7 +328,7 @@ static int xen_9pfs_front_alloc_dataring(struct xenbus_device *dev,
 	spin_lock_init(&ring->lock);
 	INIT_WORK(&ring->work, p9_xen_response);
 
-	ring->intf = (struct xen_9pfs_data_intf *)get_zeroed_page(GFP_KERNEL);
+	ring->intf = get_zeroed_page(GFP_KERNEL);
 	if (!ring->intf)
 		return ret;
 	ret = gnttab_grant_foreign_access(dev->otherend_id,

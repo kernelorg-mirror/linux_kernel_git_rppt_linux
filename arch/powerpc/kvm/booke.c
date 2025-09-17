@@ -2193,8 +2193,8 @@ int __init kvmppc_booke_init(void)
 
 	/* We install our own exception handlers by hijacking IVPR. IVPR must
 	 * be 16-bit aligned, so we need a 64KB allocation. */
-	kvmppc_booke_handlers = __get_free_pages(GFP_KERNEL | __GFP_ZERO,
-	                                         VCPU_SIZE_ORDER);
+	kvmppc_booke_handlers = (unsigned long)__get_free_pages(GFP_KERNEL | __GFP_ZERO,
+								VCPU_SIZE_ORDER);
 	if (!kvmppc_booke_handlers)
 		return -ENOMEM;
 

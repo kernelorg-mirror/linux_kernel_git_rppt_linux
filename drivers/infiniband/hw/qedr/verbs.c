@@ -755,7 +755,7 @@ static int qedr_init_user_db_rec(struct ib_udata *udata,
 		return 0;
 
 	/* Allocate a page for doorbell recovery, add to mmap */
-	q->db_rec_data = (void *)get_zeroed_page(GFP_USER);
+	q->db_rec_data = get_zeroed_page(GFP_USER);
 	if (!q->db_rec_data) {
 		DP_ERR(dev, "get_zeroed_page failed\n");
 		return -ENOMEM;

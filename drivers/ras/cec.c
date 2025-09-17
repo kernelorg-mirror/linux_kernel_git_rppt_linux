@@ -570,7 +570,7 @@ static int __init cec_init(void)
 	if (boot_cpu_data.x86_vendor == X86_VENDOR_INTEL)
 		action_threshold = 2;
 
-	ce_arr.array = (void *)get_zeroed_page(GFP_KERNEL);
+	ce_arr.array = get_zeroed_page(GFP_KERNEL);
 	if (!ce_arr.array) {
 		pr_err("Error allocating CE array page!\n");
 		return -ENOMEM;

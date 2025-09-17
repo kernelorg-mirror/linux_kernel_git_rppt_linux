@@ -17,7 +17,7 @@
  */
 int tpm_buf_init(struct tpm_buf *buf, u16 tag, u32 ordinal)
 {
-	buf->data = (u8 *)__get_free_page(GFP_KERNEL);
+	buf->data = __get_free_page(GFP_KERNEL);
 	if (!buf->data)
 		return -ENOMEM;
 
@@ -56,7 +56,7 @@ EXPORT_SYMBOL_GPL(tpm_buf_reset);
  */
 int tpm_buf_init_sized(struct tpm_buf *buf)
 {
-	buf->data = (u8 *)__get_free_page(GFP_KERNEL);
+	buf->data = __get_free_page(GFP_KERNEL);
 	if (!buf->data)
 		return -ENOMEM;
 

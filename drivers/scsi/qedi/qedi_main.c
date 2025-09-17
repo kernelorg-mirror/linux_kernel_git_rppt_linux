@@ -229,13 +229,13 @@ static int __qedi_alloc_uio_rings(struct qedi_uio_dev *udev)
 		return rc;
 
 	/* Memory for control area.  */
-	udev->uctrl = (void *)get_zeroed_page(GFP_KERNEL);
+	udev->uctrl = get_zeroed_page(GFP_KERNEL);
 	if (!udev->uctrl)
 		return -ENOMEM;
 
 	/* Allocating memory for LL2 ring  */
 	udev->ll2_ring_size = QEDI_PAGE_SIZE;
-	udev->ll2_ring = (void *)get_zeroed_page(GFP_KERNEL | __GFP_COMP);
+	udev->ll2_ring = get_zeroed_page(GFP_KERNEL | __GFP_COMP);
 	if (!udev->ll2_ring) {
 		rc = -ENOMEM;
 		goto exit_alloc_ring;
@@ -244,7 +244,7 @@ static int __qedi_alloc_uio_rings(struct qedi_uio_dev *udev)
 	/* Allocating memory for Tx/Rx pkt buffer */
 	udev->ll2_buf_size = TX_RX_RING * qedi_ll2_buf_size;
 	udev->ll2_buf_size = QEDI_PAGE_ALIGN(udev->ll2_buf_size);
-	udev->ll2_buf = (void *)__get_free_pages(GFP_KERNEL | __GFP_COMP |
+	udev->ll2_buf = __get_free_pages(GFP_KERNEL | __GFP_COMP |
 						 __GFP_ZERO, 2);
 	if (!udev->ll2_buf) {
 		rc = -ENOMEM;

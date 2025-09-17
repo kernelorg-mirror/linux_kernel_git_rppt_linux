@@ -491,7 +491,7 @@ static void __vfio_batch_init(struct vfio_batch *batch, bool single)
 	if (single || unlikely(disable_hugepages))
 		goto fallback;
 
-	batch->pages = (struct page **) __get_free_page(GFP_KERNEL);
+	batch->pages = __get_free_page(GFP_KERNEL);
 	if (!batch->pages)
 		goto fallback;
 

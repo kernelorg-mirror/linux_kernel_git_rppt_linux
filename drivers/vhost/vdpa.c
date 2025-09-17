@@ -1105,7 +1105,7 @@ static int vhost_vdpa_pa_map(struct vhost_vdpa *v,
 	int ret = 0;
 
 	/* Limit the use of memory for bookkeeping */
-	page_list = (struct page **) __get_free_page(GFP_KERNEL);
+	page_list = __get_free_page(GFP_KERNEL);
 	if (!page_list)
 		return -ENOMEM;
 

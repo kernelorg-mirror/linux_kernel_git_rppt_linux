@@ -127,7 +127,7 @@ static int alloc_discontig_frames(unsigned int order)
 	BUG_ON(order < MIN_CONTIG_ORDER);
 	BUILD_BUG_ON(sizeof(discontig_frames_early) != PAGE_SIZE);
 
-	new_array = (unsigned long *)__get_free_pages(GFP_KERNEL,
+	new_array = __get_free_pages(GFP_KERNEL,
 						      order - MIN_CONTIG_ORDER);
 	if (!new_array)
 		return -ENOMEM;
@@ -1458,7 +1458,7 @@ static int xen_pgd_alloc(struct mm_struct *mm)
 	BUG_ON(PagePinned(virt_to_page(pgd)));
 	BUG_ON(page->private != 0);
 
-	user_pgd = (pgd_t *)__get_free_page(GFP_KERNEL | __GFP_ZERO);
+	user_pgd = __get_free_page(GFP_KERNEL | __GFP_ZERO);
 	page->private = (unsigned long)user_pgd;
 
 	if (user_pgd != NULL) {

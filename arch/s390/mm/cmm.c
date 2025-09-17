@@ -66,7 +66,7 @@ static long cmm_alloc_pages(long nr, long *counter,
 	unsigned long addr;
 
 	while (nr) {
-		addr = __get_free_page(GFP_NOIO);
+		addr = (unsigned long)__get_free_page(GFP_NOIO);
 		if (!addr)
 			break;
 		spin_lock(&cmm_lock);
@@ -74,8 +74,7 @@ static long cmm_alloc_pages(long nr, long *counter,
 		if (!pa || pa->index >= CMM_NR_PAGES) {
 			/* Need a new page for the page list. */
 			spin_unlock(&cmm_lock);
-			npa = (struct cmm_page_array *)
-				__get_free_page(GFP_NOIO);
+			npa =__get_free_page(GFP_NOIO);
 			if (!npa) {
 				free_page(addr);
 				break;

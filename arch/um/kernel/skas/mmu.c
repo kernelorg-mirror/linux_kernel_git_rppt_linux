@@ -29,7 +29,8 @@ int init_new_context(struct task_struct *task, struct mm_struct *mm)
 	unsigned long stack = 0;
 	int ret = -ENOMEM;
 
-	stack = __get_free_pages(GFP_KERNEL | __GFP_ZERO, ilog2(STUB_DATA_PAGES));
+	stack = (unsigned long)__get_free_pages(GFP_KERNEL | __GFP_ZERO,
+						ilog2(STUB_DATA_PAGES));
 	if (stack == 0)
 		goto out;
 

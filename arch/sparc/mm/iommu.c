@@ -93,7 +93,7 @@ static void __init sbus_iommu_init(struct platform_device *op)
 	   We need 256K or 512K or 1M or 2M area aligned to
            its size and current gfp will fortunately give
            it to us. */
-        tmp = __get_free_pages(GFP_KERNEL, IOMMU_ORDER);
+        tmp = (unsigned long)__get_free_pages(GFP_KERNEL, IOMMU_ORDER);
 	if (!tmp) {
 		prom_printf("Unable to allocate iommu table [0x%lx]\n",
 			    IOMMU_NPTES * sizeof(iopte_t));
@@ -324,7 +324,7 @@ static void *sbus_iommu_alloc(struct device *dev, size_t len,
 		return NULL;
 
 	len = PAGE_ALIGN(len);
-	va = __get_free_pages(gfp | __GFP_ZERO, get_order(len));
+	va = (unsigned long)__get_free_pages(gfp | __GFP_ZERO, get_order(len));
 	if (va == 0)
 		return NULL;
 

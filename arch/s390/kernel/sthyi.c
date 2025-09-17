@@ -218,7 +218,7 @@ static void fill_stsi(struct sthyi_sctns *sctns)
 	void *sysinfo;
 
 	/* Errors are handled through the validity bits in the response. */
-	sysinfo = (void *)__get_free_page(GFP_KERNEL);
+	sysinfo = __get_free_page(GFP_KERNEL);
 	if (!sysinfo)
 		return;
 
@@ -354,7 +354,7 @@ static void fill_diag(struct sthyi_sctns *sctns, void *diag204_buf)
 	struct diag204_x_phys_block *phys_block;
 	struct lpar_cpu_inf lpar_inf = {};
 
-	diag224_buf = (void *)__get_free_page(GFP_KERNEL | GFP_DMA);
+	diag224_buf = __get_free_page(GFP_KERNEL | GFP_DMA);
 	if (!diag224_buf || diag224(diag224_buf))
 		goto out;
 
@@ -470,7 +470,7 @@ static int sthyi_init_cache(void)
 {
 	if (sthyi_cache.info)
 		return 0;
-	sthyi_cache.info = (void *)get_zeroed_page(GFP_KERNEL);
+	sthyi_cache.info = get_zeroed_page(GFP_KERNEL);
 	if (!sthyi_cache.info)
 		return -ENOMEM;
 	sthyi_cache.end = jiffies - 1; /* expired */
@@ -538,7 +538,7 @@ SYSCALL_DEFINE4(s390_sthyi, unsigned long, function_code, void __user *, buffer,
 		return -EINVAL;
 	if (function_code != STHYI_FC_CP_IFL_CAP)
 		return -EOPNOTSUPP;
-	info = (void *)get_zeroed_page(GFP_KERNEL);
+	info = get_zeroed_page(GFP_KERNEL);
 	if (!info)
 		return -ENOMEM;
 	r = sthyi_fill(info, &sthyi_rc);

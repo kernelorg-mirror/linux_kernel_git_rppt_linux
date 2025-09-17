@@ -122,7 +122,7 @@ static struct parsed_partitions *check_partition(struct gendisk *hd)
 	state = allocate_partitions(hd);
 	if (!state)
 		return NULL;
-	state->pp_buf = (char *)__get_free_page(GFP_KERNEL);
+	state->pp_buf = __get_free_page(GFP_KERNEL);
 	if (!state->pp_buf) {
 		free_partitions(state);
 		return NULL;

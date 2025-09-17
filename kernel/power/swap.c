@@ -381,12 +381,12 @@ static int write_page(void *buf, sector_t offset, struct hib_bio_batch *hb)
 	if (!hb)
 		goto sync_io;
 
-	src = (void *)__get_free_page(gfp);
+	src = __get_free_page(gfp);
 	if (!src) {
 		ret = hib_wait_io(hb); /* Free pages */
 		if (ret)
 			return ret;
-		src = (void *)__get_free_page(gfp);
+		src = __get_free_page(gfp);
 		if (WARN_ON_ONCE(!src))
 			goto sync_io;
 	}
@@ -414,7 +414,7 @@ static int get_swap_writer(struct swap_map_handle *handle)
 			pr_err("Cannot find swap device, try swapon -a\n");
 		return ret;
 	}
-	handle->cur = (struct swap_map_page *)get_zeroed_page(GFP_KERNEL);
+	handle->cur = get_zeroed_page(GFP_KERNEL);
 	if (!handle->cur) {
 		ret = -ENOMEM;
 		goto err_close;
@@ -705,7 +705,7 @@ static int save_compressed_image(struct swap_map_handle *handle,
 	nr_threads = num_online_cpus() - 1;
 	nr_threads = clamp_val(nr_threads, 1, CMP_THREADS);
 
-	page = (void *)__get_free_page(GFP_NOIO | __GFP_HIGH);
+	page = __get_free_page(GFP_NOIO | __GFP_HIGH);
 	if (!page) {
 		pr_err("Failed to allocate %s page\n", hib_comp_algo);
 		ret = -ENOMEM;
@@ -1019,7 +1019,7 @@ static int get_swap_reader(struct swap_map_handle *handle,
 			last->next = tmp;
 		last = tmp;
 
-		tmp->map = (struct swap_map_page *)
+		tmp->map =
 			   __get_free_page(GFP_NOIO | __GFP_HIGH);
 		if (!tmp->map) {
 			release_swap_reader(handle);
@@ -1313,7 +1313,7 @@ static int load_compressed_image(struct swap_map_handle *handle,
 	read_pages = clamp_val(read_pages, CMP_MIN_RD_PAGES, CMP_MAX_RD_PAGES);
 
 	for (i = 0; i < read_pages; i++) {
-		page[i] = (void *)__get_free_page(i < CMP_PAGES ?
+		page[i] = __get_free_page(i < CMP_PAGES ?
 						  GFP_NOIO | __GFP_HIGH :
 						  GFP_NOIO | __GFP_NOWARN |
 						  __GFP_NORETRY);
@@ -1660,7 +1660,7 @@ int swsusp_unmark(void)
 
 static int __init swsusp_header_init(void)
 {
-	swsusp_header = (struct swsusp_header*) __get_free_page(GFP_KERNEL);
+	swsusp_header = __get_free_page(GFP_KERNEL);
 	if (!swsusp_header)
 		panic("Could not allocate memory for swsusp_header\n");
 	return 0;

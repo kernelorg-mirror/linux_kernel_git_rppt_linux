@@ -5266,18 +5266,18 @@ EXPORT_SYMBOL(__folio_alloc_noprof);
  * address cannot represent highmem pages. Use alloc_pages and then kmap if
  * you need to access high mem.
  */
-unsigned long get_free_pages_noprof(gfp_t gfp_mask, unsigned int order)
+void *get_free_pages_noprof(gfp_t gfp_mask, unsigned int order)
 {
 	struct page *page;
 
 	page = alloc_pages_noprof(gfp_mask & ~__GFP_HIGHMEM, order);
 	if (!page)
 		return 0;
-	return (unsigned long) page_address(page);
+	return page_address(page);
 }
 EXPORT_SYMBOL(get_free_pages_noprof);
 
-unsigned long get_zeroed_page_noprof(gfp_t gfp_mask)
+void *get_zeroed_page_noprof(gfp_t gfp_mask)
 {
 	return get_free_pages_noprof(gfp_mask | __GFP_ZERO, 0);
 }
@@ -5362,12 +5362,12 @@ void free_pages(unsigned long addr, unsigned int order)
 
 EXPORT_SYMBOL(free_pages);
 
-static void *make_alloc_exact(unsigned long addr, unsigned int order,
+static void *make_alloc_exact(void *addr, unsigned int order,
 		size_t size)
 {
 	if (addr) {
 		unsigned long nr = DIV_ROUND_UP(size, PAGE_SIZE);
-		struct page *page = virt_to_page((void *)addr);
+		struct page *page = virt_to_page(addr);
 		struct page *last = page + nr;
 
 		split_page_owner(page, order, 0);
@@ -5380,7 +5380,7 @@ static void *make_alloc_exact(unsigned long addr, unsigned int order,
 		for (page += nr; page < last; page++)
 			__free_pages_ok(page, 0, FPI_TO_TAIL);
 	}
-	return (void *)addr;
+	return addr;
 }
 
 /**
@@ -5401,7 +5401,7 @@ static void *make_alloc_exact(unsigned long addr, unsigned int order,
 void *alloc_pages_exact_noprof(size_t size, gfp_t gfp_mask)
 {
 	unsigned int order = get_order(size);
-	unsigned long addr;
+	void *addr;
 
 	if (WARN_ON_ONCE(gfp_mask & (__GFP_COMP | __GFP_HIGHMEM)))
 		gfp_mask &= ~(__GFP_COMP | __GFP_HIGHMEM);
@@ -5434,7 +5434,7 @@ void * __meminit alloc_pages_exact_nid_noprof(int nid, size_t size, gfp_t gfp_ma
 	p = alloc_pages_node_noprof(nid, gfp_mask, order);
 	if (!p)
 		return NULL;
-	return make_alloc_exact((unsigned long)page_address(p), order, size);
+	return make_alloc_exact(page_address(p), order, size);
 }
 
 /**

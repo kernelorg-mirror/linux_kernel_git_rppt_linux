@@ -290,7 +290,7 @@ void bfs_dump_imap(const char *prefix, struct super_block *s)
 {
 #ifdef DEBUG
 	int i;
-	char *tmpbuf = (char *)get_zeroed_page(GFP_KERNEL);
+	char *tmpbuf = get_zeroed_page(GFP_KERNEL);
 
 	if (!tmpbuf)
 		return;

@@ -237,7 +237,7 @@ slow_path:
 		if (!walk->page) {
 			gfp_t gfp = skcipher_walk_gfp(walk);
 
-			walk->page = (void *)__get_free_page(gfp);
+			walk->page = __get_free_page(gfp);
 			if (!walk->page)
 				goto slow_path;
 		}

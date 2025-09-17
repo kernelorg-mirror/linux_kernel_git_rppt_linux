@@ -354,8 +354,7 @@ static int alloc_spa(struct pci_dev *dev, struct ocxl_link *link)
 	INIT_WORK(&spa->xsl_fault.fault_work, xsl_fault_handler_bh);
 
 	spa->spa_order = SPA_SPA_SIZE_LOG - PAGE_SHIFT;
-	spa->spa_mem = (struct ocxl_process_element *)
-		__get_free_pages(GFP_KERNEL | __GFP_ZERO, spa->spa_order);
+	spa->spa_mem = __get_free_pages(GFP_KERNEL | __GFP_ZERO, spa->spa_order);
 	if (!spa->spa_mem) {
 		dev_err(&dev->dev, "Can't allocate Shared Process Area\n");
 		kfree(spa);

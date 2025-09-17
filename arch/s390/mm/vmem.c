@@ -33,7 +33,7 @@ static void __ref *vmem_alloc_pages(unsigned int order)
 	unsigned long size = PAGE_SIZE << order;
 
 	if (slab_is_available())
-		return (void *)__get_free_pages(GFP_KERNEL, order);
+		return __get_free_pages(GFP_KERNEL, order);
 	return memblock_alloc(size, size);
 }
 

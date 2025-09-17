@@ -1109,7 +1109,7 @@ static int stm32_hash_copy_sgs(struct stm32_hash_request_ctx *rctx,
 
 	pages = get_order(new_len);
 
-	buf = (void *)__get_free_pages(GFP_ATOMIC, pages);
+	buf = __get_free_pages(GFP_ATOMIC, pages);
 	if (!buf) {
 		pr_err("Couldn't allocate pages for unaligned cases.\n");
 		return -ENOMEM;

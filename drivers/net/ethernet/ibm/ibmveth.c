@@ -629,13 +629,13 @@ static int ibmveth_open(struct net_device *netdev)
 		rxq_entries += adapter->rx_buff_pool[i].size;
 
 	rc = -ENOMEM;
-	adapter->buffer_list_addr = (void*) get_zeroed_page(GFP_KERNEL);
+	adapter->buffer_list_addr = get_zeroed_page(GFP_KERNEL);
 	if (!adapter->buffer_list_addr) {
 		netdev_err(netdev, "unable to allocate list pages\n");
 		goto out;
 	}
 
-	adapter->filter_list_addr = (void*) get_zeroed_page(GFP_KERNEL);
+	adapter->filter_list_addr = get_zeroed_page(GFP_KERNEL);
 	if (!adapter->filter_list_addr) {
 		netdev_err(netdev, "unable to allocate filter pages\n");
 		goto out_free_buffer_list;

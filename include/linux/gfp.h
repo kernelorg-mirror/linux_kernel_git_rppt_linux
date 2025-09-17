@@ -357,10 +357,10 @@ static inline struct page *alloc_page_vma_noprof(gfp_t gfp,
 struct page *alloc_pages_nolock_noprof(gfp_t gfp_flags, int nid, unsigned int order);
 #define alloc_pages_nolock(...)			alloc_hooks(alloc_pages_nolock_noprof(__VA_ARGS__))
 
-extern unsigned long get_free_pages_noprof(gfp_t gfp_mask, unsigned int order);
+void *get_free_pages_noprof(gfp_t gfp_mask, unsigned int order);
 #define __get_free_pages(...)			alloc_hooks(get_free_pages_noprof(__VA_ARGS__))
 
-extern unsigned long get_zeroed_page_noprof(gfp_t gfp_mask);
+void *get_zeroed_page_noprof(gfp_t gfp_mask);
 #define get_zeroed_page(...)			alloc_hooks(get_zeroed_page_noprof(__VA_ARGS__))
 
 void *alloc_pages_exact_noprof(size_t size, gfp_t gfp_mask) __alloc_size(1);
@@ -376,7 +376,7 @@ __meminit void *alloc_pages_exact_nid_noprof(int nid, size_t size, gfp_t gfp_mas
 	__get_free_pages((gfp_mask), 0)
 
 #define __get_dma_pages(gfp_mask, order)				\
-	__get_free_pages((gfp_mask) | GFP_DMA, (order))
+	(unsigned long)__get_free_pages((gfp_mask) | GFP_DMA, (order))
 
 extern void __free_pages(struct page *page, unsigned int order);
 extern void free_pages_nolock(struct page *page, unsigned int order);

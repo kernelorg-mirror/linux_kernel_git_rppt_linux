@@ -349,7 +349,7 @@ static int __init mount_nodev_root(char *root_device_name)
 	int err = -EINVAL;
 	int num_fs, i;
 
-	fs_names = (void *)__get_free_page(GFP_KERNEL);
+	fs_names = __get_free_page(GFP_KERNEL);
 	if (!fs_names)
 		return -EINVAL;
 	num_fs = split_fs_names(fs_names, PAGE_SIZE);

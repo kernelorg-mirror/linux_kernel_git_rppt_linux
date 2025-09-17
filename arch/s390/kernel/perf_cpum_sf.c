@@ -209,7 +209,7 @@ static int alloc_sample_data_block(unsigned long *sdbt, gfp_t gfp_flags)
 	unsigned long sdb;
 
 	/* Allocate and initialize sample-data-block */
-	sdb = get_zeroed_page(gfp_flags);
+	sdb = (unsigned long)get_zeroed_page(gfp_flags);
 	if (!sdb)
 		return -ENOMEM;
 	te = trailer_entry_ptr(sdb);
@@ -266,7 +266,7 @@ static int realloc_sampling_buffer(struct sf_buffer *sfb,
 	for (i = 0; i < num_sdb; i++) {
 		/* Allocate a new SDB-table if it is full. */
 		if (require_table_link(tail)) {
-			new = (unsigned long *)get_zeroed_page(gfp_flags);
+			new = get_zeroed_page(gfp_flags);
 			if (!new) {
 				rc = -ENOMEM;
 				break;
@@ -328,7 +328,7 @@ static int alloc_sampling_buffer(struct sf_buffer *sfb, unsigned long num_sdb)
 		return -EINVAL;
 
 	/* Allocate the sample-data-block-table origin */
-	sfb->sdbt = (unsigned long *)get_zeroed_page(GFP_KERNEL);
+	sfb->sdbt = get_zeroed_page(GFP_KERNEL);
 	if (!sfb->sdbt)
 		return -ENOMEM;
 	sfb->num_sdb = 0;
@@ -1628,7 +1628,7 @@ static void *aux_buffer_setup(struct perf_event *event, void **pages,
 
 	/* Allocate the first SDBT */
 	sfb->num_sdbt = 0;
-	sfb->sdbt = (unsigned long *)get_zeroed_page(GFP_KERNEL);
+	sfb->sdbt = get_zeroed_page(GFP_KERNEL);
 	if (!sfb->sdbt)
 		goto no_sdbt;
 	aux->sdbt_index[sfb->num_sdbt++] = (unsigned long)sfb->sdbt;
@@ -1640,7 +1640,7 @@ static void *aux_buffer_setup(struct perf_event *event, void **pages,
 	 */
 	for (i = 0; i < nr_pages; i++, tail++) {
 		if (require_table_link(tail)) {
-			new = (unsigned long *)get_zeroed_page(GFP_KERNEL);
+			new = get_zeroed_page(GFP_KERNEL);
 			if (!new)
 				goto no_sdbt;
 			aux->sdbt_index[sfb->num_sdbt++] = (unsigned long)new;

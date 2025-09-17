@@ -93,7 +93,7 @@ static __always_inline int clp_req(void *data, unsigned int lps)
 
 static void *clp_alloc_block(gfp_t gfp_mask)
 {
-	return (void *) __get_free_pages(gfp_mask, get_order(CLP_BLK_SIZE));
+	return __get_free_pages(gfp_mask, get_order(CLP_BLK_SIZE));
 }
 
 static void clp_free_block(void *ptr)

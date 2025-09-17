@@ -166,7 +166,7 @@ static int live_lrc_layout(void *arg)
 	 * match the layout saved by HW.
 	 */
 
-	lrc = (u32 *)__get_free_page(GFP_KERNEL); /* requires page alignment */
+	lrc = __get_free_page(GFP_KERNEL); /* requires page alignment */
 	if (!lrc)
 		return -ENOMEM;
 	GEM_BUG_ON(offset_in_page(lrc));

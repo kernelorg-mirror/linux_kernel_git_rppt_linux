@@ -2713,7 +2713,7 @@ static int bnx2x_mcast_enqueue_cmd(struct bnx2x *bp,
 				total_elems = BNX2X_MCAST_BINS_NUM;
 		}
 		while (total_elems > 0) {
-			elem_group = (struct bnx2x_mcast_elem_group *)
+			elem_group =
 				     __get_free_page(GFP_ATOMIC | __GFP_ZERO);
 			if (!elem_group) {
 				bnx2x_free_groups(&new_cmd->group_head);

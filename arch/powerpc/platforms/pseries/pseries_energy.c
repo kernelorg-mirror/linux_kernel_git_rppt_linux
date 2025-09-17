@@ -193,7 +193,7 @@ static ssize_t get_best_energy_list(char *page, int activate)
 	u32 *buf_page;
 	char *s = page;
 
-	buf_page = (u32 *) get_zeroed_page(GFP_KERNEL);
+	buf_page = get_zeroed_page(GFP_KERNEL);
 	if (!buf_page)
 		return -ENOMEM;
 

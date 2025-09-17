@@ -465,7 +465,7 @@ retry:
 	nslabs = SLABS_PER_PAGE << order;
 
 	while ((SLABS_PER_PAGE << order) > IO_TLB_MIN_SLABS) {
-		vstart = (void *)__get_free_pages(gfp_mask | __GFP_NOWARN,
+		vstart = __get_free_pages(gfp_mask | __GFP_NOWARN,
 						  order);
 		if (vstart)
 			break;
@@ -496,12 +496,12 @@ retry:
 
 	nareas = limit_nareas(default_nareas, nslabs);
 	area_order = get_order(array_size(sizeof(*mem->areas), nareas));
-	mem->areas = (struct io_tlb_area *)
+	mem->areas =
 		__get_free_pages(GFP_KERNEL | __GFP_ZERO, area_order);
 	if (!mem->areas)
 		goto error_area;
 
-	mem->slots = (void *)__get_free_pages(GFP_KERNEL | __GFP_ZERO,
+	mem->slots = __get_free_pages(GFP_KERNEL | __GFP_ZERO,
 		get_order(array_size(sizeof(*mem->slots), nslabs)));
 	if (!mem->slots)
 		goto error_slots;
@@ -711,7 +711,7 @@ static struct io_tlb_pool *swiotlb_alloc_pool(struct device *dev,
 	}
 
 	slot_order = get_order(array_size(sizeof(*pool->slots), nslabs));
-	pool->slots = (struct io_tlb_slot *)
+	pool->slots =
 		__get_free_pages(gfp, slot_order);
 	if (!pool->slots)
 		goto error_slots;

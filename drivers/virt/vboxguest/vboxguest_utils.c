@@ -70,7 +70,7 @@ void *vbg_req_alloc(size_t len, enum vmmdev_request_type req_type,
 	struct vmmdev_request_header *req;
 	int order = get_order(PAGE_ALIGN(len));
 
-	req = (void *)__get_free_pages(GFP_KERNEL | GFP_DMA32, order);
+	req = __get_free_pages(GFP_KERNEL | GFP_DMA32, order);
 	if (!req)
 		return NULL;
 

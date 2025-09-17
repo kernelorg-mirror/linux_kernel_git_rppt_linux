@@ -236,7 +236,7 @@ static ssize_t lkdtm_debugfs_entry(struct file *f,
 	if (count >= PAGE_SIZE)
 		return -EINVAL;
 
-	buf = (char *)__get_free_page(GFP_KERNEL);
+	buf = __get_free_page(GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
 	if (copy_from_user(buf, user_buf, count)) {
@@ -271,7 +271,7 @@ static ssize_t lkdtm_debugfs_read(struct file *f, char __user *user_buf,
 	ssize_t out;
 	char *buf;
 
-	buf = (char *)__get_free_page(GFP_KERNEL);
+	buf = __get_free_page(GFP_KERNEL);
 	if (buf == NULL)
 		return -ENOMEM;
 
@@ -313,7 +313,7 @@ static ssize_t direct_entry(struct file *f, const char __user *user_buf,
 	if (count < 1)
 		return -EINVAL;
 
-	buf = (char *)__get_free_page(GFP_KERNEL);
+	buf = __get_free_page(GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
 	if (copy_from_user(buf, user_buf, count)) {

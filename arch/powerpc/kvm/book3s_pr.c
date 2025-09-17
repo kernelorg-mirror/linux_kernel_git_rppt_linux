@@ -1744,7 +1744,7 @@ static int kvmppc_core_vcpu_create_pr(struct kvm_vcpu *vcpu)
 		goto free_vcpu3s;
 #endif
 
-	p = __get_free_page(GFP_KERNEL|__GFP_ZERO);
+	p = (unsigned long)__get_free_page(GFP_KERNEL | __GFP_ZERO);
 	if (!p)
 		goto free_shadow_vcpu;
 	vcpu->arch.shared = (void *)p;

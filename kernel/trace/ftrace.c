@@ -615,7 +615,7 @@ static int ftrace_profile_pages_init(struct ftrace_profile_stat *stat)
 	if (stat->pages)
 		return 0;
 
-	stat->pages = (void *)get_zeroed_page(GFP_KERNEL);
+	stat->pages = get_zeroed_page(GFP_KERNEL);
 	if (!stat->pages)
 		return -ENOMEM;
 
@@ -637,7 +637,7 @@ static int ftrace_profile_pages_init(struct ftrace_profile_stat *stat)
 	pages = DIV_ROUND_UP(functions, PROFILES_PER_PAGE);
 
 	for (i = 1; i < pages; i++) {
-		pg->next = (void *)get_zeroed_page(GFP_KERNEL);
+		pg->next = get_zeroed_page(GFP_KERNEL);
 		if (!pg->next)
 			goto out_free;
 		pg = pg->next;
@@ -3809,7 +3809,7 @@ static int ftrace_allocate_records(struct ftrace_page *pg, int count)
 	order = fls(pages) - 1;
 
  again:
-	pg->records = (void *)__get_free_pages(GFP_KERNEL | __GFP_ZERO, order);
+	pg->records = __get_free_pages(GFP_KERNEL | __GFP_ZERO, order);
 
 	if (!pg->records) {
 		/* if we can't allocate this size, try something smaller */

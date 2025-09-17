@@ -50,7 +50,7 @@ static int hypfs_sprp_create(void **data_ptr, void **free_ptr, size_t *size)
 	unsigned long rc;
 	void *data;
 
-	data = (void *) get_zeroed_page(GFP_KERNEL);
+	data = get_zeroed_page(GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
 	rc = hypfs_sprp_diag304(data, DIAG304_QUERY_PRP);
@@ -74,7 +74,7 @@ static int __hypfs_sprp_ioctl(void __user *user_area)
 	int rc;
 
 	rc = -ENOMEM;
-	data = (void *)get_zeroed_page(GFP_KERNEL);
+	data = get_zeroed_page(GFP_KERNEL);
 	diag304 = kzalloc(sizeof(*diag304), GFP_KERNEL);
 	if (!data || !diag304)
 		goto out;

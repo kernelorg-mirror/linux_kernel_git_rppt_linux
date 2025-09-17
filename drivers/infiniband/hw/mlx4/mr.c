@@ -303,7 +303,7 @@ mlx4_alloc_priv_pages(struct ib_device *device,
 				    MLX4_MR_PAGES_ALIGN);
 
 	/* Prevent cross page boundary allocation. */
-	mr->pages = (__be64 *)get_zeroed_page(GFP_KERNEL);
+	mr->pages = get_zeroed_page(GFP_KERNEL);
 	if (!mr->pages)
 		return -ENOMEM;
 

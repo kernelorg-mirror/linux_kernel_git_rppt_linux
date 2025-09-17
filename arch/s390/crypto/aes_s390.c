@@ -1125,7 +1125,7 @@ static int __init aes_s390_init(void)
 	if (cpacf_test_func(&kmctr_functions, CPACF_KMCTR_AES_128) ||
 	    cpacf_test_func(&kmctr_functions, CPACF_KMCTR_AES_192) ||
 	    cpacf_test_func(&kmctr_functions, CPACF_KMCTR_AES_256)) {
-		ctrblk = (u8 *) __get_free_page(GFP_KERNEL);
+		ctrblk = __get_free_page(GFP_KERNEL);
 		if (!ctrblk) {
 			ret = -ENOMEM;
 			goto out_err;

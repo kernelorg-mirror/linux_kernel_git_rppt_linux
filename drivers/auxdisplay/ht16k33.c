@@ -591,7 +591,7 @@ static int ht16k33_fbdev_probe(struct device *dev, struct ht16k33_priv *priv,
 
 	/* Framebuffer (2 bytes per column) */
 	BUILD_BUG_ON(PAGE_SIZE < HT16K33_FB_SIZE);
-	fbdev->buffer = (unsigned char *) get_zeroed_page(GFP_KERNEL);
+	fbdev->buffer = get_zeroed_page(GFP_KERNEL);
 	if (!fbdev->buffer)
 		return -ENOMEM;
 

@@ -1177,7 +1177,7 @@ unsigned long devm_get_free_pages(struct device *dev,
 	struct pages_devres *devres;
 	unsigned long addr;
 
-	addr = __get_free_pages(gfp_mask, order);
+	addr = (unsigned long)__get_free_pages(gfp_mask, order);
 
 	if (unlikely(!addr))
 		return 0;

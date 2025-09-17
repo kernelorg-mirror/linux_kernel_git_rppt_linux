@@ -58,7 +58,7 @@ unsigned long alloc_stack(int order, int atomic)
 
 	if (atomic)
 		flags = GFP_ATOMIC;
-	page = __get_free_pages(flags, order);
+	page = (unsigned long)__get_free_pages(flags, order);
 
 	return page;
 }

@@ -2117,7 +2117,7 @@ static int ibmvmc_init_crq_queue(struct crq_server_adapter *adapter)
 	int rc = 0;
 	int retrc = 0;
 
-	queue->msgs = (struct ibmvmc_crq_msg *)get_zeroed_page(GFP_KERNEL);
+	queue->msgs = get_zeroed_page(GFP_KERNEL);
 
 	if (!queue->msgs)
 		goto malloc_failed;

@@ -121,7 +121,7 @@ static dma_addr_t map_single(struct ipu7_mmu_info *mmu_info, void *ptr)
 
 static int get_dummy_page(struct ipu7_mmu_info *mmu_info)
 {
-	void *pt = (void *)get_zeroed_page(GFP_ATOMIC | GFP_DMA32);
+	void *pt = get_zeroed_page(GFP_ATOMIC | GFP_DMA32);
 	dma_addr_t dma;
 
 	if (!pt)
@@ -155,7 +155,7 @@ static void free_dummy_page(struct ipu7_mmu_info *mmu_info)
 
 static int alloc_dummy_l2_pt(struct ipu7_mmu_info *mmu_info)
 {
-	u32 *pt = (u32 *)get_zeroed_page(GFP_ATOMIC | GFP_DMA32);
+	u32 *pt = get_zeroed_page(GFP_ATOMIC | GFP_DMA32);
 	dma_addr_t dma;
 	unsigned int i;
 
@@ -193,7 +193,7 @@ static void free_dummy_l2_pt(struct ipu7_mmu_info *mmu_info)
 
 static u32 *alloc_l1_pt(struct ipu7_mmu_info *mmu_info)
 {
-	u32 *pt = (u32 *)get_zeroed_page(GFP_ATOMIC | GFP_DMA32);
+	u32 *pt = get_zeroed_page(GFP_ATOMIC | GFP_DMA32);
 	dma_addr_t dma;
 	unsigned int i;
 
@@ -223,7 +223,7 @@ err_free_page:
 
 static u32 *alloc_l2_pt(struct ipu7_mmu_info *mmu_info)
 {
-	u32 *pt = (u32 *)get_zeroed_page(GFP_ATOMIC | GFP_DMA32);
+	u32 *pt = get_zeroed_page(GFP_ATOMIC | GFP_DMA32);
 	unsigned int i;
 
 	if (!pt)

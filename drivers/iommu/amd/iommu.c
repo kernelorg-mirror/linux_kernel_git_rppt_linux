@@ -1941,7 +1941,7 @@ static u64 *__get_gcr3_pte(struct gcr3_tbl_info *gcr3_info,
 			if (!alloc)
 				return NULL;
 
-			root = (void *)get_zeroed_page(GFP_ATOMIC);
+			root = get_zeroed_page(GFP_ATOMIC);
 			if (root == NULL)
 				return NULL;
 

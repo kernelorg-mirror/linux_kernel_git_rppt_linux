@@ -461,7 +461,7 @@ static int __init xen_guest_init(void)
 	if (efi_enabled(EFI_RUNTIME_SERVICES))
 		xen_efi_runtime_setup();
 
-	shared_info_page = (struct shared_info *)get_zeroed_page(GFP_KERNEL);
+	shared_info_page = get_zeroed_page(GFP_KERNEL);
 
 	if (!shared_info_page) {
 		pr_err("not enough memory\n");

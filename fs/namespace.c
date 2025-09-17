@@ -3182,7 +3182,7 @@ static void mnt_warn_timestamp_expiry(const struct path *mountpoint,
 	   (ktime_get_real_seconds() + TIME_UPTIME_SEC_MAX > sb->s_time_max)) {
 		char *buf, *mntpath;
 
-		buf = (char *)__get_free_page(GFP_KERNEL);
+		buf = __get_free_page(GFP_KERNEL);
 		if (buf)
 			mntpath = d_path(mountpoint, buf, PAGE_SIZE);
 		else

@@ -578,7 +578,7 @@ int power_supply_uevent(const struct device *dev, struct kobj_uevent_env *env)
 	if (psy->removing)
 		return 0;
 
-	prop_buf = (char *)get_zeroed_page(GFP_KERNEL);
+	prop_buf = get_zeroed_page(GFP_KERNEL);
 	if (!prop_buf)
 		return -ENOMEM;
 

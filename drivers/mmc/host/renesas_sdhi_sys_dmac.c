@@ -397,7 +397,7 @@ static void renesas_sdhi_sys_dmac_request_dma(struct tmio_mmc_host *host,
 		if (ret < 0)
 			goto ecfgrx;
 
-		host->bounce_buf = (u8 *)__get_free_page(GFP_KERNEL | GFP_DMA);
+		host->bounce_buf = __get_free_page(GFP_KERNEL | GFP_DMA);
 		if (!host->bounce_buf)
 			goto ebouncebuf;
 

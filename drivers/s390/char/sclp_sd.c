@@ -298,7 +298,7 @@ static int sclp_sd_store_data(struct sclp_sd_data *result, u8 di)
 	void *data = NULL;
 	int rc;
 
-	page = __get_free_page(GFP_KERNEL | GFP_DMA);
+	page = (unsigned long)__get_free_page(GFP_KERNEL | GFP_DMA);
 	if (!page)
 		return -ENOMEM;
 

@@ -186,8 +186,8 @@ void *hcd_buffer_alloc_pages(struct usb_hcd *hcd,
 	/* some USB hosts just use PIO */
 	if (!hcd_uses_dma(hcd)) {
 		*dma = DMA_MAPPING_ERROR;
-		return (void *)__get_free_pages(mem_flags,
-				get_order(size));
+		return __get_free_pages(mem_flags,
+					get_order(size));
 	}
 
 	return dma_alloc_coherent(hcd->self.sysdev,

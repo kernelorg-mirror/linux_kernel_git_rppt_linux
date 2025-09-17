@@ -300,7 +300,7 @@ SYSCALL_DEFINE3(mincore, unsigned long, start, size_t, len,
 	if (!access_ok(vec, pages))
 		return -EFAULT;
 
-	tmp = (void *) __get_free_page(GFP_USER);
+	tmp = __get_free_page(GFP_USER);
 	if (!tmp)
 		return -EAGAIN;
 

@@ -226,7 +226,7 @@ int tty_port_alloc_xmit_buf(struct tty_port *port)
 	if (port->xmit_buf)
 		return 0;
 
-	port->xmit_buf = (u8 *)get_zeroed_page(GFP_KERNEL);
+	port->xmit_buf = get_zeroed_page(GFP_KERNEL);
 	if (port->xmit_buf == NULL)
 		return -ENOMEM;
 

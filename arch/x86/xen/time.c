@@ -447,7 +447,7 @@ static void xen_setup_vsyscall_time_info(void)
 	struct pvclock_vsyscall_time_info *ti;
 	int ret;
 
-	ti = (struct pvclock_vsyscall_time_info *)get_zeroed_page(GFP_KERNEL);
+	ti = get_zeroed_page(GFP_KERNEL);
 	if (!ti)
 		return;
 

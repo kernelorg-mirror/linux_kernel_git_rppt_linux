@@ -378,7 +378,7 @@ pcxl_dma_init(void)
 
 	pcxl_res_size = PCXL_DMA_MAP_SIZE >> (PAGE_SHIFT + 3);
 	pcxl_res_hint = 0;
-	pcxl_res_map = (char *)__get_free_pages(GFP_KERNEL,
+	pcxl_res_map = __get_free_pages(GFP_KERNEL,
 					    get_order(pcxl_res_size));
 	memset(pcxl_res_map, 0, pcxl_res_size);
 	proc_gsc_root = proc_mkdir("bus/gsc", NULL);
@@ -411,7 +411,7 @@ void *arch_dma_alloc(struct device *dev, size_t size,
 	order = get_order(size);
 	size = 1 << (order + PAGE_SHIFT);
 	vaddr = pcxl_alloc_range(size);
-	paddr = __get_free_pages(gfp | __GFP_ZERO, order);
+	paddr = (unsigned long)__get_free_pages(gfp | __GFP_ZERO, order);
 	flush_kernel_dcache_range(paddr, size);
 	paddr = __pa(paddr);
 	map_uncached_pages(vaddr, size, paddr);

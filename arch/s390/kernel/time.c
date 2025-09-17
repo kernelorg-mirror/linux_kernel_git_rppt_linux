@@ -418,7 +418,7 @@ static void __init stp_reset(void)
 {
 	int rc;
 
-	stp_page = (void *) get_zeroed_page(GFP_ATOMIC);
+	stp_page = get_zeroed_page(GFP_ATOMIC);
 	rc = chsc_sstpc(stp_page, STP_OP_CTRL, 0x0000, NULL);
 	if (rc == 0)
 		set_bit(CLOCK_SYNC_HAS_STP, &clock_sync_flags);

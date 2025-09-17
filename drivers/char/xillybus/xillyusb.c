@@ -399,7 +399,7 @@ retry:
 		return -ENOMEM;
 
 	for (i = 0; i < fifo->bufnum; i++) {
-		fifo->mem[i] = (void *)
+		fifo->mem[i] =
 			__get_free_pages(GFP_KERNEL, buf_order);
 
 		if (!fifo->mem[i])
@@ -529,7 +529,7 @@ static struct xillyusb_endpoint
 			return NULL;
 		}
 
-		addr = __get_free_pages(GFP_KERNEL, order);
+		addr = (unsigned long)__get_free_pages(GFP_KERNEL, order);
 
 		if (!addr) {
 			kfree(xb);

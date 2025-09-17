@@ -714,7 +714,7 @@ static int goldfish_pipe_open(struct inode *inode, struct file *file)
 	 */
 	BUILD_BUG_ON(sizeof(struct goldfish_pipe_command) > PAGE_SIZE);
 	pipe->command_buffer =
-		(struct goldfish_pipe_command *)__get_free_page(GFP_KERNEL);
+		__get_free_page(GFP_KERNEL);
 	if (!pipe->command_buffer) {
 		status = -ENOMEM;
 		goto err_pipe;
@@ -840,7 +840,7 @@ static int goldfish_pipe_device_init(struct platform_device *pdev,
 	 * is to just allocate a page and place the buffers in it.
 	 */
 	BUILD_BUG_ON(sizeof(struct goldfish_pipe_dev_buffers) > PAGE_SIZE);
-	dev->buffers = (struct goldfish_pipe_dev_buffers *)
+	dev->buffers =
 		__get_free_page(GFP_KERNEL);
 	if (!dev->buffers) {
 		kfree(dev->pipes);

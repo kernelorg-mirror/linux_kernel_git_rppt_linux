@@ -889,7 +889,7 @@ static void *sba_alloc(struct device *hwdev, size_t size, dma_addr_t *dma_handle
 		return NULL;
 	}
 
-        ret = (void *) __get_free_pages(gfp, get_order(size));
+        ret = __get_free_pages(gfp, get_order(size));
 
 	if (ret) {
 		memset(ret, 0, size);
@@ -1137,7 +1137,7 @@ sba_alloc_pdir(unsigned int pdir_size)
         unsigned long pdir_base;
 	unsigned long pdir_order = get_order(pdir_size);
 
-	pdir_base = __get_free_pages(GFP_KERNEL, pdir_order);
+	pdir_base = (unsigned long)__get_free_pages(GFP_KERNEL, pdir_order);
 	if (NULL == (void *) pdir_base)	{
 		panic("%s() could not allocate I/O Page Table\n",
 			__func__);
@@ -1175,7 +1175,8 @@ sba_alloc_pdir(unsigned int pdir_size)
 	if (pdir_order <= (19-12)) {
 		if (((virt_to_phys(pdir_base)+pdir_size-1) & PIRANHA_ADDR_MASK) == PIRANHA_ADDR_VAL) {
 			/* allocate a new one on 512k alignment */
-			unsigned long new_pdir = __get_free_pages(GFP_KERNEL, (19-12));
+			unsigned long new_pdir = (unsigned long)__get_free_pages(GFP_KERNEL,
+										 (19 - 12));
 			/* release original */
 			free_pages(pdir_base, pdir_order);
 
@@ -1194,7 +1195,8 @@ sba_alloc_pdir(unsigned int pdir_size)
 		** 1MB or 2MB Pdir
 		** Needs to be aligned on an "odd" 1MB boundary.
 		*/
-		unsigned long new_pdir = __get_free_pages(GFP_KERNEL, pdir_order+1); /* 2 or 4MB */
+		unsigned long new_pdir = (unsigned long)__get_free_pages(GFP_KERNEL,
+									 pdir_order + 1); /* 2 or 4MB */
 
 		/* release original */
 		free_pages( pdir_base, pdir_order);
@@ -1302,7 +1304,7 @@ sba_ioc_init_pluto(struct parisc_device *sba, struct ioc *ioc, int ioc_num)
 		__func__, ioc->ioc_hpa, iova_space_size >> 20,
 		iov_order + PAGE_SHIFT);
 
-	ioc->pdir_base = (void *) __get_free_pages(GFP_KERNEL,
+	ioc->pdir_base = __get_free_pages(GFP_KERNEL,
 						   get_order(ioc->pdir_size));
 	if (!ioc->pdir_base)
 		panic("Couldn't allocate I/O Page Table\n");
@@ -1716,7 +1718,7 @@ sba_common_init(struct sba_device *sba_dev)
 			__func__, res_size);
 
 		sba_dev->ioc[i].res_size = res_size;
-		sba_dev->ioc[i].res_map = (char *) __get_free_pages(GFP_KERNEL, get_order(res_size));
+		sba_dev->ioc[i].res_map = __get_free_pages(GFP_KERNEL, get_order(res_size));
 
 #ifdef DEBUG_DMB_TRAP
 		iterate_pages( sba_dev->ioc[i].res_map, res_size,

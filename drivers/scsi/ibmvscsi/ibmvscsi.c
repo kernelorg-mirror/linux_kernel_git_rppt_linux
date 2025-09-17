@@ -331,7 +331,7 @@ static int ibmvscsi_init_crq_queue(struct crq_queue *queue,
 	int retrc;
 	struct vio_dev *vdev = to_vio_dev(hostdata->dev);
 
-	queue->msgs = (struct viosrp_crq *)get_zeroed_page(GFP_KERNEL);
+	queue->msgs = get_zeroed_page(GFP_KERNEL);
 
 	if (!queue->msgs)
 		goto malloc_failed;

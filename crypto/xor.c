@@ -127,7 +127,7 @@ calibrate_xor_blocks(void)
 		goto out;
 	}
 
-	b1 = (void *) __get_free_pages(GFP_KERNEL, 2);
+	b1 = __get_free_pages(GFP_KERNEL, 2);
 	if (!b1) {
 		printk(KERN_WARNING "xor: Yikes!  No memory available.\n");
 		return -ENOMEM;

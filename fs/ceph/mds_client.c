@@ -2548,7 +2548,7 @@ int ceph_alloc_readdir_reply_buffer(struct ceph_mds_request *req,
 
 	order = get_order((unsigned long)bytes_count);
 	while (order >= 0) {
-		rinfo->dir_entries = (void*)__get_free_pages(GFP_KERNEL |
+		rinfo->dir_entries = __get_free_pages(GFP_KERNEL |
 							     __GFP_NOWARN |
 							     __GFP_ZERO,
 							     order);

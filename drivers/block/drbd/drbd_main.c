@@ -2418,10 +2418,10 @@ found:
 
 static int drbd_alloc_socket(struct drbd_socket *socket)
 {
-	socket->rbuf = (void *) __get_free_page(GFP_KERNEL);
+	socket->rbuf = __get_free_page(GFP_KERNEL);
 	if (!socket->rbuf)
 		return -ENOMEM;
-	socket->sbuf = (void *) __get_free_page(GFP_KERNEL);
+	socket->sbuf = __get_free_page(GFP_KERNEL);
 	if (!socket->sbuf)
 		return -ENOMEM;
 	return 0;

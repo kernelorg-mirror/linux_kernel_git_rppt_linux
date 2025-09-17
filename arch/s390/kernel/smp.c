@@ -186,8 +186,9 @@ static int pcpu_alloc_lowcore(struct pcpu *pcpu, int cpu)
 	unsigned long async_stack, nodat_stack, mcck_stack;
 	struct lowcore *lc;
 
-	lc = (struct lowcore *) __get_free_pages(GFP_KERNEL | GFP_DMA, LC_ORDER);
-	nodat_stack = __get_free_pages(GFP_KERNEL, THREAD_SIZE_ORDER);
+	lc = __get_free_pages(GFP_KERNEL | GFP_DMA, LC_ORDER);
+	nodat_stack = (unsigned long)__get_free_pages(GFP_KERNEL,
+						      THREAD_SIZE_ORDER);
 	async_stack = stack_alloc();
 	mcck_stack = stack_alloc();
 	if (!lc || !nodat_stack || !async_stack || !mcck_stack)

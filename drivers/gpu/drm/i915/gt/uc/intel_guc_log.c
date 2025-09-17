@@ -904,7 +904,7 @@ int intel_guc_log_dump(struct intel_guc_log *log, struct drm_printer *p,
 	if (!obj)
 		return 0;
 
-	page = (u32 *)__get_free_page(GFP_KERNEL);
+	page = __get_free_page(GFP_KERNEL);
 	if (!page)
 		return -ENOMEM;
 

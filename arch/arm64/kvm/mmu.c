@@ -1101,7 +1101,7 @@ static void *hyp_mc_alloc_fn(void *mc)
 	struct kvm_hyp_memcache *memcache = mc;
 	void *addr;
 
-	addr = (void *)__get_free_page(GFP_KERNEL_ACCOUNT);
+	addr = __get_free_page(GFP_KERNEL_ACCOUNT);
 	if (addr && memcache->flags & HYP_MEMCACHE_ACCOUNT_STAGE2)
 		kvm_account_pgtable_pages(addr, 1);
 
@@ -2157,7 +2157,7 @@ static int kvm_map_idmap_text(void)
 
 static void *kvm_hyp_zalloc_page(void *arg)
 {
-	return (void *)get_zeroed_page(GFP_KERNEL);
+	return get_zeroed_page(GFP_KERNEL);
 }
 
 static struct kvm_pgtable_mm_ops kvm_hyp_mm_ops = {

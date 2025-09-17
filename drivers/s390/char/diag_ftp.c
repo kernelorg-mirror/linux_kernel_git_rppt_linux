@@ -153,7 +153,7 @@ ssize_t diag_ftp_cmd(const struct hmcdrv_ftp_cmdspec *ftp, size_t *fsize)
 #endif
 	init_completion(&diag_ftp_rx_complete);
 
-	ldfpl = (void *) get_zeroed_page(GFP_KERNEL | GFP_DMA);
+	ldfpl = get_zeroed_page(GFP_KERNEL | GFP_DMA);
 	if (!ldfpl) {
 		len = -ENOMEM;
 		goto out;

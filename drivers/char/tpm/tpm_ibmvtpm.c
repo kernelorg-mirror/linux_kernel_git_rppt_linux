@@ -621,7 +621,7 @@ static int tpm_ibmvtpm_probe(struct vio_dev *vio_dev,
 	ibmvtpm->vdev = vio_dev;
 
 	crq_q = &ibmvtpm->crq_queue;
-	crq_q->crq_addr = (struct ibmvtpm_crq *)get_zeroed_page(GFP_KERNEL);
+	crq_q->crq_addr = get_zeroed_page(GFP_KERNEL);
 	if (!crq_q->crq_addr) {
 		dev_err(dev, "Unable to allocate memory for crq_addr\n");
 		goto cleanup;

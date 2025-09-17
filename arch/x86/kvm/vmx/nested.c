@@ -7457,7 +7457,7 @@ __init int nested_vmx_hardware_setup(int (*exit_handlers[])(struct kvm_vcpu *))
 			 * The vmx_bitmap is not tied to a VM and so should
 			 * not be charged to a memcg.
 			 */
-			vmx_bitmap[i] = (unsigned long *)
+			vmx_bitmap[i] =
 				__get_free_page(GFP_KERNEL);
 			if (!vmx_bitmap[i]) {
 				nested_vmx_hardware_unsetup();

@@ -683,7 +683,7 @@ static int fill_buffer(struct debug_buffer *buf)
 	int ret;
 
 	if (!buf->page)
-		buf->page = (char *)get_zeroed_page(GFP_KERNEL);
+		buf->page = get_zeroed_page(GFP_KERNEL);
 
 	if (!buf->page) {
 		ret = -ENOMEM;

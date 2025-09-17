@@ -145,7 +145,7 @@ static int create_packet(void *data, size_t length) __must_hold(&rbu_data.lock)
 	}
 
 	while (!packet_data_temp_buf) {
-		packet_data_temp_buf = (unsigned char *)
+		packet_data_temp_buf =
 			__get_free_pages(GFP_KERNEL, ordernum);
 		if (!packet_data_temp_buf) {
 			pr_warn("failed to allocate new packet\n");
@@ -405,7 +405,7 @@ static int img_update_realloc(unsigned long size)
 
 	ordernum = get_order(size);
 	image_update_buffer =
-		(unsigned char *)__get_free_pages(GFP_DMA32, ordernum);
+		__get_free_pages(GFP_DMA32, ordernum);
 	spin_lock(&rbu_data.lock);
 	if (!image_update_buffer) {
 		pr_debug("Not enough memory for image update: size = %ld\n", size);

@@ -134,7 +134,7 @@ static int mlx5_fw_tracer_create_log_buf(struct mlx5_fw_tracer *tracer)
 	tracer->buff.size = TRACE_BUFFER_SIZE_BYTE;
 
 	gfp = GFP_KERNEL | __GFP_ZERO;
-	buff = (void *)__get_free_pages(gfp,
+	buff = __get_free_pages(gfp,
 					get_order(tracer->buff.size));
 	if (!buff) {
 		err = -ENOMEM;

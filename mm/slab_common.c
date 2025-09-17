@@ -1828,7 +1828,7 @@ static void fill_page_cache_func(struct work_struct *work)
 		1 : rcu_min_cached_objs;
 
 	for (i = READ_ONCE(krcp->nr_bkv_objs); i < nr_pages; i++) {
-		bnode = (struct kvfree_rcu_bulk_data *)
+		bnode =
 			__get_free_page(GFP_KERNEL | __GFP_NORETRY | __GFP_NOMEMALLOC | __GFP_NOWARN);
 
 		if (!bnode)
@@ -1886,7 +1886,7 @@ add_ptr_to_bulk_krc_lock(struct kfree_rcu_cpu **krcp,
 			// __GFP_NOWARN - it is supposed that an allocation can
 			// be failed under low memory or high memory pressure
 			// scenarios.
-			bnode = (struct kvfree_rcu_bulk_data *)
+			bnode =
 				__get_free_page(GFP_KERNEL | __GFP_NORETRY | __GFP_NOMEMALLOC | __GFP_NOWARN);
 			raw_spin_lock_irqsave(&(*krcp)->lock, *flags);
 		}

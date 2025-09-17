@@ -733,7 +733,7 @@ int pud_free_pmd_page(pud_t *pud, unsigned long addr)
 	int i;
 
 	pmd = pud_pgtable(*pud);
-	pmd_sv = (pmd_t *)__get_free_page(GFP_KERNEL);
+	pmd_sv = __get_free_page(GFP_KERNEL);
 	if (!pmd_sv)
 		return 0;
 

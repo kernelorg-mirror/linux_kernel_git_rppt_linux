@@ -757,7 +757,7 @@ static int pci_sun4v_atu_alloc_iotsb(struct pci_pbm_info *pbm)
 	/* calculate size of IOTSB */
 	table_size = (atu->size / IO_PAGE_SIZE) * 8;
 	order = get_order(table_size);
-	table = (void *)__get_free_pages(GFP_KERNEL | __GFP_ZERO, order);
+	table = __get_free_pages(GFP_KERNEL | __GFP_ZERO, order);
 	if (!table) {
 		err = -ENOMEM;
 		goto table_failed;
@@ -1060,7 +1060,8 @@ static int pci_sun4v_msiq_alloc(struct pci_pbm_info *pbm)
 	q_size = pbm->msiq_ent_count * sizeof(struct pci_sun4v_msiq_entry);
 	alloc_size = (pbm->msiq_num * q_size);
 	order = get_order(alloc_size);
-	pages = __get_free_pages(GFP_KERNEL | __GFP_COMP, order);
+	pages = (unsigned long)__get_free_pages(GFP_KERNEL | __GFP_COMP,
+						order);
 	if (pages == 0UL) {
 		printk(KERN_ERR "MSI: Cannot allocate MSI queues (o=%lu).\n",
 		       order);
@@ -1275,7 +1276,7 @@ static int pci_sun4v_probe(struct platform_device *op)
 	err = -ENOMEM;
 	if (!iommu_batch_initialized) {
 		for_each_possible_cpu(i) {
-			unsigned long page = get_zeroed_page(GFP_KERNEL);
+			unsigned long page = (unsigned long)get_zeroed_page(GFP_KERNEL);
 
 			if (!page)
 				goto out_err;

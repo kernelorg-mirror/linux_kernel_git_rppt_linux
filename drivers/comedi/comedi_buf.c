@@ -97,7 +97,7 @@ comedi_buf_map_alloc(struct comedi_device *dev, enum dma_data_direction dma_dir,
 	} else {
 		for (i = 0; i < n_pages; i++) {
 			buf = &bm->page_list[i];
-			buf->virt_addr = (void *)get_zeroed_page(GFP_KERNEL);
+			buf->virt_addr = get_zeroed_page(GFP_KERNEL);
 			if (!buf->virt_addr)
 				break;
 

@@ -846,7 +846,7 @@ static struct kho_vmalloc_chunk *new_vmalloc_chunk(struct kho_vmalloc_chunk *cur
 	struct kho_vmalloc_chunk *chunk;
 	int err;
 
-	chunk = (struct kho_vmalloc_chunk *)get_zeroed_page(GFP_KERNEL);
+	chunk = get_zeroed_page(GFP_KERNEL);
 	if (!chunk)
 		return NULL;
 

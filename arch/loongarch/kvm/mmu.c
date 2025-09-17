@@ -113,7 +113,7 @@ kvm_pte_t *kvm_pgd_alloc(void)
 {
 	kvm_pte_t *pgd;
 
-	pgd = (kvm_pte_t *)__get_free_pages(GFP_KERNEL, 0);
+	pgd = __get_free_pages(GFP_KERNEL, 0);
 	if (pgd)
 		pgd_init((void *)pgd);
 

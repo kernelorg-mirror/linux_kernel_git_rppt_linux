@@ -180,7 +180,7 @@ static int init_transition_pgtable(struct kimage *image, pgd_t *pgd,
 	paddr = control_page;
 	pgd += pgd_index(vaddr);
 	if (!pgd_present(*pgd)) {
-		p4d = (p4d_t *)get_zeroed_page(GFP_KERNEL);
+		p4d = get_zeroed_page(GFP_KERNEL);
 		if (!p4d)
 			goto err;
 		image->arch.p4d = p4d;
@@ -188,7 +188,7 @@ static int init_transition_pgtable(struct kimage *image, pgd_t *pgd,
 	}
 	p4d = p4d_offset(pgd, vaddr);
 	if (!p4d_present(*p4d)) {
-		pud = (pud_t *)get_zeroed_page(GFP_KERNEL);
+		pud = get_zeroed_page(GFP_KERNEL);
 		if (!pud)
 			goto err;
 		image->arch.pud = pud;
@@ -196,7 +196,7 @@ static int init_transition_pgtable(struct kimage *image, pgd_t *pgd,
 	}
 	pud = pud_offset(p4d, vaddr);
 	if (!pud_present(*pud)) {
-		pmd = (pmd_t *)get_zeroed_page(GFP_KERNEL);
+		pmd = get_zeroed_page(GFP_KERNEL);
 		if (!pmd)
 			goto err;
 		image->arch.pmd = pmd;
@@ -204,7 +204,7 @@ static int init_transition_pgtable(struct kimage *image, pgd_t *pgd,
 	}
 	pmd = pmd_offset(pud, vaddr);
 	if (!pmd_present(*pmd)) {
-		pte = (pte_t *)get_zeroed_page(GFP_KERNEL);
+		pte = get_zeroed_page(GFP_KERNEL);
 		if (!pte)
 			goto err;
 		image->arch.pte = pte;

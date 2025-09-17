@@ -136,7 +136,7 @@ static void *validate_and_copy_from_user(const void __user *user_buf,
 	if (!access_ok(user_buf, *count))
 		return ERR_PTR(-EFAULT);
 
-	buf = (void *)get_zeroed_page(GFP_KERNEL);
+	buf = get_zeroed_page(GFP_KERNEL);
 	if (!buf)
 		return ERR_PTR(-ENOMEM);
 

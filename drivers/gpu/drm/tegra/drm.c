@@ -1031,7 +1031,7 @@ void *tegra_drm_alloc(struct tegra_drm *tegra, size_t size, dma_addr_t *dma)
 		gfp |= GFP_DMA;
 	}
 
-	virt = (void *)__get_free_pages(gfp, get_order(size));
+	virt = __get_free_pages(gfp, get_order(size));
 	if (!virt)
 		return ERR_PTR(-ENOMEM);
 

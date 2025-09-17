@@ -862,7 +862,7 @@ void bnxt_re_pacing_alert(struct bnxt_re_dev *rdev)
 static int bnxt_re_initialize_dbr_pacing(struct bnxt_re_dev *rdev)
 {
 	/* Allocate a page for app use */
-	rdev->pacing.dbr_page = (void *)__get_free_page(GFP_KERNEL);
+	rdev->pacing.dbr_page = __get_free_page(GFP_KERNEL);
 	if (!rdev->pacing.dbr_page)
 		return -ENOMEM;
 

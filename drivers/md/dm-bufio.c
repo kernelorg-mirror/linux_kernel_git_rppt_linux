@@ -1181,8 +1181,8 @@ static void *alloc_buffer_data(struct dm_bufio_client *c, gfp_t gfp_mask,
 	if (c->block_size <= KMALLOC_MAX_SIZE &&
 	    gfp_mask & __GFP_NORETRY) {
 		*data_mode = DATA_MODE_GET_FREE_PAGES;
-		return (void *)__get_free_pages(gfp_mask,
-						c->sectors_per_block_bits - (PAGE_SHIFT - SECTOR_SHIFT));
+		return __get_free_pages(gfp_mask,
+					c->sectors_per_block_bits - (PAGE_SHIFT - SECTOR_SHIFT));
 	}
 
 	*data_mode = DATA_MODE_VMALLOC;

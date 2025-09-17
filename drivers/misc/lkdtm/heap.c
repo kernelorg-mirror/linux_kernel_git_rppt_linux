@@ -193,7 +193,7 @@ static void lkdtm_KFENCE_READ_AFTER_FREE(void)
 
 static void lkdtm_WRITE_BUDDY_AFTER_FREE(void)
 {
-	unsigned long p = __get_free_page(GFP_KERNEL);
+	unsigned long p = (unsigned long)__get_free_page(GFP_KERNEL);
 	if (!p) {
 		pr_info("Unable to allocate free page\n");
 		return;
@@ -206,14 +206,14 @@ static void lkdtm_WRITE_BUDDY_AFTER_FREE(void)
 	pr_info("Attempting bad write to the buddy page after free\n");
 	memset((void *)p, 0x78, PAGE_SIZE);
 	/* Attempt to notice the overwrite. */
-	p = __get_free_page(GFP_KERNEL);
+	p = (unsigned long)__get_free_page(GFP_KERNEL);
 	free_page(p);
 	schedule();
 }
 
 static void lkdtm_READ_BUDDY_AFTER_FREE(void)
 {
-	unsigned long p = __get_free_page(GFP_KERNEL);
+	unsigned long p = (unsigned long)__get_free_page(GFP_KERNEL);
 	int saw, *val;
 	int *base;
 
@@ -285,7 +285,7 @@ static void lkdtm_BUDDY_INIT_ON_ALLOC(void)
 	u8 *first;
 	u8 *val;
 
-	first = (u8 *)__get_free_page(GFP_KERNEL);
+	first = __get_free_page(GFP_KERNEL);
 	if (!first) {
 		pr_info("Unable to allocate first free page\n");
 		return;
@@ -294,7 +294,7 @@ static void lkdtm_BUDDY_INIT_ON_ALLOC(void)
 	memset(first, 0xAB, PAGE_SIZE);
 	free_page((unsigned long)first);
 
-	val = (u8 *)__get_free_page(GFP_KERNEL);
+	val = __get_free_page(GFP_KERNEL);
 	if (!val) {
 		pr_info("Unable to allocate second free page\n");
 		return;
@@ -348,7 +348,7 @@ static void lkdtm_SLAB_FREE_CROSS(void)
 
 static void lkdtm_SLAB_FREE_PAGE(void)
 {
-	unsigned long p = __get_free_page(GFP_KERNEL);
+	unsigned long p = (unsigned long)__get_free_page(GFP_KERNEL);
 
 	pr_info("Attempting non-Slab slab free ...\n");
 	kmem_cache_free(NULL, (void *)p);

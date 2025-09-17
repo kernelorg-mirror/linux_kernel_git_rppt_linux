@@ -663,7 +663,7 @@ dasd_fba_dump_sense(struct dasd_device *device, struct dasd_ccw_req * req,
 
 	dev = &device->cdev->dev;
 
-	page = (char *) get_zeroed_page(GFP_ATOMIC);
+	page = get_zeroed_page(GFP_ATOMIC);
 	if (page == NULL) {
 		DBF_DEV_EVENT(DBF_WARNING, device, "%s",
 			      "No memory to dump sense data");
@@ -790,7 +790,7 @@ dasd_fba_init(void)
 
 	ASCEBC(dasd_fba_discipline.ebcname, 4);
 
-	dasd_fba_zero_page = (void *)get_zeroed_page(GFP_KERNEL | GFP_DMA);
+	dasd_fba_zero_page = get_zeroed_page(GFP_KERNEL | GFP_DMA);
 	if (!dasd_fba_zero_page)
 		return -ENOMEM;
 

@@ -55,7 +55,7 @@ affs_grow_extcache(struct inode *inode, u32 lc_idx)
 	int i, j, key;
 
 	if (!AFFS_I(inode)->i_lc) {
-		char *ptr = (char *)get_zeroed_page(GFP_NOFS);
+		char *ptr = get_zeroed_page(GFP_NOFS);
 		if (!ptr)
 			return -ENOMEM;
 		AFFS_I(inode)->i_lc = (u32 *)ptr;

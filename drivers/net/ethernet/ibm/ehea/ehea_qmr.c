@@ -62,7 +62,7 @@ static int hw_queue_ctor(struct hw_queue *queue, const u32 nr_of_pages,
 	 */
 	i = 0;
 	while (i < nr_of_pages) {
-		u8 *kpage = (u8 *)get_zeroed_page(GFP_KERNEL);
+		u8 *kpage = get_zeroed_page(GFP_KERNEL);
 		if (!kpage)
 			goto out_nomem;
 		for (k = 0; k < pages_per_kpage && i < nr_of_pages; k++) {
@@ -863,7 +863,7 @@ int ehea_reg_kernel_mr(struct ehea_adapter *adapter, struct ehea_mr *mr)
 
 	unsigned long top;
 
-	pt = (void *)get_zeroed_page(GFP_KERNEL);
+	pt = get_zeroed_page(GFP_KERNEL);
 	if (!pt) {
 		pr_err("no mem\n");
 		ret = -ENOMEM;
@@ -975,7 +975,7 @@ u64 ehea_error_data(struct ehea_adapter *adapter, u64 res_handle,
 	u64 *rblock;
 	u64 type = 0;
 
-	rblock = (void *)get_zeroed_page(GFP_KERNEL);
+	rblock = get_zeroed_page(GFP_KERNEL);
 	if (!rblock) {
 		pr_err("Cannot allocate rblock memory\n");
 		goto out;

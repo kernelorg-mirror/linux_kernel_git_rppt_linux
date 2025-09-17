@@ -181,7 +181,7 @@ static void * __ref alloc_p2m_page(void)
 		return memblock_alloc_or_panic(PAGE_SIZE, PAGE_SIZE);
 	}
 
-	return (void *)__get_free_page(GFP_KERNEL);
+	return __get_free_page(GFP_KERNEL);
 }
 
 static void __ref free_p2m_page(void *p)

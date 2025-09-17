@@ -273,7 +273,7 @@ static ssize_t evtchn_write(struct file *file, const char __user *buf,
 			    size_t count, loff_t *ppos)
 {
 	int rc, i;
-	evtchn_port_t *kbuf = (evtchn_port_t *)__get_free_page(GFP_KERNEL);
+	evtchn_port_t *kbuf = __get_free_page(GFP_KERNEL);
 	struct per_user_data *u = file->private_data;
 
 	if (kbuf == NULL)

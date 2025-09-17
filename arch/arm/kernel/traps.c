@@ -909,7 +909,7 @@ static int __init allocate_overflow_stacks(void)
 	int cpu;
 
 	for_each_possible_cpu(cpu) {
-		stack = (u8 *)__get_free_page(GFP_KERNEL);
+		stack = __get_free_page(GFP_KERNEL);
 		if (WARN_ON(!stack))
 			return -ENOMEM;
 		per_cpu(overflow_stack_ptr, cpu) = &stack[OVERFLOW_STACK_SIZE];

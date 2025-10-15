@@ -397,7 +397,7 @@ static void free_buffer_page(struct buffer_page *bpage)
 {
 	/* Range pages are not to be freed */
 	if (!bpage->range)
-		free_pages((unsigned long)bpage->page, bpage->order);
+		free_pages(bpage->page, bpage->order);
 	kfree(bpage);
 }
 
@@ -2444,7 +2444,7 @@ static void rb_free_cpu_buffer(struct ring_buffer_per_cpu *cpu_buffer)
 		free_buffer_page(bpage);
 	}
 
-	free_page((unsigned long)cpu_buffer->free_page);
+	free_page(cpu_buffer->free_page);
 
 	kfree(cpu_buffer);
 }
@@ -6547,7 +6547,7 @@ void ring_buffer_free_read_page(struct trace_buffer *buffer, int cpu,
 	local_irq_restore(flags);
 
  out:
-	free_pages((unsigned long)bpage, data_page->order);
+	free_pages(bpage, data_page->order);
 	kfree(data_page);
 }
 EXPORT_SYMBOL_GPL(ring_buffer_free_read_page);
@@ -6944,7 +6944,7 @@ int ring_buffer_subbuf_order_set(struct trace_buffer *buffer, int order)
 			list_del_init(&bpage->list);
 			free_buffer_page(bpage);
 		}
-		free_pages((unsigned long)old_free_data_page, old_order);
+		free_pages(old_free_data_page, old_order);
 
 		rb_check_pages(cpu_buffer);
 	}
@@ -6995,7 +6995,7 @@ static void rb_free_meta_page(struct ring_buffer_per_cpu *cpu_buffer)
 {
 	unsigned long addr = (unsigned long)cpu_buffer->meta_page;
 
-	free_page(addr);
+	free_page((void *)addr);
 	cpu_buffer->meta_page = NULL;
 }
 

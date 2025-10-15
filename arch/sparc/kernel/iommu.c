@@ -143,7 +143,7 @@ int iommu_table_init(struct iommu *iommu, int tsbsize,
 	return 0;
 
 out_free_dummy_page:
-	free_page(iommu->dummy_page);
+	free_page((void *)iommu->dummy_page);
 	iommu->dummy_page = 0UL;
 
 out_free_map:
@@ -223,7 +223,7 @@ static void *dma_4u_alloc_coherent(struct device *dev, size_t size,
 	iopte = alloc_npages(dev, iommu, size >> IO_PAGE_SHIFT);
 
 	if (unlikely(iopte == NULL)) {
-		free_pages(first_page, order);
+		free_pages((void *)first_page, order);
 		return NULL;
 	}
 
@@ -257,7 +257,7 @@ static void dma_4u_free_coherent(struct device *dev, size_t size,
 
 	order = get_order(size);
 	if (order < 10)
-		free_pages((unsigned long)cpu, order);
+		free_pages(cpu, order);
 }
 
 static dma_addr_t dma_4u_map_page(struct device *dev, struct page *page,

@@ -192,11 +192,11 @@ static void free_sampling_buffer(struct sf_buffer *sfb)
 		if (is_link_entry(curr)) {
 			/* Process table-link entries */
 			curr = get_next_sdbt(curr);
-			free_page((unsigned long)sdbt);
+			free_page(sdbt);
 			sdbt = curr;
 		} else {
 			/* Process SDB pointer */
-			free_page((unsigned long)phys_to_virt(*curr));
+			free_page(phys_to_virt(*curr));
 			curr++;
 		}
 	} while (curr != head);
@@ -292,7 +292,7 @@ static int realloc_sampling_buffer(struct sf_buffer *sfb,
 			 */
 			if (tail_prev) {
 				sfb->num_sdbt--;
-				free_page((unsigned long)new);
+				free_page(new);
 				tail = tail_prev;
 			}
 			break;
@@ -1554,7 +1554,7 @@ static void aux_buffer_free(void *data)
 	/* Free SDBT. SDB is freed by the caller */
 	num_sdbt = aux->sfb.num_sdbt;
 	for (i = 0; i < num_sdbt; i++)
-		free_page(aux->sdbt_index[i]);
+		free_page((void *)aux->sdbt_index[i]);
 
 	kfree(aux->sdbt_index);
 	kfree(aux->sdb_index);
@@ -1671,7 +1671,7 @@ static void *aux_buffer_setup(struct perf_event *event, void **pages,
 no_sdbt:
 	/* SDBs (AUX buffer pages) are freed by caller */
 	for (i = 0; i < sfb->num_sdbt; i++)
-		free_page(aux->sdbt_index[i]);
+		free_page((void *)aux->sdbt_index[i]);
 	kfree(aux->sdb_index);
 no_sdb_index:
 	kfree(aux->sdbt_index);

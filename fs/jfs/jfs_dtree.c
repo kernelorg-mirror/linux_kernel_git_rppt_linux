@@ -2906,7 +2906,7 @@ int jfs_readdir(struct file *file, struct dir_context *ctx)
 			if (stbl[i] < 0 || stbl[i] >= DTPAGEMAXSLOT) {
 				jfs_err("JFS: Invalid stbl[%d] = %d for inode %ld, block = %lld",
 					i, stbl[i], (long)ip->i_ino, (long long)bn);
-				free_page(dirent_buf);
+				free_page((void *)dirent_buf);
 				DT_PUTPAGE(mp);
 				return -EIO;
 			}
@@ -3040,13 +3040,13 @@ skip_one:
 
 		DT_GETPAGE(ip, bn, mp, PSIZE, p, rc);
 		if (rc) {
-			free_page(dirent_buf);
+			free_page((void *)dirent_buf);
 			return rc;
 		}
 	}
 
       out:
-	free_page(dirent_buf);
+	free_page((void *)dirent_buf);
 
 	return rc;
 }

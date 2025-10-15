@@ -42,17 +42,17 @@ static void load_segments(void)
 
 static void machine_kexec_free_page_tables(struct kimage *image)
 {
-	free_pages((unsigned long)image->arch.pgd, pgd_allocation_order());
+	free_pages(image->arch.pgd, pgd_allocation_order());
 	image->arch.pgd = NULL;
 #ifdef CONFIG_X86_PAE
-	free_page((unsigned long)image->arch.pmd0);
+	free_page(image->arch.pmd0);
 	image->arch.pmd0 = NULL;
-	free_page((unsigned long)image->arch.pmd1);
+	free_page(image->arch.pmd1);
 	image->arch.pmd1 = NULL;
 #endif
-	free_page((unsigned long)image->arch.pte0);
+	free_page(image->arch.pte0);
 	image->arch.pte0 = NULL;
-	free_page((unsigned long)image->arch.pte1);
+	free_page(image->arch.pte1);
 	image->arch.pte1 = NULL;
 }
 

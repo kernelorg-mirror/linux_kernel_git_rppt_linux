@@ -74,7 +74,7 @@ static void crypto_scomp_free_scratches(void)
 	for_each_possible_cpu(i) {
 		scratch = per_cpu_ptr(&scomp_scratch, i);
 
-		free_page(scratch->saddr);
+		free_page((void *)scratch->saddr);
 		scratch->src = NULL;
 	}
 }

@@ -249,7 +249,7 @@ static int mshv_ioctl_passthru_hvcall(struct mshv_partition *partition,
 		ret = -EFAULT;
 
 free_pages_out:
-	free_pages((unsigned long)input_pg, pages_order);
+	free_pages(input_pg, pages_order);
 
 	return ret;
 }

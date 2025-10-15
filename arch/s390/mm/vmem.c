@@ -47,7 +47,7 @@ static void vmem_free_pages(unsigned long addr, int order, struct vmem_altmap *a
 	if (!slab_is_available() ||
 	    WARN_ON_ONCE(PageReserved(virt_to_page((void *)addr))))
 		return;
-	free_pages(addr, order);
+	free_pages((void *)addr, order);
 }
 
 void *vmem_crst_alloc(unsigned long val)

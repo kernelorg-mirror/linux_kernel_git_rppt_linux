@@ -651,7 +651,7 @@ static int ftrace_profile_pages_init(struct ftrace_profile_stat *stat)
 		unsigned long tmp = (unsigned long)pg;
 
 		pg = pg->next;
-		free_page(tmp);
+		free_page((void *)tmp);
 	}
 
 	stat->pages = NULL;
@@ -3837,7 +3837,7 @@ static void ftrace_free_pages(struct ftrace_page *pages)
 
 	while (pg) {
 		if (pg->records) {
-			free_pages((unsigned long)pg->records, pg->order);
+			free_pages(pg->records, pg->order);
 			ftrace_number_of_pages -= 1 << pg->order;
 		}
 		pages = pg->next;
@@ -7489,7 +7489,7 @@ void ftrace_release_mod(struct module *mod)
 		clear_mod_from_hashes(pg);
 
 		if (pg->records) {
-			free_pages((unsigned long)pg->records, pg->order);
+			free_pages(pg->records, pg->order);
 			ftrace_number_of_pages -= 1 << pg->order;
 		}
 		tmp_page = pg->next;

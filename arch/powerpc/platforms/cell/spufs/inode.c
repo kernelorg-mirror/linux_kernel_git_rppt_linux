@@ -657,8 +657,7 @@ static int spufs_parse_param(struct fs_context *fc, struct fs_parameter *param)
 
 static void spufs_exit_isolated_loader(void)
 {
-	free_pages((unsigned long) isolated_loader,
-			get_order(isolated_loader_size));
+	free_pages(isolated_loader, get_order(isolated_loader_size));
 }
 
 static void __init

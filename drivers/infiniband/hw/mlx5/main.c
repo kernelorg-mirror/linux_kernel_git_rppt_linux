@@ -5123,7 +5123,7 @@ static int __init mlx5_ib_init(void)
 
 	mlx5_ib_event_wq = alloc_ordered_workqueue("mlx5_ib_event_wq", 0);
 	if (!mlx5_ib_event_wq) {
-		free_page((unsigned long)xlt_emergency_page);
+		free_page(xlt_emergency_page);
 		return -ENOMEM;
 	}
 
@@ -5157,7 +5157,7 @@ rep_err:
 	mlx5_ib_qp_event_cleanup();
 qp_event_err:
 	destroy_workqueue(mlx5_ib_event_wq);
-	free_page((unsigned long)xlt_emergency_page);
+	free_page(xlt_emergency_page);
 	return ret;
 }
 
@@ -5170,7 +5170,7 @@ static void __exit mlx5_ib_cleanup(void)
 
 	mlx5_ib_qp_event_cleanup();
 	destroy_workqueue(mlx5_ib_event_wq);
-	free_page((unsigned long)xlt_emergency_page);
+	free_page(xlt_emergency_page);
 }
 
 module_init(mlx5_ib_init);

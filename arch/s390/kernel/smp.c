@@ -217,8 +217,8 @@ out_mcesa:
 out:
 	stack_free(mcck_stack);
 	stack_free(async_stack);
-	free_pages(nodat_stack, THREAD_SIZE_ORDER);
-	free_pages((unsigned long) lc, LC_ORDER);
+	free_pages((void *)nodat_stack, THREAD_SIZE_ORDER);
+	free_pages(lc, LC_ORDER);
 	return -ENOMEM;
 }
 
@@ -237,8 +237,8 @@ static void pcpu_free_lowcore(struct pcpu *pcpu, int cpu)
 	nmi_free_mcesa(&lc->mcesad);
 	stack_free(async_stack);
 	stack_free(mcck_stack);
-	free_pages(nodat_stack, THREAD_SIZE_ORDER);
-	free_pages((unsigned long) lc, LC_ORDER);
+	free_pages((void *)nodat_stack, THREAD_SIZE_ORDER);
+	free_pages(lc, LC_ORDER);
 }
 
 static void pcpu_prepare_secondary(struct pcpu *pcpu, int cpu)

@@ -1136,8 +1136,7 @@ static void omap_sham_finish_req(struct ahash_request *req, int err)
 	struct omap_sham_dev *dd = ctx->dd;
 
 	if (test_bit(FLAGS_SGS_COPIED, &dd->flags))
-		free_pages((unsigned long)sg_virt(ctx->sg),
-			   get_order(ctx->sg->length));
+		free_pages(sg_virt(ctx->sg), get_order(ctx->sg->length));
 
 	if (test_bit(FLAGS_SGS_ALLOCED, &dd->flags))
 		kfree(ctx->sg);

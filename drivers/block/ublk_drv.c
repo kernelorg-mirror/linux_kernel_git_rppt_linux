@@ -2675,7 +2675,7 @@ static void ublk_deinit_queue(struct ublk_device *ub, int q_id)
 	}
 
 	if (ubq->io_cmd_buf)
-		free_pages((unsigned long)ubq->io_cmd_buf, get_order(size));
+		free_pages(ubq->io_cmd_buf, get_order(size));
 }
 
 static int ublk_init_queue(struct ublk_device *ub, int q_id)

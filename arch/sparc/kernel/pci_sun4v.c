@@ -252,7 +252,7 @@ iommu_map_fail:
 	iommu_tbl_range_free(tbl, *dma_addrp, npages, IOMMU_ERROR_CODE);
 
 range_alloc_fail:
-	free_pages(first_page, order);
+	free_pages((void *)first_page, order);
 	return NULL;
 }
 
@@ -349,7 +349,7 @@ static void dma_4v_free_coherent(struct device *dev, size_t size, void *cpu,
 	iommu_tbl_range_free(tbl, dvma, npages, IOMMU_ERROR_CODE);
 	order = get_order(size);
 	if (order < 10)
-		free_pages((unsigned long)cpu, order);
+		free_pages(cpu, order);
 }
 
 static dma_addr_t dma_4v_map_page(struct device *dev, struct page *page,
@@ -791,7 +791,7 @@ static int pci_sun4v_atu_alloc_iotsb(struct pci_pbm_info *pbm)
 	return 0;
 
 iotsb_conf_failed:
-	free_pages((unsigned long)table, order);
+	free_pages(table, order);
 table_failed:
 	kfree(iotsb);
 out_err:
@@ -1103,7 +1103,7 @@ static int pci_sun4v_msiq_alloc(struct pci_pbm_info *pbm)
 	return 0;
 
 h_error:
-	free_pages(pages, order);
+	free_pages((void *)pages, order);
 	return -EINVAL;
 }
 
@@ -1124,7 +1124,7 @@ static void pci_sun4v_msiq_free(struct pci_pbm_info *pbm)
 
 	pages = (unsigned long) pbm->msi_queues;
 
-	free_pages(pages, order);
+	free_pages((void *)pages, order);
 
 	pbm->msi_queues = NULL;
 }

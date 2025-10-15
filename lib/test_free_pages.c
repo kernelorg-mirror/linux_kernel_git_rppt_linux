@@ -21,7 +21,7 @@ static void test_free_pages(gfp_t gfp)
 
 		/* Simulate page cache getting a speculative reference */
 		get_page(page);
-		free_pages(addr, 3);
+		free_pages((void *)addr, 3);
 		put_page(page);
 	}
 }

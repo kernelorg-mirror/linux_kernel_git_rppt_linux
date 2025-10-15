@@ -300,7 +300,7 @@ int amdtee_open_session(struct tee_context *ctx,
 	}
 
 out:
-	free_pages((u64)ta, get_order(ta_size));
+	free_pages(ta, get_order(ta_size));
 	return rc;
 }
 

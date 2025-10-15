@@ -5321,11 +5321,11 @@ void free_pages_nolock(struct page *page, unsigned int order)
  * to free pages when you only have a valid virtual address. If you have
  * the page, call __free_pages() instead.
  */
-void free_pages(unsigned long addr, unsigned int order)
+void free_pages(void *addr, unsigned int order)
 {
-	if (addr != 0) {
-		VM_BUG_ON(!virt_addr_valid((void *)addr));
-		__free_pages(virt_to_page((void *)addr), order);
+	if (addr != NULL) {
+		VM_BUG_ON(!virt_addr_valid(addr));
+		__free_pages(virt_to_page(addr), order);
 	}
 }
 
@@ -5408,18 +5408,17 @@ void * __meminit alloc_pages_exact_nid_noprof(int nid, size_t size, gfp_t gfp_ma
 
 /**
  * free_pages_exact - release memory allocated via alloc_pages_exact()
- * @virt: the value returned by alloc_pages_exact.
+ * @addr: the value returned by alloc_pages_exact.
  * @size: size of allocation, same value as passed to alloc_pages_exact().
  *
  * Release the memory allocated by a previous call to alloc_pages_exact.
  */
-void free_pages_exact(void *virt, size_t size)
+void free_pages_exact(void *addr, size_t size)
 {
-	unsigned long addr = (unsigned long)virt;
-	unsigned long end = addr + PAGE_ALIGN(size);
+	void *end = addr + PAGE_ALIGN(size);
 
 	while (addr < end) {
-		free_page(addr);
+		free_page((void *)addr);
 		addr += PAGE_SIZE;
 	}
 }

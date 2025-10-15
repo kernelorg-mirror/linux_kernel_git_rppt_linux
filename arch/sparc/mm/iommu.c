@@ -388,7 +388,7 @@ static void *sbus_iommu_alloc(struct device *dev, size_t len,
 	return (void *)ret;
 
 out_free_pages:
-	free_pages(va, get_order(len));
+	free_pages((void *)va, get_order(len));
 	return NULL;
 }
 

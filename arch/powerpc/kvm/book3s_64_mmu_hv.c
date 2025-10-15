@@ -103,7 +103,7 @@ int kvmppc_allocate_hpt(struct kvm_hpt_info *info, u32 order)
 		if (cma)
 			kvm_free_hpt_cma(page, 1 << (order - PAGE_SHIFT));
 		else
-			free_pages(hpt, order - PAGE_SHIFT);
+			free_pages((void *)hpt, order - PAGE_SHIFT);
 		return -ENOMEM;
 	}
 
@@ -186,7 +186,7 @@ void kvmppc_free_hpt(struct kvm_hpt_info *info)
 		kvm_free_hpt_cma(virt_to_page((void *)info->virt),
 				 1 << (info->order - PAGE_SHIFT));
 	else if (info->virt)
-		free_pages(info->virt, info->order - PAGE_SHIFT);
+		free_pages((void *)info->virt, info->order - PAGE_SHIFT);
 	info->virt = 0;
 	info->order = 0;
 }

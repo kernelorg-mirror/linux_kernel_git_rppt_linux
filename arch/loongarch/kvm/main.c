@@ -422,7 +422,8 @@ static void kvm_loongarch_env_exit(void)
 	if (kvm_loongarch_ops) {
 		if (kvm_loongarch_ops->exc_entry) {
 			addr = (unsigned long)kvm_loongarch_ops->exc_entry;
-			free_pages(addr, kvm_loongarch_ops->page_order);
+			free_pages((void *)addr,
+				   kvm_loongarch_ops->page_order);
 		}
 		kfree(kvm_loongarch_ops);
 	}

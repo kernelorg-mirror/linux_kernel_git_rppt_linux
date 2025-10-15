@@ -132,7 +132,7 @@ static void paiext_event_destroy(struct perf_event *event)
 {
 	int cpu;
 
-	free_page(PAI_SAVE_AREA(event));
+	free_page((void *)PAI_SAVE_AREA(event));
 	if (event->cpu == -1) {
 		struct cpumask *mask = PAI_CPU_MASK(event);
 
@@ -301,7 +301,7 @@ static int paiext_event_init(struct perf_event *event)
 	else
 		rc = paiext_alloc(event);
 	if (rc) {
-		free_page(PAI_SAVE_AREA(event));
+		free_page((void *)PAI_SAVE_AREA(event));
 		return rc;
 	}
 	event->destroy = paiext_event_destroy;

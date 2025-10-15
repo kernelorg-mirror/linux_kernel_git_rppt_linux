@@ -137,7 +137,7 @@ mwifiex_info_read(struct file *file, char __user *ubuf,
 				      (unsigned long) p - page);
 
 free_and_exit:
-	free_page(page);
+	free_page((void *)page);
 	return ret;
 }
 
@@ -224,7 +224,7 @@ mwifiex_getlog_read(struct file *file, char __user *ubuf,
 				      (unsigned long) p - page);
 
 free_and_exit:
-	free_page(page);
+	free_page((void *)page);
 	return ret;
 }
 
@@ -313,7 +313,7 @@ mwifiex_histogram_read(struct file *file, char __user *ubuf,
 				      (unsigned long)p - page);
 
 free_and_exit:
-	free_page(page);
+	free_page((void *)page);
 	return ret;
 }
 
@@ -400,7 +400,7 @@ mwifiex_debug_read(struct file *file, char __user *ubuf,
 				      (unsigned long) p - page);
 
 free_and_exit:
-	free_page(page);
+	free_page((void *)page);
 	return ret;
 }
 
@@ -497,7 +497,7 @@ mwifiex_regrdwr_read(struct file *file, char __user *ubuf,
 	ret = simple_read_from_buffer(ubuf, count, ppos, buf, pos);
 
 done:
-	free_page(addr);
+	free_page((void *)addr);
 	return ret;
 }
 
@@ -523,7 +523,7 @@ mwifiex_debug_mask_read(struct file *file, char __user *ubuf,
 			priv->adapter->debug_mask);
 	ret = simple_read_from_buffer(ubuf, count, ppos, buf, pos);
 
-	free_page(page);
+	free_page((void *)page);
 	return ret;
 }
 
@@ -663,7 +663,7 @@ mwifiex_memrw_read(struct file *file, char __user *ubuf,
 			priv->mem_rw.value);
 	ret = simple_read_from_buffer(ubuf, count, ppos, buf, pos);
 
-	free_page(addr);
+	free_page((void *)addr);
 	return ret;
 }
 
@@ -749,7 +749,7 @@ mwifiex_rdeeprom_read(struct file *file, char __user *ubuf,
 done:
 	ret = simple_read_from_buffer(ubuf, count, ppos, buf, pos);
 out_free:
-	free_page(addr);
+	free_page((void *)addr);
 	return ret;
 }
 
@@ -836,7 +836,7 @@ mwifiex_hscfg_read(struct file *file, char __user *ubuf,
 
 	ret = simple_read_from_buffer(ubuf, count, ppos, buf, pos);
 
-	free_page(addr);
+	free_page((void *)addr);
 	return ret;
 }
 

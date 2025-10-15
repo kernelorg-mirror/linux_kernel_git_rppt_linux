@@ -909,7 +909,7 @@ static int __init xenstored_local_init(void)
 
  out_err:
 	if (page != 0)
-		free_page(page);
+		free_page((void *)page);
 	return err;
 }
 

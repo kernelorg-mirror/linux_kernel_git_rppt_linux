@@ -200,7 +200,7 @@ static int occ_release(struct inode *inode, struct file *file)
 	struct occ_client *client = file->private_data;
 
 	put_device(client->occ->dev);
-	free_page((unsigned long)client->buffer);
+	free_page(client->buffer);
 	kfree(client);
 
 	return 0;

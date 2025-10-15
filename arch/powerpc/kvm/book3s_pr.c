@@ -1782,7 +1782,7 @@ static int kvmppc_core_vcpu_create_pr(struct kvm_vcpu *vcpu)
 	return 0;
 
 free_shared_page:
-	free_page((unsigned long)vcpu->arch.shared);
+	free_page(vcpu->arch.shared);
 free_shadow_vcpu:
 #ifdef CONFIG_KVM_BOOK3S_32_HANDLER
 	kfree(vcpu->arch.shadow_vcpu);
@@ -1798,7 +1798,7 @@ static void kvmppc_core_vcpu_free_pr(struct kvm_vcpu *vcpu)
 	struct kvmppc_vcpu_book3s *vcpu_book3s = to_book3s(vcpu);
 
 	kvmppc_mmu_destroy_pr(vcpu);
-	free_page((unsigned long)vcpu->arch.shared & PAGE_MASK);
+	free_page(vcpu->arch.shared);
 #ifdef CONFIG_KVM_BOOK3S_32_HANDLER
 	kfree(vcpu->arch.shadow_vcpu);
 #endif

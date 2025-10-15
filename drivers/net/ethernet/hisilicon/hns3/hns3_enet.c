@@ -5049,8 +5049,7 @@ void hns3_fini_ring(struct hns3_enet_ring *ring)
 
 		dma_unmap_page(ring_to_dev(ring), tx_spare->dma, tx_spare->len,
 			       DMA_TO_DEVICE);
-		free_pages((unsigned long)tx_spare->buf,
-			   get_order(tx_spare->len));
+		free_pages(tx_spare->buf, get_order(tx_spare->len));
 		devm_kfree(ring_to_dev(ring), tx_spare);
 		ring->tx_spare = NULL;
 	}

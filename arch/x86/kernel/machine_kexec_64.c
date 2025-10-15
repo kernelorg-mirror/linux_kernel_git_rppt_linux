@@ -150,13 +150,13 @@ map_efi_systab(struct x86_mapping_info *info, pgd_t *level4p)
 
 static void free_transition_pgtable(struct kimage *image)
 {
-	free_page((unsigned long)image->arch.p4d);
+	free_page(image->arch.p4d);
 	image->arch.p4d = NULL;
-	free_page((unsigned long)image->arch.pud);
+	free_page(image->arch.pud);
 	image->arch.pud = NULL;
-	free_page((unsigned long)image->arch.pmd);
+	free_page(image->arch.pmd);
 	image->arch.pmd = NULL;
-	free_page((unsigned long)image->arch.pte);
+	free_page(image->arch.pte);
 	image->arch.pte = NULL;
 }
 

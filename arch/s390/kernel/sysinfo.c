@@ -270,7 +270,7 @@ static int sysinfo_show(struct seq_file *m, void *v)
 		stsi_2_2_2(m, info);
 	if (level >= 3)
 		stsi_3_2_2(m, info);
-	free_page((unsigned long)info);
+	free_page(info);
 	return 0;
 }
 
@@ -427,7 +427,7 @@ void s390_adjust_jiffies(void)
 		 */
 		capability = 42;
 	loops_per_jiffy = capability * (500000/HZ);
-	free_page((unsigned long) info);
+	free_page(info);
 }
 
 /*
@@ -447,11 +447,11 @@ void calibrate_delay(void)
 #define STSI_FILE(fc, s1, s2)						       \
 static int stsi_open_##fc##_##s1##_##s2(struct inode *inode, struct file *file)\
 {									       \
-	file->private_data = (void *) get_zeroed_page(GFP_KERNEL);	       \
+	file->private_data = get_zeroed_page(GFP_KERNEL);		       \
 	if (!file->private_data)					       \
 		return -ENOMEM;						       \
 	if (stsi(file->private_data, fc, s1, s2)) {			       \
-		free_page((unsigned long)file->private_data);		       \
+		free_page(file->private_data);				       \
 		file->private_data = NULL;				       \
 		return -EACCES;						       \
 	}								       \
@@ -466,7 +466,7 @@ static const struct file_operations stsi_##fc##_##s1##_##s2##_fs_ops = {       \
 
 static int stsi_release(struct inode *inode, struct file *file)
 {
-	free_page((unsigned long)file->private_data);
+	free_page(file->private_data);
 	return 0;
 }
 

@@ -1210,7 +1210,7 @@ out:
 unlock:
 	mmap_read_unlock(dev->mm);
 free:
-	free_page((unsigned long)page_list);
+	free_page(page_list);
 	return ret;
 
 }

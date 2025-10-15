@@ -138,10 +138,10 @@ int kvm_s390_pv_destroy_cpu(struct kvm_vcpu *vcpu, u16 *rc, u16 *rrc)
 
 	/* Intended memory leak for something that should never happen. */
 	if (!cc)
-		free_pages(vcpu->arch.pv.stor_base,
+		free_pages((void *)vcpu->arch.pv.stor_base,
 			   get_order(uv_info.guest_cpu_stor_len));
 
-	free_page((unsigned long)sida_addr(vcpu->arch.sie_block));
+	free_page(sida_addr(vcpu->arch.sie_block));
 	vcpu->arch.sie_block->pv_handle_cpu = 0;
 	vcpu->arch.sie_block->pv_handle_config = 0;
 	memset(&vcpu->arch.pv, 0, sizeof(vcpu->arch.pv));
@@ -185,7 +185,7 @@ int kvm_s390_pv_create_cpu(struct kvm_vcpu *vcpu, u16 *rc, u16 *rrc)
 	/* Alloc Secure Instruction Data Area Designation */
 	sida_addr = __get_free_page(GFP_KERNEL_ACCOUNT | __GFP_ZERO);
 	if (!sida_addr) {
-		free_pages(vcpu->arch.pv.stor_base,
+		free_pages((void *)vcpu->arch.pv.stor_base,
 			   get_order(uv_info.guest_cpu_stor_len));
 		return -ENOMEM;
 	}
@@ -219,7 +219,7 @@ int kvm_s390_pv_create_cpu(struct kvm_vcpu *vcpu, u16 *rc, u16 *rrc)
 static void kvm_s390_pv_dealloc_vm(struct kvm *kvm)
 {
 	vfree(kvm->arch.pv.stor_var);
-	free_pages(kvm->arch.pv.stor_base,
+	free_pages((void *)kvm->arch.pv.stor_base,
 		   get_order(uv_info.guest_base_stor_len));
 	kvm_s390_clear_pv_state(kvm);
 }
@@ -294,8 +294,9 @@ static int kvm_s390_pv_dispose_one_leftover(struct kvm *kvm,
 	 * This can only happen in case of a serious KVM or hardware bug; it
 	 * is not expected to happen in normal operation.
 	 */
-	free_pages(leftover->stor_base, get_order(uv_info.guest_base_stor_len));
-	free_pages(leftover->old_gmap_table, CRST_ALLOC_ORDER);
+	free_pages((void *)leftover->stor_base,
+		   get_order(uv_info.guest_base_stor_len));
+	free_pages((void *)leftover->old_gmap_table, CRST_ALLOC_ORDER);
 	vfree(leftover->stor_var);
 done_fast:
 	atomic_dec(&kvm->mm->context.protected_count);

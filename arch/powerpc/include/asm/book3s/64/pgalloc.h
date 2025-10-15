@@ -39,9 +39,9 @@ static inline pgd_t *radix__pgd_alloc(struct mm_struct *mm)
 static inline void radix__pgd_free(struct mm_struct *mm, pgd_t *pgd)
 {
 #ifdef CONFIG_PPC_64K_PAGES
-	free_page((unsigned long)pgd);
+	free_page(pgd);
 #else
-	free_pages((unsigned long)pgd, 4);
+	free_pages(pgd, 4);
 #endif
 }
 

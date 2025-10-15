@@ -553,7 +553,7 @@ static void *realloc_pages(void *old_memmap, int old_shift)
 	memcpy(ret, old_memmap, PAGE_SIZE << old_shift);
 
 out:
-	free_pages((unsigned long)old_memmap, old_shift);
+	free_pages(old_memmap, old_shift);
 	return ret;
 }
 

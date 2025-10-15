@@ -201,13 +201,13 @@ static void lkdtm_WRITE_BUDDY_AFTER_FREE(void)
 
 	pr_info("Writing to the buddy page before free\n");
 	memset((void *)p, 0x3, PAGE_SIZE);
-	free_page(p);
+	free_page((void *)p);
 	schedule();
 	pr_info("Attempting bad write to the buddy page after free\n");
 	memset((void *)p, 0x78, PAGE_SIZE);
 	/* Attempt to notice the overwrite. */
 	p = (unsigned long)__get_free_page(GFP_KERNEL);
-	free_page(p);
+	free_page((void *)p);
 	schedule();
 }
 
@@ -225,7 +225,7 @@ static void lkdtm_READ_BUDDY_AFTER_FREE(void)
 	val = kmalloc(1024, GFP_KERNEL);
 	if (!val) {
 		pr_info("Unable to allocate val memory.\n");
-		free_page(p);
+		free_page((void *)p);
 		return;
 	}
 
@@ -234,7 +234,7 @@ static void lkdtm_READ_BUDDY_AFTER_FREE(void)
 	*val = 0x12345678;
 	base[0] = *val;
 	pr_info("Value in memory before free: %x\n", base[0]);
-	free_page(p);
+	free_page((void *)p);
 	pr_info("Attempting to read from freed memory\n");
 	saw = base[0];
 	if (saw != *val) {
@@ -292,7 +292,7 @@ static void lkdtm_BUDDY_INIT_ON_ALLOC(void)
 	}
 
 	memset(first, 0xAB, PAGE_SIZE);
-	free_page((unsigned long)first);
+	free_page(first);
 
 	val = __get_free_page(GFP_KERNEL);
 	if (!val) {
@@ -310,7 +310,7 @@ static void lkdtm_BUDDY_INIT_ON_ALLOC(void)
 		pr_err("FAIL: Slab was not initialized\n");
 		pr_expected_config_param(CONFIG_INIT_ON_ALLOC_DEFAULT_ON, "init_on_alloc");
 	}
-	free_page((unsigned long)val);
+	free_page(val);
 }
 
 static void lkdtm_SLAB_FREE_DOUBLE(void)
@@ -352,7 +352,7 @@ static void lkdtm_SLAB_FREE_PAGE(void)
 
 	pr_info("Attempting non-Slab slab free ...\n");
 	kmem_cache_free(NULL, (void *)p);
-	free_page(p);
+	free_page((void *)p);
 }
 
 void __init lkdtm_heap_init(void)

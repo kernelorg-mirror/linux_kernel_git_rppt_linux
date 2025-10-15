@@ -288,7 +288,7 @@ void iova_bitmap_free(struct iova_bitmap *bitmap)
 	iova_bitmap_put(bitmap);
 
 	if (mapped->pages) {
-		free_page((unsigned long)mapped->pages);
+		free_page(mapped->pages);
 		mapped->pages = NULL;
 	}
 

@@ -366,7 +366,7 @@ static int __init mount_nodev_root(char *root_device_name)
 			break;
 	}
 
-	free_page((unsigned long)fs_names);
+	free_page(fs_names);
 	return err;
 }
 

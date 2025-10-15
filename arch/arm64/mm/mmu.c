@@ -1188,7 +1188,7 @@ static int __init __kpti_install_ng_mappings(void *__unused)
 	cpu_uninstall_idmap();
 
 	if (!cpu) {
-		free_pages(alloc, order);
+		free_pages((void *)alloc, order);
 		arm64_use_ng_mappings = true;
 	}
 

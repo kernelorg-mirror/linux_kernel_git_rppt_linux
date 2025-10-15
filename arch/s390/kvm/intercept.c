@@ -437,7 +437,7 @@ int handle_sthyi(struct kvm_vcpu *vcpu)
 
 	cc = sthyi_fill(sctns, &rc);
 	if (cc < 0) {
-		free_page((unsigned long)sctns);
+		free_page(sctns);
 		return cc;
 	}
 out:
@@ -447,13 +447,13 @@ out:
 		} else {
 			r = write_guest(vcpu, addr, reg2, sctns, PAGE_SIZE);
 			if (r) {
-				free_page((unsigned long)sctns);
+				free_page(sctns);
 				return kvm_s390_inject_prog_cond(vcpu, r);
 			}
 		}
 	}
 
-	free_page((unsigned long)sctns);
+	free_page(sctns);
 	vcpu->run->s.regs.gprs[reg2 + 1] = rc;
 	kvm_s390_set_psw_cc(vcpu, cc);
 	return r;

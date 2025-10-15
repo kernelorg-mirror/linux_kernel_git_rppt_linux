@@ -4774,7 +4774,7 @@ cont:
 			memset(inuse, 0, PAGE_SIZE);
 			goto cont;
 		}
-		free_page((unsigned long)inuse);
+		free_page(inuse);
 	}
 
 	set->name = kasprintf(GFP_KERNEL_ACCOUNT, name, min + n);

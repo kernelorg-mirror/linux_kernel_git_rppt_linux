@@ -1845,8 +1845,7 @@ void kvmppc_xive_cleanup_vcpu(struct kvm_vcpu *vcpu)
 
 		xive_native_disable_queue(xc->vp_id, q, i);
 		if (q->qpage) {
-			free_pages((unsigned long)q->qpage,
-				   xive->q_page_order);
+			free_pages(q->qpage, xive->q_page_order);
 			q->qpage = NULL;
 		}
 	}

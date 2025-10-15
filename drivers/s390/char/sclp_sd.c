@@ -348,7 +348,7 @@ out_result:
 
 out:
 	base_asce_free(asce);
-	free_page(page);
+	free_page((void *)page);
 
 	return rc;
 }

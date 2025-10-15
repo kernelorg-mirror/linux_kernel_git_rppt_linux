@@ -611,10 +611,10 @@ static void *dsalloc_pages(size_t size, gfp_t flags, int cpu)
 	return page ? page_address(page) : NULL;
 }
 
-static void dsfree_pages(const void *buffer, size_t size)
+static void dsfree_pages(void *buffer, size_t size)
 {
 	if (buffer)
-		free_pages((unsigned long)buffer, get_order(size));
+		free_pages(buffer, get_order(size));
 }
 
 static int alloc_pebs_buffer(int cpu)

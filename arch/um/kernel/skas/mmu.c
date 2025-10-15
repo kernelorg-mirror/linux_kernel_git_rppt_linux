@@ -51,7 +51,7 @@ int init_new_context(struct task_struct *task, struct mm_struct *mm)
 	return 0;
 
  out_free:
-	free_pages(new_id->stack, ilog2(STUB_DATA_PAGES));
+	free_pages((void *)new_id->stack, ilog2(STUB_DATA_PAGES));
  out:
 	return ret;
 }
@@ -82,7 +82,7 @@ void destroy_context(struct mm_struct *mm)
 	if (using_seccomp && mmu->id.sock)
 		os_close_file(mmu->id.sock);
 
-	free_pages(mmu->id.stack, ilog2(STUB_DATA_PAGES));
+	free_pages((void *)mmu->id.stack, ilog2(STUB_DATA_PAGES));
 
 	guard(spinlock_irqsave)(&mm_list_lock);
 

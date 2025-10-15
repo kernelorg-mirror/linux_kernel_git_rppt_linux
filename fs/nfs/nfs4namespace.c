@@ -571,7 +571,7 @@ int nfs4_replace_transport(struct nfs_server *server,
 	}
 
 out:
-	free_page((unsigned long)page);
-	free_page((unsigned long)page2);
+	free_page(page);
+	free_page(page2);
 	return error;
 }

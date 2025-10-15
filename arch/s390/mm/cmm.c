@@ -76,7 +76,7 @@ static long cmm_alloc_pages(long nr, long *counter,
 			spin_unlock(&cmm_lock);
 			npa =__get_free_page(GFP_NOIO);
 			if (!npa) {
-				free_page(addr);
+				free_page((void *)addr);
 				break;
 			}
 			spin_lock(&cmm_lock);
@@ -87,7 +87,7 @@ static long cmm_alloc_pages(long nr, long *counter,
 				pa = npa;
 				*list = pa;
 			} else
-				free_page((unsigned long) npa);
+				free_page(npa);
 		}
 		diag10_range(virt_to_pfn((void *)addr), 1);
 		pa->pages[pa->index++] = addr;
@@ -112,10 +112,10 @@ static long __cmm_free_pages(long nr, long *counter, struct cmm_page_array **lis
 		addr = pa->pages[--pa->index];
 		if (pa->index == 0) {
 			pa = pa->next;
-			free_page((unsigned long) *list);
+			free_page(*list);
 			*list = pa;
 		}
-		free_page(addr);
+		free_page((void *)addr);
 		(*counter)--;
 		nr--;
 	}

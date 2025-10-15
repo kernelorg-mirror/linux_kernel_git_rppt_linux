@@ -99,15 +99,15 @@ struct dasd_device *dasd_alloc_device(void)
 	/* Get one page for error recovery. */
 	device->erp_mem = get_zeroed_page(GFP_ATOMIC | GFP_DMA);
 	if (!device->erp_mem) {
-		free_pages((unsigned long) device->ccw_mem, 1);
+		free_pages(device->ccw_mem, 1);
 		kfree(device);
 		return ERR_PTR(-ENOMEM);
 	}
 	/* Get two pages for ese format. */
 	device->ese_mem = __get_free_pages(GFP_ATOMIC | GFP_DMA, 1);
 	if (!device->ese_mem) {
-		free_page((unsigned long) device->erp_mem);
-		free_pages((unsigned long) device->ccw_mem, 1);
+		free_page(device->erp_mem);
+		free_pages(device->ccw_mem, 1);
 		kfree(device);
 		return ERR_PTR(-ENOMEM);
 	}
@@ -137,9 +137,9 @@ struct dasd_device *dasd_alloc_device(void)
 void dasd_free_device(struct dasd_device *device)
 {
 	kfree(device->private);
-	free_pages((unsigned long) device->ese_mem, 1);
-	free_page((unsigned long) device->erp_mem);
-	free_pages((unsigned long) device->ccw_mem, 1);
+	free_pages(device->ese_mem, 1);
+	free_page(device->erp_mem);
+	free_pages(device->ccw_mem, 1);
 	kfree(device);
 }
 

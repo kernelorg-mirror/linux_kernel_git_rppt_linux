@@ -915,7 +915,7 @@ sba_free(struct device *hwdev, size_t size, void *vaddr,
 		    dma_addr_t dma_handle, unsigned long attrs)
 {
 	sba_unmap_page(hwdev, dma_handle, size, 0, 0);
-	free_pages((unsigned long) vaddr, get_order(size));
+	free_pages(vaddr, get_order(size));
 }
 
 
@@ -1178,14 +1178,14 @@ sba_alloc_pdir(unsigned int pdir_size)
 			unsigned long new_pdir = (unsigned long)__get_free_pages(GFP_KERNEL,
 										 (19 - 12));
 			/* release original */
-			free_pages(pdir_base, pdir_order);
+			free_pages((void *)pdir_base, pdir_order);
 
 			pdir_base = new_pdir;
 
 			/* release excess */
 			while (pdir_order < (19-12)) {
 				new_pdir += pdir_size;
-				free_pages(new_pdir, pdir_order);
+				free_pages((void *)new_pdir, pdir_order);
 				pdir_order +=1;
 				pdir_size <<=1;
 			}
@@ -1199,10 +1199,10 @@ sba_alloc_pdir(unsigned int pdir_size)
 									 pdir_order + 1); /* 2 or 4MB */
 
 		/* release original */
-		free_pages( pdir_base, pdir_order);
+		free_pages((void *)pdir_base, pdir_order);
 
 		/* release first 1MB */
-		free_pages(new_pdir, 20-12);
+		free_pages((void *)new_pdir, 20 - 12);
 
 		pdir_base = new_pdir + 1024*1024;
 
@@ -1217,10 +1217,10 @@ sba_alloc_pdir(unsigned int pdir_size)
 
 			new_pdir += 3*1024*1024;
 			/* release last 1MB */
-			free_pages(new_pdir, 20-12);
+			free_pages((void *)new_pdir, 20 - 12);
 
 			/* release unusable 128KB */
-			free_pages(new_pdir - 128*1024 , 17-12);
+			free_pages((void *)(new_pdir - 128 * 1024), 17 - 12);
 
 			pdir_size -= 128*1024;
 		}

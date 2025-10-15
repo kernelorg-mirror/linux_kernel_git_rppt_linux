@@ -450,7 +450,7 @@ static void s5p_free_sg_cpy(struct s5p_aes_dev *dev, struct scatterlist **sg)
 		return;
 
 	len = ALIGN(dev->req->cryptlen, AES_BLOCK_SIZE);
-	free_pages((unsigned long)sg_virt(*sg), get_order(len));
+	free_pages(sg_virt(*sg), get_order(len));
 
 	kfree(*sg);
 	*sg = NULL;
@@ -1308,8 +1308,7 @@ static void s5p_hash_finish_req(struct ahash_request *req, int err)
 	unsigned long flags;
 
 	if (test_bit(HASH_FLAGS_SGS_COPIED, &dd->hash_flags))
-		free_pages((unsigned long)sg_virt(ctx->sg),
-			   get_order(ctx->sg->length));
+		free_pages(sg_virt(ctx->sg), get_order(ctx->sg->length));
 
 	if (test_bit(HASH_FLAGS_SGS_ALLOCED, &dd->hash_flags))
 		kfree(ctx->sg);

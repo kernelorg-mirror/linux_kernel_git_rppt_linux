@@ -83,7 +83,7 @@ static DEFINE_MUTEX(pai_reserve_mutex);
 /* Free all memory allocated for event counting/sampling setup */
 static void paicrypt_free(struct paicrypt_mapptr *mp)
 {
-	free_page((unsigned long)mp->mapptr->page);
+	free_page(mp->mapptr->page);
 	kvfree(mp->mapptr->save);
 	kfree(mp->mapptr);
 	mp->mapptr = NULL;
@@ -113,7 +113,7 @@ static void paicrypt_event_destroy(struct perf_event *event)
 	int cpu;
 
 	static_branch_dec(&pai_key);
-	free_page(PAI_SAVE_AREA(event));
+	free_page((void *)PAI_SAVE_AREA(event));
 	if (event->cpu == -1) {
 		struct cpumask *mask = PAI_CPU_MASK(event);
 
@@ -293,7 +293,7 @@ static int paicrypt_event_init(struct perf_event *event)
 	else
 		rc = paicrypt_alloc(event);
 	if (rc) {
-		free_page(PAI_SAVE_AREA(event));
+		free_page((void *)PAI_SAVE_AREA(event));
 		goto out;
 	}
 	event->destroy = paicrypt_event_destroy;

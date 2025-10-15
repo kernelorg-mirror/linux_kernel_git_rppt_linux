@@ -330,7 +330,7 @@ void *dvma_malloc_align(unsigned long len, unsigned long align)
 		return NULL;
 
 	if((baddr = (unsigned long)dvma_map_align(kaddr, len, align)) == 0) {
-		free_pages(kaddr, get_order(len));
+		free_pages((void *)kaddr, get_order(len));
 		return NULL;
 	}
 
@@ -338,7 +338,7 @@ void *dvma_malloc_align(unsigned long len, unsigned long align)
 
 	if(dvma_map_cpu(kaddr, vaddr, len) < 0) {
 		dvma_unmap((void *)baddr);
-		free_pages(kaddr, get_order(len));
+		free_pages((void *)kaddr, get_order(len));
 		return NULL;
 	}
 

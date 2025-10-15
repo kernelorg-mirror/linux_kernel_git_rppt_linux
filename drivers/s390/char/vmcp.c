@@ -93,7 +93,7 @@ static void vmcp_response_free(struct vmcp_session *session)
 		cma_release(vmcp_cma, page, nr_pages);
 		session->cma_alloc = 0;
 	} else {
-		free_pages((unsigned long)session->response, order);
+		free_pages(session->response, order);
 	}
 	session->response = NULL;
 }

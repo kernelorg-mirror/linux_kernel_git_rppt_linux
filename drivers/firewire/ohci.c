@@ -2927,7 +2927,7 @@ static struct fw_iso_context *ohci_allocate_iso_context(struct fw_card *card,
 
 	memset(ctx, 0, sizeof(*ctx));
 	ctx->header_length = 0;
-	ctx->header = (void *) __get_free_page(GFP_KERNEL);
+	ctx->header = __get_free_page(GFP_KERNEL);
 	if (ctx->header == NULL) {
 		ret = -ENOMEM;
 		goto out;
@@ -2945,7 +2945,7 @@ static struct fw_iso_context *ohci_allocate_iso_context(struct fw_card *card,
 	return &ctx->base;
 
  out_with_header:
-	free_page((unsigned long)ctx->header);
+	free_page(ctx->header);
  out:
 	scoped_guard(spinlock_irq, &ohci->lock) {
 		switch (type) {
@@ -3045,7 +3045,7 @@ static void ohci_free_iso_context(struct fw_iso_context *base)
 
 	ohci_stop_iso(base);
 	context_release(&ctx->context);
-	free_page((unsigned long)ctx->header);
+	free_page(ctx->header);
 
 	guard(spinlock_irqsave)(&ohci->lock);
 

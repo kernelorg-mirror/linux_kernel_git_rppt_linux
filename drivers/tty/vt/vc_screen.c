@@ -53,7 +53,7 @@
 #define HEADER_SIZE	4u
 #define CON_BUF_SIZE (IS_ENABLED(CONFIG_BASE_SMALL) ? 256 : PAGE_SIZE)
 
-DEFINE_FREE(free_page_ptr, void *, if (_T) free_page((unsigned long)_T));
+DEFINE_FREE(free_page_ptr, void *, if (_T) free_page(_T));
 
 /*
  * Our minor space:

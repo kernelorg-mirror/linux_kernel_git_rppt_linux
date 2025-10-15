@@ -749,7 +749,7 @@ err_cmd:
 	dev->pipes[id] = NULL;
 err_id_locked:
 	spin_unlock_irqrestore(&dev->lock, flags);
-	free_page((unsigned long)pipe->command_buffer);
+	free_page(pipe->command_buffer);
 err_pipe:
 	kfree(pipe);
 	return status;
@@ -770,7 +770,7 @@ static int goldfish_pipe_release(struct inode *inode, struct file *filp)
 	spin_unlock_irqrestore(&dev->lock, flags);
 
 	filp->private_data = NULL;
-	free_page((unsigned long)pipe->command_buffer);
+	free_page(pipe->command_buffer);
 	kfree(pipe);
 	return 0;
 }
@@ -867,7 +867,7 @@ static void goldfish_pipe_device_deinit(struct platform_device *pdev,
 {
 	misc_deregister(&dev->miscdev);
 	kfree(dev->pipes);
-	free_page((unsigned long)dev->buffers);
+	free_page(dev->buffers);
 }
 
 static int goldfish_pipe_probe(struct platform_device *pdev)

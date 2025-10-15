@@ -858,7 +858,7 @@ static struct kho_vmalloc_chunk *new_vmalloc_chunk(struct kho_vmalloc_chunk *cur
 	return chunk;
 
 err_free:
-	free_page((unsigned long)chunk);
+	free_page(chunk);
 	return NULL;
 }
 
@@ -885,7 +885,7 @@ static void kho_vmalloc_free_chunks(struct kho_vmalloc *kho_vmalloc)
 		kho_vmalloc_unpreserve_chunk(chunk);
 
 		chunk = KHOSER_LOAD_PTR(chunk->hdr.next);
-		free_page((unsigned long)tmp);
+		free_page(tmp);
 	}
 }
 

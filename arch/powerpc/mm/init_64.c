@@ -256,7 +256,7 @@ static int __meminit __vmemmap_populate(unsigned long start, unsigned long end, 
 			if (altmap_alloc)
 				vmem_altmap_free(altmap, nr_pfns);
 			else
-				free_pages((unsigned long)p, page_order);
+				free_pages(p, page_order);
 			return -ENOMEM;
 		}
 
@@ -369,7 +369,7 @@ static void __ref __vmemmap_free(unsigned long start, unsigned long end,
 					free_reserved_page(page++);
 			}
 		} else {
-			free_pages((unsigned long)(__va(addr)), page_order);
+			free_pages(__va(addr), page_order);
 		}
 
 		vmemmap_remove_mapping(start, page_size);

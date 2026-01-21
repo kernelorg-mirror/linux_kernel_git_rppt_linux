@@ -15,12 +15,15 @@
 #define ARCH_PFN_OFFSET		(0UL)
 #endif
 
+/* avoid <linux/mm.h> include hell */
+struct page;
+/* The array of struct pages for flatmem */
+extern struct page *mem_map;
+extern unsigned long max_mapnr;
+
 #define __pfn_to_page(pfn)	(mem_map + ((pfn) - ARCH_PFN_OFFSET))
 #define __page_to_pfn(page)	((unsigned long)((page) - mem_map) + \
 				 ARCH_PFN_OFFSET)
-
-/* avoid <linux/mm.h> include hell */
-extern unsigned long max_mapnr;
 
 #ifndef pfn_valid
 static inline int pfn_valid(unsigned long pfn)

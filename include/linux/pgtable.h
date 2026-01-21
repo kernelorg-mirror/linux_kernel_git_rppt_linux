@@ -2188,6 +2188,14 @@ static inline const char *pgtable_level_to_str(enum pgtable_level level)
 	}
 }
 
+#ifndef __HAVE_COLOR_ZERO_PAGE
+extern unsigned long empty_zero_page[PAGE_SIZE / sizeof(unsigned long)];
+#endif
+
+#ifndef ZERO_PAGE
+#define ZERO_PAGE(vaddr) ((void)(vaddr),virt_to_page(empty_zero_page))
+#endif
+
 #endif /* !__ASSEMBLY__ */
 
 #if !defined(MAX_POSSIBLE_PHYSMEM_BITS) && !defined(CONFIG_64BIT)

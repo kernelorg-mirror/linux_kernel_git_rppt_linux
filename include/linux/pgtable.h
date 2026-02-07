@@ -1913,11 +1913,20 @@ static inline void pfnmap_setup_cachemode_pfn(unsigned long pfn, pgprot_t *prot)
 	pfnmap_setup_cachemode(pfn, PAGE_SIZE, prot);
 }
 
+/*
+ * ZERO_PAGE() a global shared page that is always zero. It is used for
+ * zero-mapped memory areas, CoW etc.
+ *
+ * On architecutes that __HAVE_COLOR_ZERO_PAGE there are several such pages for
+ * different ranges in the virtual address space.
+ */
+extern unsigned long zero_page_pfn;
+
 #ifdef __HAVE_COLOR_ZERO_PAGE
 static inline int is_zero_pfn(unsigned long pfn)
 {
-	extern unsigned long zero_page_pfn;
 	unsigned long offset_from_zero_pfn = pfn - zero_page_pfn;
+
 	return offset_from_zero_pfn <= (zero_page_mask >> PAGE_SHIFT);
 }
 
@@ -1926,13 +1935,11 @@ static inline int is_zero_pfn(unsigned long pfn)
 #else
 static inline int is_zero_pfn(unsigned long pfn)
 {
-	extern unsigned long zero_page_pfn;
 	return pfn == zero_page_pfn;
 }
 
 static inline unsigned long zero_pfn(unsigned long addr)
 {
-	extern unsigned long zero_page_pfn;
 	return zero_page_pfn;
 }
 

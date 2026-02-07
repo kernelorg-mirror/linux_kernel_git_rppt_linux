@@ -1920,6 +1920,8 @@ static inline void pfnmap_setup_cachemode_pfn(unsigned long pfn, pgprot_t *prot)
  * On architecutes that __HAVE_COLOR_ZERO_PAGE there are several such pages for
  * different ranges in the virtual address space.
  */
+void arch_setup_zero_pages(void);
+
 extern unsigned long zero_page_pfn;
 
 #ifdef __HAVE_COLOR_ZERO_PAGE
@@ -1944,17 +1946,13 @@ static inline unsigned long zero_pfn(unsigned long addr)
 }
 
 extern unsigned long empty_zero_page[PAGE_SIZE / sizeof(unsigned long)];
+extern struct page *__zero_page;
 
-#ifndef __ZERO_PAGE
-#define __ZERO_PAGE()	virt_to_page(empty_zero_page)
-#endif
-
-static inline struct page *__zero_page(unsigned long addr)
+static inline struct page *_zero_page(unsigned long addr)
 {
-	extern struct page *__empty_zero_page;
-	return __empty_zero_page;
+	return __zero_page;
 }
-#define ZERO_PAGE(vaddr) __zero_page(vaddr)
+#define ZERO_PAGE(vaddr) _zero_page(vaddr)
 
 #endif /* __HAVE_COLOR_ZERO_PAGE */
 

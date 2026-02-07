@@ -2494,6 +2494,14 @@ static void __init register_page_bootmem_info(void)
 #endif
 }
 
+void __init arch_setup_zero_pages(void)
+{
+	phys_addr_t zero_page_pa = kern_base +
+		((unsigned long)&empty_zero_page[0] - KERNBASE);
+
+	__zero_page = phys_to_page(zero_page_pa);
+}
+
 void __init mem_init(void)
 {
 	/*

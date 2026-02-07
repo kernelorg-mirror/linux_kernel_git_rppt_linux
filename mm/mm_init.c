@@ -64,16 +64,8 @@ EXPORT_SYMBOL(zero_page_pfn);
 unsigned long empty_zero_page[PAGE_SIZE / sizeof(unsigned long)] __page_aligned_bss;
 EXPORT_SYMBOL(empty_zero_page);
 
-struct page *__empty_zero_page __ro_after_init;
-EXPORT_SYMBOL(__empty_zero_page);
-
-static void __init setup_zero_page(void)
-{
-	__empty_zero_page = __ZERO_PAGE();
-}
-
-#else
-static inline void setup_zero_page(void) {}
+struct page *__zero_page __ro_after_init;
+EXPORT_SYMBOL(__zero_page);
 #endif /* __HAVE_COLOR_ZERO_PAGE */
 
 #ifdef CONFIG_DEBUG_MEMORY_INIT
@@ -2690,9 +2682,19 @@ static void __init mem_init_print_info(void)
 		);
 }
 
+#ifndef __HAVE_COLOR_ZERO_PAGE
+/*
+ * architecures that __HAVE_COLOR_ZERO_PAGE must define this function
+ */
+void __init __weak arch_setup_zero_pages(void)
+{
+	__zero_page = virt_to_page(empty_zero_page);
+}
+#endif
+
 static void __init init_zero_page_pfn(void)
 {
-	setup_zero_page();
+	arch_setup_zero_pages();
 	zero_page_pfn = page_to_pfn(ZERO_PAGE(0));
 }
 

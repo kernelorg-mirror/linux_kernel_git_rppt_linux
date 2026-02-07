@@ -63,7 +63,18 @@ EXPORT_SYMBOL(zero_page_pfn);
  */
 unsigned long empty_zero_page[PAGE_SIZE / sizeof(unsigned long)] __page_aligned_bss;
 EXPORT_SYMBOL(empty_zero_page);
-#endif
+
+struct page *__empty_zero_page __ro_after_init;
+EXPORT_SYMBOL(__empty_zero_page);
+
+static void __init setup_zero_page(void)
+{
+	__empty_zero_page = __ZERO_PAGE();
+}
+
+#else
+static inline void setup_zero_page(void) {}
+#endif /* __HAVE_COLOR_ZERO_PAGE */
 
 #ifdef CONFIG_DEBUG_MEMORY_INIT
 int __meminitdata mminit_loglevel;
@@ -2679,12 +2690,11 @@ static void __init mem_init_print_info(void)
 		);
 }
 
-static int __init init_zero_page_pfn(void)
+static void __init init_zero_page_pfn(void)
 {
+	setup_zero_page();
 	zero_page_pfn = page_to_pfn(ZERO_PAGE(0));
-	return 0;
 }
-early_initcall(init_zero_page_pfn);
 
 void __init __weak arch_mm_preinit(void)
 {
@@ -2708,6 +2718,7 @@ void __init mm_core_init_early(void)
 void __init mm_core_init(void)
 {
 	arch_mm_preinit();
+	init_zero_page_pfn();
 
 	/* Initializations relying on SMP setup */
 	BUILD_BUG_ON(MAX_ZONELISTS > 2);

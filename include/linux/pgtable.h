@@ -1945,9 +1945,16 @@ static inline unsigned long zero_pfn(unsigned long addr)
 
 extern unsigned long empty_zero_page[PAGE_SIZE / sizeof(unsigned long)];
 
-#ifndef ZERO_PAGE
-#define ZERO_PAGE(vaddr) ((void)(vaddr),virt_to_page(empty_zero_page))
+#ifndef __ZERO_PAGE
+#define __ZERO_PAGE()	virt_to_page(empty_zero_page)
 #endif
+
+static inline struct page *__zero_page(unsigned long addr)
+{
+	extern struct page *__empty_zero_page;
+	return __empty_zero_page;
+}
+#define ZERO_PAGE(vaddr) __zero_page(vaddr)
 
 #endif /* __HAVE_COLOR_ZERO_PAGE */
 

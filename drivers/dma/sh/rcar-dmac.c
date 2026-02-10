@@ -534,7 +534,7 @@ static int rcar_dmac_desc_alloc(struct rcar_dmac_chan *chan, gfp_t gfp)
 	LIST_HEAD(list);
 	unsigned int i;
 
-	page = (void *)get_zeroed_page(gfp);
+	page = kzalloc(PAGE_SIZE, gfp);
 	if (!page)
 		return -ENOMEM;
 
@@ -665,7 +665,7 @@ static int rcar_dmac_xfer_chunk_alloc(struct rcar_dmac_chan *chan, gfp_t gfp)
 	LIST_HEAD(list);
 	unsigned int i;
 
-	page = (void *)get_zeroed_page(gfp);
+	page = kzalloc(PAGE_SIZE, gfp);
 	if (!page)
 		return -ENOMEM;
 
@@ -1110,7 +1110,7 @@ static void rcar_dmac_free_chan_resources(struct dma_chan *chan)
 
 	list_for_each_entry_safe(page, _page, &rchan->desc.pages, node) {
 		list_del(&page->node);
-		free_page((unsigned long)page);
+		kfree((void *)(unsigned long)page);
 	}
 
 	/* Remove slave mapping if present. */

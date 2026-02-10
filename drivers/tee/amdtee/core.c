@@ -204,7 +204,7 @@ static int copy_ta_binary(struct tee_context *ctx, void *ptr, void **ta,
 	}
 
 	*ta_size = roundup(fw->size, PAGE_SIZE);
-	*ta = (void *)__get_free_pages(GFP_KERNEL, get_order(*ta_size));
+	*ta = kmalloc(PAGE_SIZE << get_order(*ta_size), GFP_KERNEL);
 	if (!*ta) {
 		pr_err("%s: get_free_pages failed\n", __func__);
 		rc = -ENOMEM;
@@ -300,7 +300,7 @@ int amdtee_open_session(struct tee_context *ctx,
 	}
 
 out:
-	free_pages((u64)ta, get_order(ta_size));
+	kfree((void *)(u64)ta);
 	return rc;
 }
 

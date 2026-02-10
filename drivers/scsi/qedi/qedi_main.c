@@ -5,6 +5,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/slab.h>
 #include <linux/pci.h>
 #include <linux/kernel.h>
 #include <linux/if_arp.h>
@@ -168,17 +169,17 @@ static int qedi_uio_close(struct uio_info *uinfo, struct inode *inode)
 static void __qedi_free_uio_rings(struct qedi_uio_dev *udev)
 {
 	if (udev->uctrl) {
-		free_page((unsigned long)udev->uctrl);
+		kfree(udev->uctrl);
 		udev->uctrl = NULL;
 	}
 
 	if (udev->ll2_ring) {
-		free_page((unsigned long)udev->ll2_ring);
+		kfree(udev->ll2_ring);
 		udev->ll2_ring = NULL;
 	}
 
 	if (udev->ll2_buf) {
-		free_pages((unsigned long)udev->ll2_buf, 2);
+		kfree(udev->ll2_buf);
 		udev->ll2_buf = NULL;
 	}
 }
@@ -229,13 +230,13 @@ static int __qedi_alloc_uio_rings(struct qedi_uio_dev *udev)
 		return rc;
 
 	/* Memory for control area.  */
-	udev->uctrl = (void *)get_zeroed_page(GFP_KERNEL);
+	udev->uctrl = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!udev->uctrl)
 		return -ENOMEM;
 
 	/* Allocating memory for LL2 ring  */
 	udev->ll2_ring_size = QEDI_PAGE_SIZE;
-	udev->ll2_ring = (void *)get_zeroed_page(GFP_KERNEL | __GFP_COMP);
+	udev->ll2_ring = kzalloc(PAGE_SIZE, GFP_KERNEL | __GFP_COMP);
 	if (!udev->ll2_ring) {
 		rc = -ENOMEM;
 		goto exit_alloc_ring;
@@ -253,7 +254,7 @@ static int __qedi_alloc_uio_rings(struct qedi_uio_dev *udev)
 	return rc;
 
 exit_alloc_buf:
-	free_page((unsigned long)udev->ll2_ring);
+	kfree(udev->ll2_ring);
 	udev->ll2_ring = NULL;
 exit_alloc_ring:
 	return rc;

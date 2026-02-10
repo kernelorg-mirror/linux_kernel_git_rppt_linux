@@ -310,7 +310,7 @@ static ssize_t proc_dev_atm_read(struct file *file, char __user *buf,
 
 	if (count == 0)
 		return 0;
-	page = get_zeroed_page(GFP_KERNEL);
+	page = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!page)
 		return -ENOMEM;
 	dev = pde_data(file_inode(file));
@@ -326,7 +326,7 @@ static ssize_t proc_dev_atm_read(struct file *file, char __user *buf,
 			length = -EFAULT;
 		(*pos)++;
 	}
-	free_page(page);
+	kfree((void *)page);
 	return length;
 }
 

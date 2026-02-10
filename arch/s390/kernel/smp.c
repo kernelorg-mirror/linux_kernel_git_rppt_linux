@@ -185,8 +185,8 @@ static int pcpu_alloc_lowcore(struct pcpu *pcpu, int cpu)
 	unsigned long async_stack, nodat_stack, mcck_stack;
 	struct lowcore *lc;
 
-	lc = (struct lowcore *) __get_free_pages(GFP_KERNEL | GFP_DMA, LC_ORDER);
-	nodat_stack = __get_free_pages(GFP_KERNEL, THREAD_SIZE_ORDER);
+	lc = kmalloc(PAGE_SIZE << (LC_ORDER), GFP_KERNEL | GFP_DMA);
+	nodat_stack = (unsigned long)kmalloc(PAGE_SIZE << (THREAD_SIZE_ORDER), GFP_KERNEL);
 	async_stack = stack_alloc();
 	mcck_stack = stack_alloc();
 	if (!lc || !nodat_stack || !async_stack || !mcck_stack)
@@ -215,8 +215,8 @@ out_mcesa:
 out:
 	stack_free(mcck_stack);
 	stack_free(async_stack);
-	free_pages(nodat_stack, THREAD_SIZE_ORDER);
-	free_pages((unsigned long) lc, LC_ORDER);
+	kfree((void *)nodat_stack);
+	kfree((void *)(unsigned long) lc);
 	return -ENOMEM;
 }
 
@@ -235,8 +235,8 @@ static void pcpu_free_lowcore(struct pcpu *pcpu, int cpu)
 	nmi_free_mcesa(&lc->mcesad);
 	stack_free(async_stack);
 	stack_free(mcck_stack);
-	free_pages(nodat_stack, THREAD_SIZE_ORDER);
-	free_pages((unsigned long) lc, LC_ORDER);
+	kfree((void *)nodat_stack);
+	kfree((void *)(unsigned long) lc);
 }
 
 static void pcpu_prepare_secondary(struct pcpu *pcpu, int cpu)

@@ -981,7 +981,7 @@ static int alloc_queue(const char *name, unsigned long num_entries,
 	size = num_entries * LDC_PACKET_SIZE;
 	order = get_order(size);
 
-	q = (void *) __get_free_pages(GFP_KERNEL, order);
+	q = kmalloc(PAGE_SIZE << (order), GFP_KERNEL);
 	if (!q) {
 		printk(KERN_ERR PFX "Alloc of %s queue failed with "
 		       "size=%lu order=%lu\n", name, size, order);
@@ -1006,7 +1006,7 @@ static void free_queue(unsigned long num_entries, struct ldc_packet *q)
 	size = num_entries * LDC_PACKET_SIZE;
 	order = get_order(size);
 
-	free_pages((unsigned long)q, order);
+	kfree((void *)(unsigned long)q);
 }
 
 static unsigned long ldc_cookie_to_index(u64 cookie, void *arg)
@@ -1065,8 +1065,7 @@ static int ldc_iommu_init(const char *name, struct ldc_channel *lp)
 
 	order = get_order(tsbsize);
 
-	table = (struct ldc_mtable_entry *)
-		__get_free_pages(GFP_KERNEL, order);
+	table = (struct ldc_mtable_entry *)kmalloc(PAGE_SIZE << (order), GFP_KERNEL);
 	err = -ENOMEM;
 	if (!table) {
 		printk(KERN_ERR PFX "Alloc of MTE table failed, "
@@ -1087,7 +1086,7 @@ static int ldc_iommu_init(const char *name, struct ldc_channel *lp)
 	return 0;
 
 out_free_table:
-	free_pages((unsigned long) table, order);
+	kfree((void *)(unsigned long) table);
 	ldc_iommu->page_table = NULL;
 
 out_free_map:
@@ -1109,7 +1108,7 @@ static void ldc_iommu_release(struct ldc_channel *lp)
 	tsbsize = num_tsb_entries * sizeof(struct ldc_mtable_entry);
 	order = get_order(tsbsize);
 
-	free_pages((unsigned long) ldc_iommu->page_table, order);
+	kfree((void *)(unsigned long) ldc_iommu->page_table);
 	ldc_iommu->page_table = NULL;
 
 	kfree(iommu->map);

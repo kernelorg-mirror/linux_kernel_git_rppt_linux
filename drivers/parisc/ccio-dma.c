@@ -850,7 +850,7 @@ ccio_alloc(struct device *dev, size_t size, dma_addr_t *dma_handle, gfp_t flag,
 		return 0;
 	}
 #endif
-	ret = (void *) __get_free_pages(flag, get_order(size));
+	ret = kmalloc(PAGE_SIZE << get_order(size), flag);
 
 	if (ret) {
 		memset(ret, 0, size);
@@ -876,7 +876,7 @@ ccio_free(struct device *dev, size_t size, void *cpu_addr,
 		dma_addr_t dma_handle, unsigned long attrs)
 {
 	ccio_unmap_phys(dev, dma_handle, size, 0, 0);
-	free_pages((unsigned long)cpu_addr, get_order(size));
+	kfree((void *)(unsigned long)cpu_addr);
 }
 
 /*

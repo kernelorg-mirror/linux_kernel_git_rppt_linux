@@ -15,6 +15,7 @@
 #define pr_fmt(fmt) "time: " fmt
 
 #include <linux/kernel_stat.h>
+#include <linux/slab.h>
 #include <linux/errno.h>
 #include <linux/export.h>
 #include <linux/sched.h>
@@ -417,12 +418,12 @@ static void __init stp_reset(void)
 {
 	int rc;
 
-	stp_page = (void *) get_zeroed_page(GFP_ATOMIC);
+	stp_page = kzalloc(PAGE_SIZE, GFP_ATOMIC);
 	rc = chsc_sstpc(stp_page, STP_OP_CTRL, 0x0000, NULL);
 	if (rc == 0)
 		set_bit(CLOCK_SYNC_HAS_STP, &clock_sync_flags);
 	else if (stp_online) {
-		free_page((unsigned long) stp_page);
+		kfree((void *)(unsigned long) stp_page);
 		stp_page = NULL;
 		stp_online = false;
 	}

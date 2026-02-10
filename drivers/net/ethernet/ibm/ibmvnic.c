@@ -33,6 +33,7 @@
 /**************************************************************************/
 
 #include <linux/module.h>
+#include <linux/slab.h>
 #include <linux/moduleparam.h>
 #include <linux/types.h>
 #include <linux/errno.h>
@@ -4032,7 +4033,7 @@ static void release_sub_crq_queue(struct ibmvnic_adapter *adapter,
 
 	dma_unmap_single(dev, scrq->msg_token, 4 * PAGE_SIZE,
 			 DMA_BIDIRECTIONAL);
-	free_pages((unsigned long)scrq->msgs, 2);
+	kfree((void *)(unsigned long)scrq->msgs);
 	free_cpumask_var(scrq->affinity_mask);
 	kfree(scrq);
 }
@@ -4049,7 +4050,7 @@ static struct ibmvnic_sub_crq_queue *init_sub_crq_queue(struct ibmvnic_adapter
 		return NULL;
 
 	scrq->msgs =
-		(union sub_crq *)__get_free_pages(GFP_KERNEL | __GFP_ZERO, 2);
+		kzalloc(PAGE_SIZE << (2), GFP_KERNEL);
 	if (!scrq->msgs) {
 		dev_warn(dev, "Couldn't allocate crq queue messages page\n");
 		goto zero_page_failed;
@@ -4110,7 +4111,7 @@ reg_failed:
 map_failed:
 	free_cpumask_var(scrq->affinity_mask);
 cpumask_alloc_failed:
-	free_pages((unsigned long)scrq->msgs, 2);
+	kfree((void *)(unsigned long)scrq->msgs);
 zero_page_failed:
 	kfree(scrq);
 
@@ -6252,7 +6253,7 @@ static void release_crq_queue(struct ibmvnic_adapter *adapter)
 
 	dma_unmap_single(&vdev->dev, crq->msg_token, PAGE_SIZE,
 			 DMA_BIDIRECTIONAL);
-	free_page((unsigned long)crq->msgs);
+	kfree((void *)(unsigned long)crq->msgs);
 	crq->msgs = NULL;
 	crq->active = false;
 }
@@ -6267,7 +6268,7 @@ static int init_crq_queue(struct ibmvnic_adapter *adapter)
 	if (crq->msgs)
 		return 0;
 
-	crq->msgs = (union ibmvnic_crq *)get_zeroed_page(GFP_KERNEL);
+	crq->msgs = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	/* Should we allocate more than one page? */
 
 	if (!crq->msgs)
@@ -6330,7 +6331,7 @@ req_irq_failed:
 reg_crq_failed:
 	dma_unmap_single(dev, crq->msg_token, PAGE_SIZE, DMA_BIDIRECTIONAL);
 map_failed:
-	free_page((unsigned long)crq->msgs);
+	kfree((void *)(unsigned long)crq->msgs);
 	crq->msgs = NULL;
 	return retrc;
 }

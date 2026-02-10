@@ -463,7 +463,7 @@ int extcon_sync(struct extcon_dev *edev, unsigned int id)
 
 	spin_lock_irqsave(&edev->lock, flags);
 	/* This could be in interrupt handler */
-	prop_buf = (char *)get_zeroed_page(GFP_ATOMIC);
+	prop_buf = kzalloc(PAGE_SIZE, GFP_ATOMIC);
 	if (!prop_buf) {
 		/* Unlock early before uevent */
 		spin_unlock_irqrestore(&edev->lock, flags);
@@ -494,7 +494,7 @@ int extcon_sync(struct extcon_dev *edev, unsigned int id)
 	/* Unlock early before uevent */
 	spin_unlock_irqrestore(&edev->lock, flags);
 	kobject_uevent_env(&edev->dev.kobj, KOBJ_CHANGE, envp);
-	free_page((unsigned long)prop_buf);
+	kfree((void *)(unsigned long)prop_buf);
 
 	return 0;
 }

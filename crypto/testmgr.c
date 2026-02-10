@@ -168,7 +168,7 @@ static int __testmgr_alloc_buf(char *buf[XBUFSIZE], int order)
 	int i;
 
 	for (i = 0; i < XBUFSIZE; i++) {
-		buf[i] = (char *)__get_free_pages(GFP_KERNEL, order);
+		buf[i] = kmalloc(PAGE_SIZE << (order), GFP_KERNEL);
 		if (!buf[i])
 			goto err_free_buf;
 	}
@@ -177,7 +177,7 @@ static int __testmgr_alloc_buf(char *buf[XBUFSIZE], int order)
 
 err_free_buf:
 	while (i-- > 0)
-		free_pages((unsigned long)buf[i], order);
+		kfree((void *)(unsigned long)buf[i]);
 
 	return -ENOMEM;
 }
@@ -192,7 +192,7 @@ static void __testmgr_free_buf(char *buf[XBUFSIZE], int order)
 	int i;
 
 	for (i = 0; i < XBUFSIZE; i++)
-		free_pages((unsigned long)buf[i], order);
+		kfree((void *)(unsigned long)buf[i]);
 }
 
 static void testmgr_free_buf(char *buf[XBUFSIZE])

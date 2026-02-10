@@ -146,8 +146,7 @@ static int create_packet(void *data, size_t length) __must_hold(&rbu_data.lock)
 	}
 
 	while (!packet_data_temp_buf) {
-		packet_data_temp_buf = (unsigned char *)
-			__get_free_pages(GFP_KERNEL, ordernum);
+		packet_data_temp_buf = (unsigned char *)kmalloc(PAGE_SIZE << (ordernum), GFP_KERNEL);
 		if (!packet_data_temp_buf) {
 			pr_warn("failed to allocate new packet\n");
 			retval = -ENOMEM;
@@ -195,7 +194,7 @@ out_alloc_packet_array:
 	while (idx--) {
 		pr_debug("freeing unused packet below floor 0x%lx\n",
 			(unsigned long)virt_to_phys(invalid_addr_packet_array[idx]));
-		free_pages((unsigned long)invalid_addr_packet_array[idx], ordernum);
+		kfree((void *)(unsigned long)invalid_addr_packet_array[idx]);
 	}
 	kfree(invalid_addr_packet_array);
 
@@ -327,8 +326,7 @@ static void packet_empty_list(void)
 		memset(newpacket->data, 0, newpacket->length);
 		set_memory_wb((unsigned long)newpacket->data,
 			1 << newpacket->ordernum);
-		free_pages((unsigned long) newpacket->data,
-			newpacket->ordernum);
+		kfree((void *)(unsigned long) newpacket->data);
 		kfree(newpacket);
 	}
 	rbu_data.packet_read_count = 0;
@@ -350,8 +348,7 @@ static void img_update_free(void)
 	 */
 	memset(rbu_data.image_update_buffer, 0,
 		rbu_data.image_update_buffer_size);
-	free_pages((unsigned long) rbu_data.image_update_buffer,
-		rbu_data.image_update_ordernum);
+	kfree((void *)(unsigned long) rbu_data.image_update_buffer);
 
 	/*
 	 * Re-initialize the rbu_data variables after a free
@@ -406,7 +403,7 @@ static int img_update_realloc(unsigned long size)
 
 	ordernum = get_order(size);
 	image_update_buffer =
-		(unsigned char *)__get_free_pages(GFP_DMA32, ordernum);
+		kmalloc(PAGE_SIZE << (ordernum), GFP_DMA32);
 	spin_lock(&rbu_data.lock);
 	if (!image_update_buffer) {
 		pr_debug("Not enough memory for image update: size = %ld\n", size);

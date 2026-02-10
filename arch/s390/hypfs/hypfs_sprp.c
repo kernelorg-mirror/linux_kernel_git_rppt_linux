@@ -8,6 +8,7 @@
  */
 
 #include <linux/errno.h>
+#include <linux/slab.h>
 #include <linux/gfp.h>
 #include <linux/string.h>
 #include <linux/types.h>
@@ -41,7 +42,7 @@ static unsigned long hypfs_sprp_diag304(void *data, unsigned long cmd)
 
 static void hypfs_sprp_free(const void *data)
 {
-	free_page((unsigned long) data);
+	kfree(data);
 }
 
 static int hypfs_sprp_create(void **data_ptr, void **free_ptr, size_t *size)
@@ -49,14 +50,14 @@ static int hypfs_sprp_create(void **data_ptr, void **free_ptr, size_t *size)
 	unsigned long rc;
 	void *data;
 
-	data = (void *) get_zeroed_page(GFP_KERNEL);
+	data = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
 	rc = hypfs_sprp_diag304(data, DIAG304_QUERY_PRP);
 	if (rc != 1) {
 		*data_ptr = *free_ptr = NULL;
 		*size = 0;
-		free_page((unsigned long) data);
+		kfree(data);
 		return -EIO;
 	}
 	*data_ptr = *free_ptr = data;
@@ -73,7 +74,7 @@ static int __hypfs_sprp_ioctl(void __user *user_area)
 	int rc;
 
 	rc = -ENOMEM;
-	data = (void *)get_zeroed_page(GFP_KERNEL);
+	data = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	diag304 = kzalloc_obj(*diag304);
 	if (!data || !diag304)
 		goto out;
@@ -104,7 +105,7 @@ static int __hypfs_sprp_ioctl(void __user *user_area)
 	rc = copy_to_user(user_area, diag304, sizeof(*diag304)) ? -EFAULT : 0;
 out:
 	kfree(diag304);
-	free_page((unsigned long) data);
+	kfree(data);
 	return rc;
 }
 

@@ -14,6 +14,7 @@
 #include <crypto/sha2.h>
 #include <crypto/sha3.h>
 #include <linux/clk.h>
+#include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/dmaengine.h>
@@ -1103,7 +1104,7 @@ static int stm32_hash_copy_sgs(struct stm32_hash_request_ctx *rctx,
 
 	pages = get_order(new_len);
 
-	buf = (void *)__get_free_pages(GFP_ATOMIC, pages);
+	buf = kmalloc(PAGE_SIZE << (pages), GFP_ATOMIC);
 	if (!buf) {
 		pr_err("Couldn't allocate pages for unaligned cases.\n");
 		return -ENOMEM;
@@ -1338,7 +1339,7 @@ static void stm32_hash_unprepare_request(struct ahash_request *req)
 		dmaengine_terminate_sync(hdev->dma_lch);
 
 	if (state->flags & HASH_FLAGS_SGS_COPIED)
-		free_pages((unsigned long)sg_virt(rctx->sg), get_order(rctx->sg->length));
+		kfree((void *)(unsigned long)sg_virt(rctx->sg));
 
 	rctx->sg = NULL;
 	rctx->offset = 0;

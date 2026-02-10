@@ -763,7 +763,7 @@ static int rzg3s_pcie_msi_setup(struct rzg3s_pcie_host *host)
 	struct device *dev = host->dev;
 	int id, ret;
 
-	msi->pages = __get_free_pages(GFP_KERNEL | GFP_DMA, 0);
+	msi->pages = kmalloc(PAGE_SIZE, GFP_KERNEL | GFP_DMA);
 	if (!msi->pages)
 		return -ENOMEM;
 
@@ -821,7 +821,7 @@ static int rzg3s_pcie_msi_setup(struct rzg3s_pcie_host *host)
 dma_unmap:
 	dma_unmap_single(dev, msi->dma_addr, size * 2, DMA_BIDIRECTIONAL);
 free_pages:
-	free_pages(msi->pages, 0);
+	kfree((void *)msi->pages);
 	return ret;
 }
 
@@ -857,7 +857,7 @@ static void rzg3s_pcie_teardown_msi(struct rzg3s_pcie_host *host)
 
 	/* Free unused memory */
 	dma_unmap_single(host->dev, msi->dma_addr, size * 2, DMA_BIDIRECTIONAL);
-	free_pages(msi->pages, 0);
+	kfree((void *)msi->pages);
 }
 
 static int rzg3s_pcie_init_msi(struct rzg3s_pcie_host *host)

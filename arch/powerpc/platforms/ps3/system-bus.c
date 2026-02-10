@@ -513,7 +513,7 @@ static void * ps3_alloc_coherent(struct device *_dev, size_t size,
 	flag &= ~(__GFP_DMA | __GFP_HIGHMEM);
 	flag |= __GFP_ZERO;
 
-	virt_addr = __get_free_pages(flag, get_order(size));
+	virt_addr = (unsigned long)kmalloc(PAGE_SIZE << get_order(size), flag);
 
 	if (!virt_addr) {
 		pr_debug("%s:%d: get_free_pages failed\n", __func__, __LINE__);
@@ -534,7 +534,7 @@ static void * ps3_alloc_coherent(struct device *_dev, size_t size,
 	return (void*)virt_addr;
 
 clean_alloc:
-	free_pages(virt_addr, get_order(size));
+	kfree((void *)virt_addr);
 clean_none:
 	dma_handle = NULL;
 	return NULL;
@@ -546,7 +546,7 @@ static void ps3_free_coherent(struct device *_dev, size_t size, void *vaddr,
 	struct ps3_system_bus_device *dev = ps3_dev_to_system_bus_dev(_dev);
 
 	ps3_dma_unmap(dev->d_region, dma_handle, size);
-	free_pages((unsigned long)vaddr, get_order(size));
+	kfree((void *)(unsigned long)vaddr);
 }
 
 /* Creates TCEs for a user provided buffer.  The user buffer must be

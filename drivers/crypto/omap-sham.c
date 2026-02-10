@@ -698,7 +698,7 @@ static int omap_sham_copy_sgs(struct omap_sham_reqctx *ctx,
 
 	pages = get_order(new_len);
 
-	buf = (void *)__get_free_pages(GFP_ATOMIC, pages);
+	buf = kmalloc(PAGE_SIZE << (pages), GFP_ATOMIC);
 	if (!buf) {
 		pr_err("Couldn't allocate pages for unaligned cases.\n");
 		return -ENOMEM;
@@ -1135,8 +1135,7 @@ static void omap_sham_finish_req(struct ahash_request *req, int err)
 	struct omap_sham_dev *dd = ctx->dd;
 
 	if (test_bit(FLAGS_SGS_COPIED, &dd->flags))
-		free_pages((unsigned long)sg_virt(ctx->sg),
-			   get_order(ctx->sg->length));
+		kfree((void *)(unsigned long)sg_virt(ctx->sg));
 
 	if (test_bit(FLAGS_SGS_ALLOCED, &dd->flags))
 		kfree(ctx->sg);

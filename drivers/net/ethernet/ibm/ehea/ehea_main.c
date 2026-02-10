@@ -353,7 +353,7 @@ static void ehea_update_stats(struct work_struct *work)
 	struct hcp_ehea_port_cb2 *cb2;
 	u64 hret;
 
-	cb2 = (void *)get_zeroed_page(GFP_KERNEL);
+	cb2 = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!cb2) {
 		netdev_err(dev, "No mem for cb2. Some interface statistics were not updated\n");
 		goto resched;
@@ -374,7 +374,7 @@ static void ehea_update_stats(struct work_struct *work)
 	stats->rx_errors = cb2->rxuerr;
 
 out_herr:
-	free_page((unsigned long)cb2);
+	kfree((void *)(unsigned long)cb2);
 resched:
 	schedule_delayed_work(&port->stats_work,
 			      round_jiffies_relative(msecs_to_jiffies(1000)));
@@ -977,7 +977,7 @@ int ehea_sense_port_attr(struct ehea_port *port)
 	struct hcp_ehea_port_cb0 *cb0;
 
 	/* may be called via ehea_neq_tasklet() */
-	cb0 = (void *)get_zeroed_page(GFP_ATOMIC);
+	cb0 = kzalloc(PAGE_SIZE, GFP_ATOMIC);
 	if (!cb0) {
 		pr_err("no mem for cb0\n");
 		ret = -ENOMEM;
@@ -1051,7 +1051,7 @@ int ehea_sense_port_attr(struct ehea_port *port)
 out_free:
 	if (ret || netif_msg_probe(port))
 		ehea_dump(cb0, sizeof(*cb0), "ehea_sense_port_attr");
-	free_page((unsigned long)cb0);
+	kfree((void *)(unsigned long)cb0);
 out:
 	return ret;
 }
@@ -1062,7 +1062,7 @@ int ehea_set_portspeed(struct ehea_port *port, u32 port_speed)
 	u64 hret;
 	int ret = 0;
 
-	cb4 = (void *)get_zeroed_page(GFP_KERNEL);
+	cb4 = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!cb4) {
 		pr_err("no mem for cb4\n");
 		ret = -ENOMEM;
@@ -1130,7 +1130,7 @@ int ehea_set_portspeed(struct ehea_port *port, u32 port_speed)
 	if (!prop_carrier_state || (port->phy_link == EHEA_PHY_LINK_UP))
 		netif_carrier_on(port->netdev);
 
-	free_page((unsigned long)cb4);
+	kfree((void *)(unsigned long)cb4);
 out:
 	return ret;
 }
@@ -1350,7 +1350,7 @@ static int ehea_configure_port(struct ehea_port *port)
 	struct hcp_ehea_port_cb0 *cb0;
 
 	ret = -ENOMEM;
-	cb0 = (void *)get_zeroed_page(GFP_KERNEL);
+	cb0 = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!cb0)
 		goto out;
 
@@ -1386,7 +1386,7 @@ static int ehea_configure_port(struct ehea_port *port)
 	ret = 0;
 
 out_free:
-	free_page((unsigned long)cb0);
+	kfree((void *)(unsigned long)cb0);
 out:
 	return ret;
 }
@@ -1725,7 +1725,7 @@ static int ehea_set_mac_addr(struct net_device *dev, void *sa)
 		goto out;
 	}
 
-	cb0 = (void *)get_zeroed_page(GFP_KERNEL);
+	cb0 = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!cb0) {
 		pr_err("no mem for cb0\n");
 		ret = -ENOMEM;
@@ -1767,7 +1767,7 @@ static int ehea_set_mac_addr(struct net_device *dev, void *sa)
 out_upregs:
 	ehea_update_bcmc_registrations();
 out_free:
-	free_page((unsigned long)cb0);
+	kfree((void *)(unsigned long)cb0);
 out:
 	return ret;
 }
@@ -1791,7 +1791,7 @@ static void ehea_promiscuous(struct net_device *dev, int enable)
 	if (enable == port->promisc)
 		return;
 
-	cb7 = (void *)get_zeroed_page(GFP_ATOMIC);
+	cb7 = kzalloc(PAGE_SIZE, GFP_ATOMIC);
 	if (!cb7) {
 		pr_err("no mem for cb7\n");
 		goto out;
@@ -1810,7 +1810,7 @@ static void ehea_promiscuous(struct net_device *dev, int enable)
 
 	port->promisc = enable;
 out:
-	free_page((unsigned long)cb7);
+	kfree((void *)(unsigned long)cb7);
 }
 
 static u64 ehea_multicast_reg_helper(struct ehea_port *port, u64 mc_mac_addr,
@@ -2095,7 +2095,7 @@ static int ehea_vlan_rx_add_vid(struct net_device *dev, __be16 proto, u16 vid)
 	u64 hret;
 	int err = 0;
 
-	cb1 = (void *)get_zeroed_page(GFP_KERNEL);
+	cb1 = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!cb1) {
 		pr_err("no mem for cb1\n");
 		err = -ENOMEM;
@@ -2120,7 +2120,7 @@ static int ehea_vlan_rx_add_vid(struct net_device *dev, __be16 proto, u16 vid)
 		err = -EINVAL;
 	}
 out:
-	free_page((unsigned long)cb1);
+	kfree((void *)(unsigned long)cb1);
 	return err;
 }
 
@@ -2133,7 +2133,7 @@ static int ehea_vlan_rx_kill_vid(struct net_device *dev, __be16 proto, u16 vid)
 	u64 hret;
 	int err = 0;
 
-	cb1 = (void *)get_zeroed_page(GFP_KERNEL);
+	cb1 = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!cb1) {
 		pr_err("no mem for cb1\n");
 		err = -ENOMEM;
@@ -2158,7 +2158,7 @@ static int ehea_vlan_rx_kill_vid(struct net_device *dev, __be16 proto, u16 vid)
 		err = -EINVAL;
 	}
 out:
-	free_page((unsigned long)cb1);
+	kfree((void *)(unsigned long)cb1);
 	return err;
 }
 
@@ -2170,7 +2170,7 @@ static int ehea_activate_qp(struct ehea_adapter *adapter, struct ehea_qp *qp)
 	u64 dummy64 = 0;
 	struct hcp_modify_qp_cb0 *cb0;
 
-	cb0 = (void *)get_zeroed_page(GFP_KERNEL);
+	cb0 = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!cb0) {
 		ret = -ENOMEM;
 		goto out;
@@ -2233,7 +2233,7 @@ static int ehea_activate_qp(struct ehea_adapter *adapter, struct ehea_qp *qp)
 
 	ret = 0;
 out:
-	free_page((unsigned long)cb0);
+	kfree((void *)(unsigned long)cb0);
 	return ret;
 }
 
@@ -2518,7 +2518,7 @@ static int ehea_stop_qps(struct net_device *dev)
 	u64 dummy64 = 0;
 	u16 dummy16 = 0;
 
-	cb0 = (void *)get_zeroed_page(GFP_KERNEL);
+	cb0 = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!cb0) {
 		ret = -ENOMEM;
 		goto out;
@@ -2570,7 +2570,7 @@ static int ehea_stop_qps(struct net_device *dev)
 
 	ret = 0;
 out:
-	free_page((unsigned long)cb0);
+	kfree((void *)(unsigned long)cb0);
 
 	return ret;
 }
@@ -2620,7 +2620,7 @@ static int ehea_restart_qps(struct net_device *dev)
 	u64 dummy64 = 0;
 	u16 dummy16 = 0;
 
-	cb0 = (void *)get_zeroed_page(GFP_KERNEL);
+	cb0 = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!cb0)
 		return -ENOMEM;
 
@@ -2674,7 +2674,7 @@ static int ehea_restart_qps(struct net_device *dev)
 		ehea_refill_rq3(pr, 0);
 	}
 out:
-	free_page((unsigned long)cb0);
+	kfree((void *)(unsigned long)cb0);
 
 	return ret;
 }
@@ -2806,7 +2806,7 @@ static int ehea_sense_adapter_attr(struct ehea_adapter *adapter)
 	u64 hret;
 	int ret;
 
-	cb = (void *)get_zeroed_page(GFP_KERNEL);
+	cb = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!cb) {
 		ret = -ENOMEM;
 		goto out;
@@ -2823,7 +2823,7 @@ static int ehea_sense_adapter_attr(struct ehea_adapter *adapter)
 	ret = 0;
 
 out_herr:
-	free_page((unsigned long)cb);
+	kfree((void *)(unsigned long)cb);
 out:
 	return ret;
 }
@@ -2837,7 +2837,7 @@ static int ehea_get_jumboframe_status(struct ehea_port *port, int *jumbo)
 	*jumbo = 0;
 
 	/* (Try to) enable *jumbo frames */
-	cb4 = (void *)get_zeroed_page(GFP_KERNEL);
+	cb4 = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!cb4) {
 		pr_err("no mem for cb4\n");
 		ret = -ENOMEM;
@@ -2865,7 +2865,7 @@ static int ehea_get_jumboframe_status(struct ehea_port *port, int *jumbo)
 		} else
 			ret = -EINVAL;
 
-		free_page((unsigned long)cb4);
+		kfree((void *)(unsigned long)cb4);
 	}
 out:
 	return ret;

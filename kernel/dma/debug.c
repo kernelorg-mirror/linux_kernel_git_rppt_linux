@@ -628,7 +628,7 @@ static int dma_debug_create_entries(gfp_t gfp)
 	struct dma_debug_entry *entry;
 	int i;
 
-	entry = (void *)get_zeroed_page(gfp);
+	entry = kzalloc(PAGE_SIZE, gfp);
 	if (!entry)
 		return -ENOMEM;
 

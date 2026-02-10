@@ -644,7 +644,7 @@ static void zfcp_fc_sg_free_table(struct scatterlist *sg, int count)
 
 	for (i = 0; i < count; i++, sg = sg_next(sg))
 		if (sg)
-			free_page((unsigned long) sg_virt(sg));
+			kfree(sg_virt(sg));
 		else
 			break;
 }
@@ -664,7 +664,7 @@ static int zfcp_fc_sg_setup_table(struct scatterlist *sg, int count)
 
 	sg_init_table(sg, count);
 	for (i = 0; i < count; i++, sg = sg_next(sg)) {
-		addr = (void *) get_zeroed_page(GFP_KERNEL);
+		addr = kzalloc(PAGE_SIZE, GFP_KERNEL);
 		if (!addr) {
 			zfcp_fc_sg_free_table(sg, i);
 			return -ENOMEM;

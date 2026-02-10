@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 #include <linux/types.h>
+#include <linux/slab.h>
 #include <linux/interrupt.h>
 
 #include <asm/msr.h>
@@ -499,7 +500,7 @@ void xen_pmu_init(int cpu)
 	if (xen_hvm_domain() || (cpu != 0 && !is_xen_pmu))
 		return;
 
-	xenpmu_data = (struct xen_pmu_data *)get_zeroed_page(GFP_KERNEL);
+	xenpmu_data = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!xenpmu_data) {
 		pr_err("VPMU init: No memory\n");
 		return;
@@ -531,7 +532,7 @@ fail:
 	else
 		pr_info_once("Could not initialize VPMU for cpu %d, error %d\n",
 			cpu, err);
-	free_pages((unsigned long)xenpmu_data, 0);
+	kfree((void *)(unsigned long)xenpmu_data);
 }
 
 void xen_pmu_finish(int cpu)
@@ -547,6 +548,6 @@ void xen_pmu_finish(int cpu)
 
 	(void)HYPERVISOR_xenpmu_op(XENPMU_finish, &xp);
 
-	free_pages((unsigned long)per_cpu(xenpmu_shared, cpu).xenpmu_data, 0);
+	kfree((void *)(unsigned long)per_cpu(xenpmu_shared).xenpmu_data, 0);
 	per_cpu(xenpmu_shared, cpu).xenpmu_data = NULL;
 }

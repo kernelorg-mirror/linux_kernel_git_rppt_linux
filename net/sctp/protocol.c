@@ -1557,8 +1557,7 @@ static __init int sctp_init(void)
 	 * reduce the order and try again
 	 */
 	do {
-		sctp_port_hashtable = (struct sctp_bind_hashbucket *)
-			__get_free_pages(GFP_KERNEL | __GFP_NOWARN, order);
+		sctp_port_hashtable = (struct sctp_bind_hashbucket *)kmalloc(PAGE_SIZE << (order), GFP_KERNEL | __GFP_NOWARN);
 	} while (!sctp_port_hashtable && --order > 0);
 
 	if (!sctp_port_hashtable) {
@@ -1643,9 +1642,7 @@ err_register_defaults:
 	sctp_v4_pf_exit();
 	sctp_v6_pf_exit();
 	sctp_sysctl_unregister();
-	free_pages((unsigned long)sctp_port_hashtable,
-		   get_order(sctp_port_hashsize *
-			     sizeof(struct sctp_bind_hashbucket)));
+	kfree((void *)(unsigned long)sctp_port_hashtable);
 err_bhash_alloc:
 	sctp_transport_hashtable_destroy();
 err_thash_alloc:
@@ -1684,9 +1681,7 @@ static __exit void sctp_exit(void)
 
 	sctp_sysctl_unregister();
 
-	free_pages((unsigned long)sctp_port_hashtable,
-		   get_order(sctp_port_hashsize *
-			     sizeof(struct sctp_bind_hashbucket)));
+	kfree((void *)(unsigned long)sctp_port_hashtable);
 	kfree(sctp_ep_hashtable);
 	sctp_transport_hashtable_destroy();
 

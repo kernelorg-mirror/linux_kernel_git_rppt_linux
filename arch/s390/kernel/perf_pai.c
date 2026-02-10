@@ -8,6 +8,7 @@
 #define pr_fmt(fmt) "pai: " fmt
 
 #include <linux/kernel.h>
+#include <linux/slab.h>
 #include <linux/kernel_stat.h>
 #include <linux/percpu.h>
 #include <linux/notifier.h>
@@ -128,7 +129,7 @@ static DEFINE_MUTEX(pai_reserve_mutex);
 static void pai_free(struct pai_mapptr *mp)
 {
 	if (mp->mapptr->fullpage)
-		free_page((unsigned long)mp->mapptr->area);
+		kfree(mp->mapptr->area);
 	else
 		kfree(mp->mapptr->area);
 	kfree(mp->mapptr->paiext_cb);
@@ -161,7 +162,7 @@ static void pai_event_destroy(struct perf_event *event)
 {
 	int cpu;
 
-	free_page(PAI_SAVE_AREA(event));
+	kfree((void *)PAI_SAVE_AREA(event));
 	if (event->cpu == -1) {
 		struct cpumask *mask = PAI_CPU_MASK(event);
 
@@ -260,7 +261,7 @@ static int pai_alloc_cpu(struct perf_event *event, int cpu)
 		 */
 		mp->mapptr = cpump;
 		if (idx == PAI_PMU_CRYPTO) {
-			cpump->area = (unsigned long *)get_zeroed_page(GFP_KERNEL);
+			cpump->area = kzalloc(PAGE_SIZE, GFP_KERNEL);
 			/* free_page() can handle 0x0 address */
 			cpump->fullpage = true;
 		} else {			/* PAI_PMU_EXT */
@@ -377,7 +378,7 @@ static int pai_event_init(struct perf_event *event, int idx)
 		goto out;
 	/* Get a page to store last counter values for sampling */
 	if (a->sample_period) {
-		PAI_SAVE_AREA(event) = get_zeroed_page(GFP_KERNEL);
+		PAI_SAVE_AREA(event) = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 		if (!PAI_SAVE_AREA(event)) {
 			rc = -ENOMEM;
 			goto out;
@@ -389,7 +390,7 @@ static int pai_event_init(struct perf_event *event, int idx)
 	else
 		rc = pai_alloc(event);
 	if (rc) {
-		free_page(PAI_SAVE_AREA(event));
+		kfree((void *)PAI_SAVE_AREA(event));
 		goto out;
 	}
 

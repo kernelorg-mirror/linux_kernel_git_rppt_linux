@@ -12,6 +12,7 @@
  */
 
 #include <linux/types.h>
+#include <linux/slab.h>
 #include <linux/ctype.h>
 #include <linux/agp_backend.h>
 #include <linux/init.h>
@@ -803,7 +804,7 @@ int __init gart_iommu_init(void)
 	 * Any prefetches that hit unmapped entries won't get an bus abort
 	 * then. (P2P bridge may be prefetching on DMA reads).
 	 */
-	scratch = get_zeroed_page(GFP_KERNEL);
+	scratch = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!scratch)
 		panic("Cannot allocate iommu scratch page");
 	gart_unmapped_entry = GPTE_ENCODE(__pa(scratch));

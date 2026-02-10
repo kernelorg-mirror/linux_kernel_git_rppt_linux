@@ -313,7 +313,7 @@ static int __init cfag12864b_init(void)
 	}
 	BUILD_BUG_ON(PAGE_SIZE < CFAG12864B_SIZE);
 
-	cfag12864b_buffer = (unsigned char *) get_zeroed_page(GFP_KERNEL);
+	cfag12864b_buffer = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (cfag12864b_buffer == NULL) {
 		printk(KERN_ERR CFAG12864B_NAME ": ERROR: "
 			"can't get a free page\n");
@@ -345,7 +345,7 @@ cachealloced:
 	kfree(cfag12864b_cache);
 
 bufferalloced:
-	free_page((unsigned long) cfag12864b_buffer);
+	kfree((void *)(unsigned long) cfag12864b_buffer);
 
 none:
 	return ret;
@@ -357,7 +357,7 @@ static void __exit cfag12864b_exit(void)
 	cfag12864b_off();
 	destroy_workqueue(cfag12864b_workqueue);
 	kfree(cfag12864b_cache);
-	free_page((unsigned long) cfag12864b_buffer);
+	kfree((void *)(unsigned long) cfag12864b_buffer);
 }
 
 module_init(cfag12864b_init);

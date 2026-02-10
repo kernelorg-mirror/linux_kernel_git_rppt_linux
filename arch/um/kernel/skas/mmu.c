@@ -49,7 +49,7 @@ int init_new_context(struct task_struct *task, struct mm_struct *mm)
 	mutex_init(&mm->context.turnstile);
 	spin_lock_init(&mm->context.sync_tlb_lock);
 
-	stack = __get_free_pages(GFP_KERNEL | __GFP_ZERO, ilog2(STUB_DATA_PAGES));
+	stack = (unsigned long)kzalloc(PAGE_SIZE << ilog2(STUB_DATA_PAGES), GFP_KERNEL);
 	if (stack == 0)
 		goto out;
 
@@ -72,7 +72,7 @@ int init_new_context(struct task_struct *task, struct mm_struct *mm)
 	return 0;
 
  out_free:
-	free_pages(new_id->stack, ilog2(STUB_DATA_PAGES));
+	kfree((void *)new_id->stack);
  out:
 	return ret;
 }
@@ -106,7 +106,7 @@ void destroy_context(struct mm_struct *mm)
 	if (using_seccomp && mmu->id.sock)
 		os_close_file(mmu->id.sock);
 
-	free_pages(mmu->id.stack, ilog2(STUB_DATA_PAGES));
+	kfree((void *)mmu->id.stack);
 }
 
 static irqreturn_t mm_sigchld_irq(int irq, void* dev)

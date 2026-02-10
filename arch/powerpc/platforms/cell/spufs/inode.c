@@ -632,8 +632,7 @@ static int spufs_parse_param(struct fs_context *fc, struct fs_parameter *param)
 
 static void spufs_exit_isolated_loader(void)
 {
-	free_pages((unsigned long) isolated_loader,
-			get_order(isolated_loader_size));
+	kfree((void *)(unsigned long) isolated_loader);
 }
 
 static void __init
@@ -653,7 +652,7 @@ spufs_init_isolated_loader(void)
 		return;
 
 	/* the loader must be align on a 16 byte boundary */
-	isolated_loader = (char *)__get_free_pages(GFP_KERNEL, get_order(size));
+	isolated_loader = kmalloc(PAGE_SIZE << get_order(size), GFP_KERNEL);
 	if (!isolated_loader)
 		return;
 

@@ -638,7 +638,7 @@ static int ftrace_profile_pages_init(struct ftrace_profile_stat *stat)
 	if (stat->pages)
 		return 0;
 
-	stat->pages = (void *)get_zeroed_page(GFP_KERNEL);
+	stat->pages = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!stat->pages)
 		return -ENOMEM;
 
@@ -660,7 +660,7 @@ static int ftrace_profile_pages_init(struct ftrace_profile_stat *stat)
 	pages = DIV_ROUND_UP(functions, PROFILES_PER_PAGE);
 
 	for (i = 1; i < pages; i++) {
-		pg->next = (void *)get_zeroed_page(GFP_KERNEL);
+		pg->next = kzalloc(PAGE_SIZE, GFP_KERNEL);
 		if (!pg->next)
 			goto out_free;
 		pg = pg->next;
@@ -674,7 +674,7 @@ static int ftrace_profile_pages_init(struct ftrace_profile_stat *stat)
 		unsigned long tmp = (unsigned long)pg;
 
 		pg = pg->next;
-		free_page(tmp);
+		kfree((void *)tmp);
 	}
 
 	stat->pages = NULL;
@@ -3860,7 +3860,7 @@ static int ftrace_allocate_records(struct ftrace_page *pg, int count,
 	order = fls(pages) - 1;
 
  again:
-	pg->records = (void *)__get_free_pages(GFP_KERNEL | __GFP_ZERO, order);
+	pg->records = kzalloc(PAGE_SIZE << (order), GFP_KERNEL);
 
 	if (!pg->records) {
 		/* if we can't allocate this size, try something smaller */
@@ -3889,7 +3889,7 @@ static void ftrace_free_pages(struct ftrace_page *pages)
 
 	while (pg) {
 		if (pg->records) {
-			free_pages((unsigned long)pg->records, pg->order);
+			kfree((void *)(unsigned long)pg->records);
 			ftrace_number_of_pages -= 1 << pg->order;
 		}
 		pages = pg->next;
@@ -7930,7 +7930,7 @@ void ftrace_release_mod(struct module *mod)
 		clear_mod_from_hashes(pg);
 
 		if (pg->records) {
-			free_pages((unsigned long)pg->records, pg->order);
+			kfree((void *)(unsigned long)pg->records);
 			ftrace_number_of_pages -= 1 << pg->order;
 		}
 		tmp_page = pg->next;

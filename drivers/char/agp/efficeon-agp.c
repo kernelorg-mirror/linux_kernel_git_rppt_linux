@@ -21,6 +21,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/slab.h>
 #include <linux/pci.h>
 #include <linux/init.h>
 #include <linux/agp_backend.h>
@@ -163,7 +164,7 @@ static int efficeon_free_gatt_table(struct agp_bridge_data *bridge)
 		unsigned long page = efficeon_private.l1_table[index];
 		if (page) {
 			efficeon_private.l1_table[index] = 0;
-			free_page(page);
+			kfree((void *)page);
 			freed++;
 		}
 		printk(KERN_DEBUG PFX "efficeon_free_gatt_table(%p, %02x, %08x)\n",
@@ -213,7 +214,7 @@ static int efficeon_create_gatt_table(struct agp_bridge_data *bridge)
 		page = efficeon_private.l1_table[index];
 		BUG_ON(page);
 
-		page = get_zeroed_page(GFP_KERNEL);
+		page = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 		if (!page) {
 			efficeon_free_gatt_table(agp_bridge);
 			return -ENOMEM;

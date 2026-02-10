@@ -33,7 +33,7 @@ static int tee_alloc_ring(struct psp_tee_device *tee, int ring_size)
 	/* We need actual physical address instead of DMA address, since
 	 * Trusted OS running on AMD Secure Processor will map this region
 	 */
-	start_addr = (void *)__get_free_pages(GFP_KERNEL, get_order(ring_size));
+	start_addr = kmalloc(PAGE_SIZE << get_order(ring_size), GFP_KERNEL);
 	if (!start_addr)
 		return -ENOMEM;
 
@@ -53,8 +53,7 @@ static void tee_free_ring(struct psp_tee_device *tee)
 	if (!rb_mgr->ring_start)
 		return;
 
-	free_pages((unsigned long)rb_mgr->ring_start,
-		   get_order(rb_mgr->ring_size));
+	kfree((void *)(unsigned long)rb_mgr->ring_start);
 
 	rb_mgr->ring_start = NULL;
 	rb_mgr->ring_size = 0;

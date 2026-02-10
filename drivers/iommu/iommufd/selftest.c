@@ -605,7 +605,7 @@ static void mock_viommu_destroy(struct iommufd_viommu *viommu)
 	if (mock_viommu->mmap_offset)
 		iommufd_viommu_destroy_mmap(&mock_viommu->core,
 					    mock_viommu->mmap_offset);
-	free_pages((unsigned long)mock_viommu->page, 1);
+	kfree(mock_viommu->page);
 	mutex_destroy(&mock_viommu->queue_mutex);
 
 	/* iommufd core frees mock_viommu and viommu */
@@ -806,7 +806,7 @@ static int mock_viommu_init(struct iommufd_viommu *viommu,
 
 		/* Allocate two pages */
 		mock_viommu->page =
-			(u32 *)__get_free_pages(GFP_KERNEL | __GFP_ZERO, 1);
+			kzalloc(PAGE_SIZE << (1), GFP_KERNEL);
 		if (!mock_viommu->page)
 			return -ENOMEM;
 
@@ -839,7 +839,7 @@ err_destroy_mmap:
 	iommufd_viommu_destroy_mmap(&mock_viommu->core,
 				    mock_viommu->mmap_offset);
 err_free_page:
-	free_pages((unsigned long)mock_viommu->page, 1);
+	kfree(mock_viommu->page);
 	return rc;
 }
 

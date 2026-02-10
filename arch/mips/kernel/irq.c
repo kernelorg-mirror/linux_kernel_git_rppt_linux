@@ -9,6 +9,7 @@
  * Copyright (C) 1994 - 2000 Ralf Baechle
  */
 #include <linux/kernel.h>
+#include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
@@ -64,7 +65,7 @@ void __init init_IRQ(void)
 	arch_init_irq();
 
 	for_each_possible_cpu(i) {
-		void *s = (void *)__get_free_pages(GFP_KERNEL, order);
+		void *s = kmalloc(PAGE_SIZE << (order), GFP_KERNEL);
 
 		irq_stack[i] = s;
 		pr_debug("CPU%d IRQ stack at 0x%p - 0x%p\n", i,

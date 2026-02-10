@@ -450,7 +450,7 @@ static void s5p_free_sg_cpy(struct s5p_aes_dev *dev, struct scatterlist **sg)
 		return;
 
 	len = ALIGN(dev->req->cryptlen, AES_BLOCK_SIZE);
-	free_pages((unsigned long)sg_virt(*sg), get_order(len));
+	kfree((void *)(unsigned long)sg_virt(*sg));
 
 	kfree(*sg);
 	*sg = NULL;
@@ -504,7 +504,7 @@ static int s5p_make_sg_cpy(struct s5p_aes_dev *dev, struct scatterlist *src,
 		return -ENOMEM;
 
 	len = ALIGN(dev->req->cryptlen, AES_BLOCK_SIZE);
-	pages = (void *)__get_free_pages(GFP_ATOMIC, get_order(len));
+	pages = kmalloc(PAGE_SIZE << get_order(len), GFP_ATOMIC);
 	if (!pages) {
 		kfree(*dst);
 		*dst = NULL;
@@ -1010,7 +1010,7 @@ static int s5p_hash_copy_sgs(struct s5p_hash_reqctx *ctx,
 	len = new_len + ctx->bufcnt;
 	pages = get_order(len);
 
-	buf = (void *)__get_free_pages(GFP_ATOMIC, pages);
+	buf = kmalloc(PAGE_SIZE << (pages), GFP_ATOMIC);
 	if (!buf) {
 		dev_err(ctx->dd->dev, "alloc pages for unaligned case.\n");
 		ctx->error = true;
@@ -1308,8 +1308,7 @@ static void s5p_hash_finish_req(struct ahash_request *req, int err)
 	unsigned long flags;
 
 	if (test_bit(HASH_FLAGS_SGS_COPIED, &dd->hash_flags))
-		free_pages((unsigned long)sg_virt(ctx->sg),
-			   get_order(ctx->sg->length));
+		kfree((void *)(unsigned long)sg_virt(ctx->sg));
 
 	if (test_bit(HASH_FLAGS_SGS_ALLOCED, &dd->hash_flags))
 		kfree(ctx->sg);

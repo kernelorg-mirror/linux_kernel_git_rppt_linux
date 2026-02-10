@@ -30,6 +30,7 @@
  * SOFTWARE.
  */
 #include <linux/dma-mapping.h>
+#include <linux/slab.h>
 #include <linux/crc32.h>
 #include <net/ip.h>
 #include <net/ipv6.h>
@@ -375,7 +376,7 @@ void qedr_mmap_free(struct rdma_user_mmap_entry *rdma_entry)
 	struct qedr_dev *dev = entry->dev;
 
 	if (entry->mmap_flag == QEDR_USER_MMAP_PHYS_PAGE)
-		free_page((unsigned long)entry->address);
+		kfree((void *)(unsigned long)entry->address);
 	else if (entry->mmap_flag == QEDR_USER_MMAP_IO_WC)
 		dev->ops->rdma_remove_user(dev->rdma_ctx, entry->dpi);
 
@@ -752,7 +753,7 @@ static int qedr_init_user_db_rec(struct ib_udata *udata,
 		return 0;
 
 	/* Allocate a page for doorbell recovery, add to mmap */
-	q->db_rec_data = (void *)get_zeroed_page(GFP_USER);
+	q->db_rec_data = kzalloc(PAGE_SIZE, GFP_USER);
 	if (!q->db_rec_data) {
 		DP_ERR(dev, "get_zeroed_page failed\n");
 		return -ENOMEM;
@@ -779,7 +780,7 @@ err_free_entry:
 	kfree(entry);
 
 err_free_db_data:
-	free_page((unsigned long)q->db_rec_data);
+	kfree((void *)(unsigned long)q->db_rec_data);
 	q->db_rec_data = NULL;
 	return -ENOMEM;
 }

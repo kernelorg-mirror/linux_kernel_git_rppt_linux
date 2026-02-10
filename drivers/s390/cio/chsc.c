@@ -931,12 +931,12 @@ static int cub_alloc(struct channel_subsystem *css)
 	int i;
 
 	for (i = 0; i < CSS_NUM_CUB_PAGES; i++) {
-		css->cub[i] = (void *)get_zeroed_page(GFP_KERNEL | GFP_DMA);
+		css->cub[i] = kzalloc(PAGE_SIZE, GFP_KERNEL | GFP_DMA);
 		if (!css->cub[i])
 			return -ENOMEM;
 	}
 	for (i = 0; i < CSS_NUM_ECUB_PAGES; i++) {
-		css->ecub[i] = (void *)get_zeroed_page(GFP_KERNEL);
+		css->ecub[i] = kzalloc(PAGE_SIZE, GFP_KERNEL);
 		if (!css->ecub[i])
 			return -ENOMEM;
 	}
@@ -949,11 +949,11 @@ static void cub_free(struct channel_subsystem *css)
 	int i;
 
 	for (i = 0; i < CSS_NUM_CUB_PAGES; i++) {
-		free_page((unsigned long)css->cub[i]);
+		kfree((void *)(unsigned long)css->cub[i]);
 		css->cub[i] = NULL;
 	}
 	for (i = 0; i < CSS_NUM_ECUB_PAGES; i++) {
-		free_page((unsigned long)css->ecub[i]);
+		kfree((void *)(unsigned long)css->ecub[i]);
 		css->ecub[i] = NULL;
 	}
 }
@@ -1142,8 +1142,8 @@ int __init chsc_init(void)
 {
 	int ret;
 
-	sei_page = (void *)get_zeroed_page(GFP_KERNEL);
-	chsc_page = (void *)get_zeroed_page(GFP_KERNEL);
+	sei_page = kzalloc(PAGE_SIZE, GFP_KERNEL);
+	chsc_page = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!sei_page || !chsc_page) {
 		ret = -ENOMEM;
 		goto out_err;
@@ -1153,16 +1153,16 @@ int __init chsc_init(void)
 		goto out_err;
 	return ret;
 out_err:
-	free_page((unsigned long)chsc_page);
-	free_page((unsigned long)sei_page);
+	kfree((void *)(unsigned long)chsc_page);
+	kfree((void *)(unsigned long)sei_page);
 	return ret;
 }
 
 void __init chsc_init_cleanup(void)
 {
 	crw_unregister_handler(CRW_RSC_CSS);
-	free_page((unsigned long)chsc_page);
-	free_page((unsigned long)sei_page);
+	kfree((void *)(unsigned long)chsc_page);
+	kfree((void *)(unsigned long)sei_page);
 }
 
 int __chsc_enable_facility(struct chsc_sda_area *sda_area, int operation_code)
@@ -1463,7 +1463,7 @@ EXPORT_SYMBOL_GPL(chsc_scm_info);
  * @resume_token:	resume token for multiblock response
  * @cnc:		Boolean change-notification control
  *
- * pnso_area must be allocated by the caller with get_zeroed_page(GFP_KERNEL)
+ * pnso_area must be allocated by the caller with kzalloc(PAGE_SIZE, GFP_KERNEL)
  *
  * Returns 0 on success.
  */

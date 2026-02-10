@@ -539,7 +539,7 @@ static void *realloc_pages(void *old_memmap, int old_shift)
 {
 	void *ret;
 
-	ret = (void *)__get_free_pages(GFP_KERNEL, old_shift + 1);
+	ret = kmalloc(PAGE_SIZE << (old_shift + 1), GFP_KERNEL);
 	if (!ret)
 		goto out;
 
@@ -552,7 +552,7 @@ static void *realloc_pages(void *old_memmap, int old_shift)
 	memcpy(ret, old_memmap, PAGE_SIZE << old_shift);
 
 out:
-	free_pages((unsigned long)old_memmap, old_shift);
+	kfree((void *)(unsigned long)old_memmap);
 	return ret;
 }
 

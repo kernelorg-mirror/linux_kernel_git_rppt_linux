@@ -6,6 +6,7 @@
 #define pr_fmt(fmt) "xive-kvm: " fmt
 
 #include <linux/kernel.h>
+#include <linux/slab.h>
 #include <linux/kvm_host.h>
 #include <linux/err.h>
 #include <linux/gfp.h>
@@ -944,7 +945,7 @@ static int xive_provision_queue(struct kvm_vcpu *vcpu, u8 prio)
 		return 0;
 
 	/* Allocate the queue and retrieve infos on current node for now */
-	qpage = (__be32 *)__get_free_pages(GFP_KERNEL, xive->q_page_order);
+	qpage = kmalloc(PAGE_SIZE << (xive->q_page_order), GFP_KERNEL);
 	if (!qpage) {
 		pr_err("Failed to allocate queue %d for VCPU %d\n",
 		       prio, xc->server_num);
@@ -1843,8 +1844,7 @@ void kvmppc_xive_cleanup_vcpu(struct kvm_vcpu *vcpu)
 
 		xive_native_disable_queue(xc->vp_id, q, i);
 		if (q->qpage) {
-			free_pages((unsigned long)q->qpage,
-				   xive->q_page_order);
+			kfree((void *)(unsigned long)q->qpage);
 			q->qpage = NULL;
 		}
 	}

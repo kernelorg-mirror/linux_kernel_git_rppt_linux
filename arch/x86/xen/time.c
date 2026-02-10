@@ -449,7 +449,7 @@ static void xen_setup_vsyscall_time_info(void)
 	struct pvclock_vsyscall_time_info *ti;
 	int ret;
 
-	ti = (struct pvclock_vsyscall_time_info *)get_zeroed_page(GFP_KERNEL);
+	ti = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!ti)
 		return;
 
@@ -458,7 +458,7 @@ static void xen_setup_vsyscall_time_info(void)
 	ret = HYPERVISOR_vcpu_op(VCPUOP_register_vcpu_time_memory_area, 0, &t);
 	if (ret) {
 		pr_notice("xen: VDSO_CLOCKMODE_PVCLOCK not supported (err %d)\n", ret);
-		free_page((unsigned long)ti);
+		kfree(ti);
 		return;
 	}
 
@@ -472,7 +472,7 @@ static void xen_setup_vsyscall_time_info(void)
 		ret = HYPERVISOR_vcpu_op(VCPUOP_register_vcpu_time_memory_area,
 					 0, &t);
 		if (!ret)
-			free_page((unsigned long)ti);
+			kfree(ti);
 
 		pr_notice("xen: VDSO_CLOCKMODE_PVCLOCK not supported (tsc unstable)\n");
 		return;

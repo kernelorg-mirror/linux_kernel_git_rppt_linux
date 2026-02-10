@@ -3003,7 +3003,7 @@ static long ibmvscsis_create_command_q(struct scsi_info *vscsi, int num_cmds)
 	vscsi->cmd_q.size = pages;
 
 	vscsi->cmd_q.base_addr =
-		(struct viosrp_crq *)get_zeroed_page(GFP_KERNEL);
+		kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!vscsi->cmd_q.base_addr)
 		return -ENOMEM;
 
@@ -3013,7 +3013,7 @@ static long ibmvscsis_create_command_q(struct scsi_info *vscsi, int num_cmds)
 						vscsi->cmd_q.base_addr,
 						PAGE_SIZE, DMA_BIDIRECTIONAL);
 	if (dma_mapping_error(&vdev->dev, vscsi->cmd_q.crq_token)) {
-		free_page((unsigned long)vscsi->cmd_q.base_addr);
+		kfree((void *)(unsigned long)vscsi->cmd_q.base_addr);
 		return -ENOMEM;
 	}
 
@@ -3033,7 +3033,7 @@ static void ibmvscsis_destroy_command_q(struct scsi_info *vscsi)
 {
 	dma_unmap_single(&vscsi->dma_dev->dev, vscsi->cmd_q.crq_token,
 			 PAGE_SIZE, DMA_BIDIRECTIONAL);
-	free_page((unsigned long)vscsi->cmd_q.base_addr);
+	kfree((void *)(unsigned long)vscsi->cmd_q.base_addr);
 	vscsi->cmd_q.base_addr = NULL;
 	vscsi->state = NO_QUEUE;
 }

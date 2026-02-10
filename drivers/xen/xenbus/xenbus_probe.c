@@ -923,7 +923,7 @@ static int __init xenstored_local_init(void)
 	struct evtchn_alloc_unbound alloc_unbound;
 
 	/* Allocate Xenstore page */
-	page = get_zeroed_page(GFP_KERNEL);
+	page = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!page)
 		goto out_err;
 
@@ -945,7 +945,7 @@ static int __init xenstored_local_init(void)
 
  out_err:
 	if (page != 0)
-		free_page(page);
+		kfree((void *)page);
 	return err;
 }
 

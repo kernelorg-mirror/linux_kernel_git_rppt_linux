@@ -84,7 +84,7 @@ static int do_assign_storage(sclp_cmdw_t cmd, u16 rn)
 	struct assign_storage_sccb *sccb;
 	int rc;
 
-	sccb = (void *)get_zeroed_page(GFP_KERNEL | GFP_DMA);
+	sccb = kzalloc(PAGE_SIZE, GFP_KERNEL | GFP_DMA);
 	if (!sccb)
 		return -ENOMEM;
 	sccb->header.length = PAGE_SIZE;
@@ -103,7 +103,7 @@ static int do_assign_storage(sclp_cmdw_t cmd, u16 rn)
 		break;
 	}
 out:
-	free_page((unsigned long)sccb);
+	kfree((void *)(unsigned long)sccb);
 	return rc;
 }
 
@@ -130,7 +130,7 @@ static int sclp_attach_storage(u8 id)
 	struct attach_storage_sccb *sccb;
 	int rc, i;
 
-	sccb = (void *)get_zeroed_page(GFP_KERNEL | GFP_DMA);
+	sccb = kzalloc(PAGE_SIZE, GFP_KERNEL | GFP_DMA);
 	if (!sccb)
 		return -ENOMEM;
 	sccb->header.length = PAGE_SIZE;
@@ -152,7 +152,7 @@ static int sclp_attach_storage(u8 id)
 		break;
 	}
 out:
-	free_page((unsigned long)sccb);
+	kfree((void *)(unsigned long)sccb);
 	return rc;
 }
 
@@ -531,7 +531,7 @@ static int __init sclp_setup_memory(void)
 		insert_increment(0, 1, 0);
 	rc = sclp_init_mem();
 out:
-	free_page((unsigned long)sccb);
+	kfree((void *)(unsigned long)sccb);
 	return rc;
 }
 __initcall(sclp_setup_memory);

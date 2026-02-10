@@ -7,6 +7,7 @@
  */
 
 #include <linux/export.h>
+#include <linux/slab.h>
 #include <linux/errno.h>
 #include <linux/pagemap.h>
 #include <linux/vmalloc.h>
@@ -225,7 +226,7 @@ static void fill_stsi(struct sthyi_sctns *sctns)
 	fill_stsi_mac(sctns, sysinfo);
 	fill_stsi_par(sctns, sysinfo);
 
-	free_pages((unsigned long)sysinfo, 0);
+	kfree((void *)(unsigned long)sysinfo);
 }
 
 static void fill_diag_mac(struct sthyi_sctns *sctns,
@@ -417,7 +418,7 @@ static void fill_diag(struct sthyi_sctns *sctns, void *diag204_buf)
 	sctns->par.infpval1 |= PAR_WGHT_VLD;
 
 out:
-	free_page((unsigned long)diag224_buf);
+	kfree((void *)(unsigned long)diag224_buf);
 }
 
 static int sthyi(u64 vaddr, u64 *rc)
@@ -470,7 +471,7 @@ static int sthyi_init_cache(void)
 {
 	if (sthyi_cache.info)
 		return 0;
-	sthyi_cache.info = (void *)get_zeroed_page(GFP_KERNEL);
+	sthyi_cache.info = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!sthyi_cache.info)
 		return -ENOMEM;
 	sthyi_cache.end = jiffies - 1; /* expired */
@@ -538,7 +539,7 @@ SYSCALL_DEFINE4(s390_sthyi, unsigned long, function_code, void __user *, buffer,
 		return -EINVAL;
 	if (function_code != STHYI_FC_CP_IFL_CAP)
 		return -EOPNOTSUPP;
-	info = (void *)get_zeroed_page(GFP_KERNEL);
+	info = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!info)
 		return -ENOMEM;
 	r = sthyi_fill(info, &sthyi_rc);
@@ -551,6 +552,6 @@ SYSCALL_DEFINE4(s390_sthyi, unsigned long, function_code, void __user *, buffer,
 	if (copy_to_user(buffer, info, PAGE_SIZE))
 		r = -EFAULT;
 out:
-	free_page((unsigned long)info);
+	kfree((void *)(unsigned long)info);
 	return r;
 }

@@ -6,6 +6,7 @@
  */
 
 #include <linux/debugfs.h>
+#include <linux/slab.h>
 
 #include "main.h"
 #include "11n.h"
@@ -67,7 +68,7 @@ mwifiex_info_read(struct file *file, char __user *ubuf,
 	struct net_device *netdev = priv->netdev;
 	struct netdev_hw_addr *ha;
 	struct netdev_queue *txq;
-	unsigned long page = get_zeroed_page(GFP_KERNEL);
+	unsigned long page = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 	char *p = (char *) page, fmt[64];
 	struct mwifiex_bss_info info;
 	ssize_t ret;
@@ -137,7 +138,7 @@ mwifiex_info_read(struct file *file, char __user *ubuf,
 				      (unsigned long) p - page);
 
 free_and_exit:
-	free_page(page);
+	kfree((void *)page);
 	return ret;
 }
 
@@ -168,7 +169,7 @@ mwifiex_getlog_read(struct file *file, char __user *ubuf,
 {
 	struct mwifiex_private *priv =
 		(struct mwifiex_private *) file->private_data;
-	unsigned long page = get_zeroed_page(GFP_KERNEL);
+	unsigned long page = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 	char *p = (char *) page;
 	ssize_t ret;
 	struct mwifiex_ds_get_stats stats;
@@ -224,7 +225,7 @@ mwifiex_getlog_read(struct file *file, char __user *ubuf,
 				      (unsigned long) p - page);
 
 free_and_exit:
-	free_page(page);
+	kfree((void *)page);
 	return ret;
 }
 
@@ -247,7 +248,7 @@ mwifiex_histogram_read(struct file *file, char __user *ubuf,
 	ssize_t ret;
 	struct mwifiex_histogram_data *phist_data;
 	int i, value;
-	unsigned long page = get_zeroed_page(GFP_KERNEL);
+	unsigned long page = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 	char *p = (char *)page;
 
 	if (!p)
@@ -313,7 +314,7 @@ mwifiex_histogram_read(struct file *file, char __user *ubuf,
 				      (unsigned long)p - page);
 
 free_and_exit:
-	free_page(page);
+	kfree((void *)page);
 	return ret;
 }
 
@@ -383,7 +384,7 @@ mwifiex_debug_read(struct file *file, char __user *ubuf,
 {
 	struct mwifiex_private *priv =
 		(struct mwifiex_private *) file->private_data;
-	unsigned long page = get_zeroed_page(GFP_KERNEL);
+	unsigned long page = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 	char *p = (char *) page;
 	ssize_t ret;
 
@@ -400,7 +401,7 @@ mwifiex_debug_read(struct file *file, char __user *ubuf,
 				      (unsigned long) p - page);
 
 free_and_exit:
-	free_page(page);
+	kfree((void *)page);
 	return ret;
 }
 
@@ -457,7 +458,7 @@ mwifiex_regrdwr_read(struct file *file, char __user *ubuf,
 {
 	struct mwifiex_private *priv =
 		(struct mwifiex_private *) file->private_data;
-	unsigned long addr = get_zeroed_page(GFP_KERNEL);
+	unsigned long addr = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 	char *buf = (char *) addr;
 	int pos = 0, ret = 0;
 	u32 reg_value;
@@ -497,7 +498,7 @@ mwifiex_regrdwr_read(struct file *file, char __user *ubuf,
 	ret = simple_read_from_buffer(ubuf, count, ppos, buf, pos);
 
 done:
-	free_page(addr);
+	kfree((void *)addr);
 	return ret;
 }
 
@@ -511,7 +512,7 @@ mwifiex_debug_mask_read(struct file *file, char __user *ubuf,
 {
 	struct mwifiex_private *priv =
 		(struct mwifiex_private *)file->private_data;
-	unsigned long page = get_zeroed_page(GFP_KERNEL);
+	unsigned long page = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 	char *buf = (char *)page;
 	size_t ret = 0;
 	int pos = 0;
@@ -523,7 +524,7 @@ mwifiex_debug_mask_read(struct file *file, char __user *ubuf,
 			priv->adapter->debug_mask);
 	ret = simple_read_from_buffer(ubuf, count, ppos, buf, pos);
 
-	free_page(page);
+	kfree((void *)page);
 	return ret;
 }
 
@@ -652,7 +653,7 @@ mwifiex_memrw_read(struct file *file, char __user *ubuf,
 		   size_t count, loff_t *ppos)
 {
 	struct mwifiex_private *priv = (void *)file->private_data;
-	unsigned long addr = get_zeroed_page(GFP_KERNEL);
+	unsigned long addr = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 	char *buf = (char *)addr;
 	int ret, pos = 0;
 
@@ -663,7 +664,7 @@ mwifiex_memrw_read(struct file *file, char __user *ubuf,
 			priv->mem_rw.value);
 	ret = simple_read_from_buffer(ubuf, count, ppos, buf, pos);
 
-	free_page(addr);
+	kfree((void *)addr);
 	return ret;
 }
 
@@ -719,7 +720,7 @@ mwifiex_rdeeprom_read(struct file *file, char __user *ubuf,
 {
 	struct mwifiex_private *priv =
 		(struct mwifiex_private *) file->private_data;
-	unsigned long addr = get_zeroed_page(GFP_KERNEL);
+	unsigned long addr = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 	char *buf = (char *) addr;
 	int pos, ret, i;
 	u8 value[MAX_EEPROM_DATA];
@@ -749,7 +750,7 @@ mwifiex_rdeeprom_read(struct file *file, char __user *ubuf,
 done:
 	ret = simple_read_from_buffer(ubuf, count, ppos, buf, pos);
 out_free:
-	free_page(addr);
+	kfree((void *)addr);
 	return ret;
 }
 
@@ -820,7 +821,7 @@ mwifiex_hscfg_read(struct file *file, char __user *ubuf,
 		   size_t count, loff_t *ppos)
 {
 	struct mwifiex_private *priv = (void *)file->private_data;
-	unsigned long addr = get_zeroed_page(GFP_KERNEL);
+	unsigned long addr = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 	char *buf = (char *)addr;
 	int pos, ret;
 	struct mwifiex_ds_hs_cfg hscfg;
@@ -836,7 +837,7 @@ mwifiex_hscfg_read(struct file *file, char __user *ubuf,
 
 	ret = simple_read_from_buffer(ubuf, count, ppos, buf, pos);
 
-	free_page(addr);
+	kfree((void *)addr);
 	return ret;
 }
 

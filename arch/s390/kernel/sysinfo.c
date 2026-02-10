@@ -254,7 +254,7 @@ static void stsi_3_2_2(struct seq_file *m, struct sysinfo_3_2_2 *info)
 
 static int sysinfo_show(struct seq_file *m, void *v)
 {
-	void *info = (void *)get_zeroed_page(GFP_KERNEL);
+	void *info = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	int level;
 
 	if (!info)
@@ -270,7 +270,7 @@ static int sysinfo_show(struct seq_file *m, void *v)
 		stsi_2_2_2(m, info);
 	if (level >= 3)
 		stsi_3_2_2(m, info);
-	free_page((unsigned long)info);
+	kfree(info);
 	return 0;
 }
 
@@ -394,7 +394,7 @@ void s390_adjust_jiffies(void)
 	struct sysinfo_1_2_2 *info;
 	unsigned long capability;
 
-	info = (void *) get_zeroed_page(GFP_KERNEL);
+	info = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!info)
 		return;
 
@@ -427,7 +427,7 @@ void s390_adjust_jiffies(void)
 		 */
 		capability = 42;
 	loops_per_jiffy = capability * (500000/HZ);
-	free_page((unsigned long) info);
+	kfree(info);
 }
 
 /*
@@ -447,11 +447,11 @@ void calibrate_delay(void)
 #define STSI_FILE(fc, s1, s2)						       \
 static int stsi_open_##fc##_##s1##_##s2(struct inode *inode, struct file *file)\
 {									       \
-	file->private_data = (void *) get_zeroed_page(GFP_KERNEL);	       \
+	file->private_data = kzalloc(PAGE_SIZE, GFP_KERNEL);	       \
 	if (!file->private_data)					       \
 		return -ENOMEM;						       \
 	if (stsi(file->private_data, fc, s1, s2)) {			       \
-		free_page((unsigned long)file->private_data);		       \
+		kfree(file->private_data);		       \
 		file->private_data = NULL;				       \
 		return -EACCES;						       \
 	}								       \
@@ -466,7 +466,7 @@ static const struct file_operations stsi_##fc##_##s1##_##s2##_fs_ops = {       \
 
 static int stsi_release(struct inode *inode, struct file *file)
 {
-	free_page((unsigned long)file->private_data);
+	kfree(file->private_data);
 	return 0;
 }
 

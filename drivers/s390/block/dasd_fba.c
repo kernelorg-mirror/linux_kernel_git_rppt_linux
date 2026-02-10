@@ -662,7 +662,7 @@ dasd_fba_dump_sense(struct dasd_device *device, struct dasd_ccw_req * req,
 
 	dev = &device->cdev->dev;
 
-	page = (char *) get_zeroed_page(GFP_ATOMIC);
+	page = kzalloc(PAGE_SIZE, GFP_ATOMIC);
 	if (page == NULL) {
 		DBF_DEV_EVENT(DBF_WARNING, device, "%s",
 			      "No memory to dump sense data");
@@ -745,7 +745,7 @@ dasd_fba_dump_sense(struct dasd_device *device, struct dasd_ccw_req * req,
 	}
 	if (len > 0)
 		dev_err(dev, "%s", page);
-	free_page((unsigned long) page);
+	kfree((void *)(unsigned long) page);
 }
 
 static unsigned int dasd_fba_max_sectors(struct dasd_block *block)
@@ -789,7 +789,7 @@ dasd_fba_init(void)
 
 	ASCEBC(dasd_fba_discipline.ebcname, 4);
 
-	dasd_fba_zero_page = (void *)get_zeroed_page(GFP_KERNEL | GFP_DMA);
+	dasd_fba_zero_page = kzalloc(PAGE_SIZE, GFP_KERNEL | GFP_DMA);
 	if (!dasd_fba_zero_page)
 		return -ENOMEM;
 
@@ -804,7 +804,7 @@ static void __exit
 dasd_fba_cleanup(void)
 {
 	ccw_driver_unregister(&dasd_fba_driver);
-	free_page((unsigned long)dasd_fba_zero_page);
+	kfree((void *)(unsigned long)dasd_fba_zero_page);
 }
 
 module_init(dasd_fba_init);

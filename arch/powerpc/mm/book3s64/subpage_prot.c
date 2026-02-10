@@ -4,6 +4,7 @@
  */
 
 #include <linux/errno.h>
+#include <linux/slab.h>
 #include <linux/kernel.h>
 #include <linux/gfp.h>
 #include <linux/types.h>
@@ -30,7 +31,7 @@ void subpage_prot_free(struct mm_struct *mm)
 
 	for (i = 0; i < 4; ++i) {
 		if (spt->low_prot[i]) {
-			free_page((unsigned long)spt->low_prot[i]);
+			kfree((void *)(unsigned long)spt->low_prot[i]);
 			spt->low_prot[i] = NULL;
 		}
 	}
@@ -43,8 +44,8 @@ void subpage_prot_free(struct mm_struct *mm)
 		for (j = 0; j < SBP_L2_COUNT && addr < spt->maxaddr;
 		     ++j, addr += PAGE_SIZE)
 			if (p[j])
-				free_page((unsigned long)p[j]);
-		free_page((unsigned long)p);
+				kfree((void *)(unsigned long)p[j]);
+		kfree((void *)(unsigned long)p);
 	}
 	spt->maxaddr = 0;
 	kfree(spt);
@@ -238,7 +239,7 @@ SYSCALL_DEFINE3(subpage_prot, unsigned long, addr,
 		} else {
 			spm = spt->protptrs[addr >> SBP_L3_SHIFT];
 			if (!spm) {
-				spm = (u32 **)get_zeroed_page(GFP_KERNEL);
+				spm = kzalloc(PAGE_SIZE, GFP_KERNEL);
 				if (!spm)
 					goto out;
 				spt->protptrs[addr >> SBP_L3_SHIFT] = spm;
@@ -247,7 +248,7 @@ SYSCALL_DEFINE3(subpage_prot, unsigned long, addr,
 		spm += (addr >> SBP_L2_SHIFT) & (SBP_L2_COUNT - 1);
 		spp = *spm;
 		if (!spp) {
-			spp = (u32 *)get_zeroed_page(GFP_KERNEL);
+			spp = kzalloc(PAGE_SIZE, GFP_KERNEL);
 			if (!spp)
 				goto out;
 			*spm = spp;

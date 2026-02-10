@@ -62,7 +62,7 @@ static int hw_queue_ctor(struct hw_queue *queue, const u32 nr_of_pages,
 	 */
 	i = 0;
 	while (i < nr_of_pages) {
-		u8 *kpage = (u8 *)get_zeroed_page(GFP_KERNEL);
+		u8 *kpage = kzalloc(PAGE_SIZE, GFP_KERNEL);
 		if (!kpage)
 			goto out_nomem;
 		for (k = 0; k < pages_per_kpage && i < nr_of_pages; k++) {
@@ -82,7 +82,7 @@ out_nomem:
 	for (i = 0; i < nr_of_pages; i += pages_per_kpage) {
 		if (!(queue->queue_pages)[i])
 			break;
-		free_page((unsigned long)(queue->queue_pages)[i]);
+		kfree((void *)(unsigned long)(queue->queue_pages)[i]);
 	}
 	return -ENOMEM;
 }
@@ -100,7 +100,7 @@ static void hw_queue_dtor(struct hw_queue *queue)
 	nr_pages = queue->queue_length / queue->pagesize;
 
 	for (i = 0; i < nr_pages; i += pages_per_kpage)
-		free_page((unsigned long)(queue->queue_pages)[i]);
+		kfree((void *)(unsigned long)(queue->queue_pages)[i]);
 
 	kfree(queue->queue_pages);
 }
@@ -863,7 +863,7 @@ int ehea_reg_kernel_mr(struct ehea_adapter *adapter, struct ehea_mr *mr)
 
 	unsigned long top;
 
-	pt = (void *)get_zeroed_page(GFP_KERNEL);
+	pt = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!pt) {
 		pr_err("no mem\n");
 		ret = -ENOMEM;
@@ -907,7 +907,7 @@ int ehea_reg_kernel_mr(struct ehea_adapter *adapter, struct ehea_mr *mr)
 	mr->adapter = adapter;
 	ret = 0;
 out:
-	free_page((unsigned long)pt);
+	kfree((void *)(unsigned long)pt);
 	return ret;
 }
 
@@ -975,7 +975,7 @@ u64 ehea_error_data(struct ehea_adapter *adapter, u64 res_handle,
 	u64 *rblock;
 	u64 type = 0;
 
-	rblock = (void *)get_zeroed_page(GFP_KERNEL);
+	rblock = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!rblock) {
 		pr_err("Cannot allocate rblock memory\n");
 		goto out;
@@ -993,7 +993,7 @@ u64 ehea_error_data(struct ehea_adapter *adapter, u64 res_handle,
 	} else
 		pr_err("Error data could not be fetched: %llX\n", res_handle);
 
-	free_page((unsigned long)rblock);
+	kfree((void *)(unsigned long)rblock);
 out:
 	return type;
 }

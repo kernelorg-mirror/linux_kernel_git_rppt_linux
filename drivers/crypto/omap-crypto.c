@@ -7,6 +7,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/slab.h>
 #include <linux/kernel.h>
 #include <linux/scatterlist.h>
 #include <crypto/scatterwalk.h>
@@ -62,7 +63,7 @@ static int omap_crypto_copy_sgs(int total, int bs, struct scatterlist **sg,
 	new_len = ALIGN(total, bs);
 	pages = get_order(new_len);
 
-	buf = (void *)__get_free_pages(GFP_ATOMIC, pages);
+	buf = kmalloc(PAGE_SIZE << (pages), GFP_ATOMIC);
 	if (!buf) {
 		pr_err("%s: Couldn't allocate pages for unaligned cases.\n",
 		       __func__);
@@ -214,7 +215,7 @@ void omap_crypto_cleanup(struct scatterlist *sg, struct scatterlist *orig,
 		omap_crypto_copy_data(sg, orig, offset, len);
 
 	if (flags & OMAP_CRYPTO_DATA_COPIED)
-		free_pages((unsigned long)buf, pages);
+		kfree((void *)(unsigned long)buf);
 	else if (flags & OMAP_CRYPTO_SG_COPIED)
 		kfree(sg);
 }

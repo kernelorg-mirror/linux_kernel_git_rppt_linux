@@ -5,6 +5,7 @@
  * Copyright (c) 2006 Andriy Skulysh <askulsyh@gmail.com>
  */
 #include <linux/init.h>
+#include <linux/slab.h>
 #include <linux/suspend.h>
 #include <linux/errno.h>
 #include <linux/time.h>
@@ -66,7 +67,7 @@ static void pm_enter(void)
 
 	/* set interrupt handler */
 	asm volatile("stc vbr, %0" : "=r" (vbr_old));
-	vbr_new = get_zeroed_page(GFP_ATOMIC);
+	vbr_new = (u32)kzalloc(PAGE_SIZE, GFP_ATOMIC);
 	udelay(50);
 	memcpy((void*)(vbr_new + INTR_OFFSET),
 	       &wakeup_start, &wakeup_end - &wakeup_start);
@@ -79,7 +80,7 @@ static void pm_enter(void)
 
 	asm volatile("ldc %0, vbr" : : "r" (vbr_old));
 
-	free_page(vbr_new);
+	kfree((void *)vbr_new);
 
 	/* enable PLL1 */
 	frqcr = __raw_readw(FRQCR);

@@ -8,6 +8,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/errno.h>
 #include <linux/init.h>
@@ -193,7 +194,7 @@ static ssize_t get_best_energy_list(char *page, int activate)
 	u32 *buf_page;
 	char *s = page;
 
-	buf_page = (u32 *) get_zeroed_page(GFP_KERNEL);
+	buf_page = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!buf_page)
 		return -ENOMEM;
 
@@ -204,7 +205,7 @@ static ssize_t get_best_energy_list(char *page, int activate)
 	rc = plpar_hcall9(H_BEST_ENERGY, retbuf, flags, 0, __pa(buf_page),
 				0, 0, 0, 0, 0, 0);
 	if (rc != H_SUCCESS) {
-		free_page((unsigned long) buf_page);
+		kfree((void *)(unsigned long) buf_page);
 		return -EINVAL;
 	}
 
@@ -220,7 +221,7 @@ static ssize_t get_best_energy_list(char *page, int activate)
 		s += sprintf(s, "\n");
 	}
 
-	free_page((unsigned long) buf_page);
+	kfree((void *)(unsigned long) buf_page);
 	return s-page;
 }
 

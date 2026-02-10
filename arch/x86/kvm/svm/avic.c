@@ -15,6 +15,7 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/kvm_types.h>
+#include <linux/slab.h>
 #include <linux/hashtable.h>
 #include <linux/amd-iommu.h>
 #include <linux/kvm_host.h>
@@ -319,9 +320,8 @@ void avic_vm_destroy(struct kvm *kvm)
 	if (!enable_apicv)
 		return;
 
-	free_page((unsigned long)kvm_svm->avic_logical_id_table);
-	free_pages((unsigned long)kvm_svm->avic_physical_id_table,
-		   avic_get_physical_id_table_order(kvm));
+	kfree((void *)(unsigned long)kvm_svm->avic_logical_id_table);
+	kfree((void *)(unsigned long)kvm_svm->avic_physical_id_table);
 
 	spin_lock_irqsave(&svm_vm_data_hash_lock, flags);
 	hash_del(&kvm_svm->hnode);
@@ -339,7 +339,7 @@ int avic_vm_init(struct kvm *kvm)
 	if (!enable_apicv)
 		return 0;
 
-	kvm_svm->avic_logical_id_table = (void *)get_zeroed_page(GFP_KERNEL_ACCOUNT);
+	kvm_svm->avic_logical_id_table = kzalloc(PAGE_SIZE, GFP_KERNEL_ACCOUNT);
 	if (!kvm_svm->avic_logical_id_table)
 		goto free_avic;
 

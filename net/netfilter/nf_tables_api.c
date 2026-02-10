@@ -6,6 +6,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/slab.h>
 #include <linux/init.h>
 #include <linux/list.h>
 #include <linux/skbuff.h>
@@ -4849,7 +4850,7 @@ static int nf_tables_set_alloc_name(struct nft_ctx *ctx, struct nft_set *set,
 		if (strnlen(name, NFT_SET_MAX_ANONLEN) >= NFT_SET_MAX_ANONLEN)
 			return -EINVAL;
 
-		inuse = (unsigned long *)get_zeroed_page(GFP_KERNEL);
+		inuse = kzalloc(PAGE_SIZE, GFP_KERNEL);
 		if (inuse == NULL)
 			return -ENOMEM;
 cont:
@@ -4872,7 +4873,7 @@ cont:
 			memset(inuse, 0, PAGE_SIZE);
 			goto cont;
 		}
-		free_page((unsigned long)inuse);
+		kfree((void *)(unsigned long)inuse);
 	}
 
 	set->name = kasprintf(GFP_KERNEL_ACCOUNT, name, min + n);

@@ -50,7 +50,7 @@ EXPORT_SYMBOL(cpu_tasks);
 
 void free_stack(unsigned long stack, int order)
 {
-	free_pages(stack, order);
+	kfree((void *)stack);
 }
 
 unsigned long alloc_stack(int order, int atomic)
@@ -60,7 +60,7 @@ unsigned long alloc_stack(int order, int atomic)
 
 	if (atomic)
 		flags = GFP_ATOMIC;
-	page = __get_free_pages(flags, order);
+	page = (unsigned long)kmalloc(PAGE_SIZE << (order), flags);
 
 	return page;
 }

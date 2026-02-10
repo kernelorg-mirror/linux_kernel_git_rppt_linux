@@ -12,6 +12,7 @@
 #include "bset.h"
 
 #include <linux/console.h>
+#include <linux/slab.h>
 #include <linux/sched/clock.h>
 #include <linux/random.h>
 #include <linux/prefetch.h>
@@ -296,16 +297,14 @@ void bch_btree_keys_free(struct btree_keys *b)
 	if (bset_prev_bytes(b) < PAGE_SIZE)
 		kfree(t->prev);
 	else
-		free_pages((unsigned long) t->prev,
-			   get_order(bset_prev_bytes(b)));
+		kfree((void *)(unsigned long) t->prev);
 
 	if (bset_tree_bytes(b) < PAGE_SIZE)
 		kfree(t->tree);
 	else
-		free_pages((unsigned long) t->tree,
-			   get_order(bset_tree_bytes(b)));
+		kfree((void *)(unsigned long) t->tree);
 
-	free_pages((unsigned long) t->data, b->page_order);
+	kfree((void *)(unsigned long) t->data);
 
 	t->prev = NULL;
 	t->tree = NULL;
@@ -322,19 +321,19 @@ int bch_btree_keys_alloc(struct btree_keys *b,
 
 	b->page_order = page_order;
 
-	t->data = (void *) __get_free_pages(__GFP_COMP|gfp, b->page_order);
+	t->data = kmalloc(PAGE_SIZE << (b->page_order), __GFP_COMP|gfp);
 	if (!t->data)
 		goto err;
 
 	t->tree = bset_tree_bytes(b) < PAGE_SIZE
 		? kmalloc(bset_tree_bytes(b), gfp)
-		: (void *) __get_free_pages(gfp, get_order(bset_tree_bytes(b)));
+		: kmalloc(PAGE_SIZE << (get_order(bset_tree_bytes(b), gfp)));
 	if (!t->tree)
 		goto err;
 
 	t->prev = bset_prev_bytes(b) < PAGE_SIZE
 		? kmalloc(bset_prev_bytes(b), gfp)
-		: (void *) __get_free_pages(gfp, get_order(bset_prev_bytes(b)));
+		: kmalloc(PAGE_SIZE << (get_order(bset_prev_bytes(b), gfp)));
 	if (!t->prev)
 		goto err;
 
@@ -1281,7 +1280,7 @@ static void __btree_sort(struct btree_keys *b, struct btree_iter *iter,
 	if (used_mempool)
 		mempool_free(virt_to_page(out), &state->pool);
 	else
-		free_pages((unsigned long) out, order);
+		kfree((void *)(unsigned long) out);
 
 	bch_bset_build_written_tree(b);
 

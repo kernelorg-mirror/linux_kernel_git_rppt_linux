@@ -37,7 +37,6 @@ struct spufs_sb_info {
 
 static struct kmem_cache *spufs_inode_cache;
 char *isolated_loader;
-static int isolated_loader_size;
 
 static struct spufs_sb_info *spufs_get_sb_info(struct super_block *sb)
 {
@@ -632,8 +631,7 @@ static int spufs_parse_param(struct fs_context *fc, struct fs_parameter *param)
 
 static void spufs_exit_isolated_loader(void)
 {
-	free_pages((unsigned long) isolated_loader,
-			get_order(isolated_loader_size));
+	kfree(isolated_loader);
 }
 
 static void __init
@@ -653,11 +651,10 @@ spufs_init_isolated_loader(void)
 		return;
 
 	/* the loader must be align on a 16 byte boundary */
-	isolated_loader = (char *)__get_free_pages(GFP_KERNEL, get_order(size));
+	isolated_loader = kmalloc(PAGE_SIZE << get_order(size), GFP_KERNEL);
 	if (!isolated_loader)
 		return;
 
-	isolated_loader_size = size;
 	memcpy(isolated_loader, loader, size);
 	printk(KERN_INFO "spufs: SPU isolation mode enabled\n");
 }

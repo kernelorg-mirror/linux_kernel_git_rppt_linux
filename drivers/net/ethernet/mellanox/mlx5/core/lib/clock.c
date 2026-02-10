@@ -31,6 +31,7 @@
  */
 
 #include <linux/clocksource.h>
+#include <linux/slab.h>
 #include <linux/highmem.h>
 #include <linux/log2.h>
 #include <linux/ptp_clock_kernel.h>
@@ -1266,7 +1267,7 @@ static void mlx5_init_clock_info(struct mlx5_core_dev *mdev)
 	struct mlx5_ib_clock_info *info;
 	struct mlx5_timer *timer;
 
-	mdev->clock_info = (struct mlx5_ib_clock_info *)get_zeroed_page(GFP_KERNEL);
+	mdev->clock_info = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!mdev->clock_info) {
 		mlx5_core_warn(mdev, "Failed to allocate IB clock info page\n");
 		return;
@@ -1396,7 +1397,7 @@ static void mlx5_destroy_clock_dev(struct mlx5_core_dev *mdev)
 	}
 
 	if (mdev->clock_info) {
-		free_page((unsigned long)mdev->clock_info);
+		kfree((void *)(unsigned long)mdev->clock_info);
 		mdev->clock_info = NULL;
 	}
 

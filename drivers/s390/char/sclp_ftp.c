@@ -93,7 +93,7 @@ static int sclp_ftp_et7(const struct hmcdrv_ftp_cmdspec *ftp)
 	int rc;
 
 	req = kzalloc_obj(*req);
-	sccb = (void *) get_zeroed_page(GFP_KERNEL | GFP_DMA);
+	sccb = kzalloc(PAGE_SIZE, GFP_KERNEL | GFP_DMA);
 	if (!req || !sccb) {
 		rc = -ENOMEM;
 		goto out_free;
@@ -155,7 +155,7 @@ static int sclp_ftp_et7(const struct hmcdrv_ftp_cmdspec *ftp)
 	}
 
 out_free:
-	free_page((unsigned long) sccb);
+	kfree(sccb);
 	kfree(req);
 	return rc;
 }
@@ -241,7 +241,7 @@ static struct sclp_register sclp_ftp_event = {
 int sclp_ftp_startup(void)
 {
 #ifdef DEBUG
-	unsigned long info;
+	struct sysinfo_2_2_2 *info222;
 #endif
 	int rc;
 
@@ -250,11 +250,9 @@ int sclp_ftp_startup(void)
 		return rc;
 
 #ifdef DEBUG
-	info = get_zeroed_page(GFP_KERNEL);
+	info222 = kzalloc(PAGE_SIZE, GFP_KERNEL);
 
-	if (info != 0) {
-		struct sysinfo_2_2_2 *info222 = (struct sysinfo_2_2_2 *)info;
-
+	if (info222) {
 		if (!stsi(info222, 2, 2, 2)) { /* get SYSIB 2.2.2 */
 			info222->name[sizeof(info222->name) - 1] = '\0';
 			EBCASC_500(info222->name, sizeof(info222->name) - 1);
@@ -262,7 +260,7 @@ int sclp_ftp_startup(void)
 				 info222->lpar_number, info222->name);
 		}
 
-		free_page(info);
+		kfree(info222);
 	}
 #endif	/* DEBUG */
 	return 0;

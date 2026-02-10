@@ -10,6 +10,7 @@
 #define pr_fmt(fmt) "zpci: " fmt
 
 #include <linux/kernel.h>
+#include <linux/slab.h>
 #include <linux/sprintf.h>
 #include <linux/pci.h>
 
@@ -118,7 +119,7 @@ int zpci_report_status(struct zpci_dev *zdev, const char *operation, const char 
 	if (prot_virt_guest)
 		return -ENODATA;
 
-	report = (void *)get_zeroed_page(GFP_KERNEL);
+	report = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!report)
 		return -ENOMEM;
 	if (zdev->zbus->bus)
@@ -151,7 +152,7 @@ int zpci_report_status(struct zpci_dev *zdev, const char *operation, const char 
 	else
 		pr_info("Reported PCI device status\n");
 
-	free_page((unsigned long)report);
+	kfree((void *)(unsigned long)report);
 
 	return ret;
 }

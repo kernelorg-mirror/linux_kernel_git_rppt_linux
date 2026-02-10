@@ -313,8 +313,8 @@ static int atmel_tdes_buff_init(struct atmel_tdes_dev *dd)
 {
 	int err = -ENOMEM;
 
-	dd->buf_in = (void *)__get_free_pages(GFP_KERNEL, 0);
-	dd->buf_out = (void *)__get_free_pages(GFP_KERNEL, 0);
+	dd->buf_in = kmalloc(PAGE_SIZE, GFP_KERNEL);
+	dd->buf_out = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	dd->buflen = PAGE_SIZE;
 	dd->buflen &= ~(DES_BLOCK_SIZE - 1);
 
@@ -347,8 +347,8 @@ err_map_out:
 		DMA_TO_DEVICE);
 err_map_in:
 err_alloc:
-	free_page((unsigned long)dd->buf_out);
-	free_page((unsigned long)dd->buf_in);
+	kfree((void *)(unsigned long)dd->buf_out);
+	kfree((void *)(unsigned long)dd->buf_in);
 	return err;
 }
 
@@ -358,8 +358,8 @@ static void atmel_tdes_buff_cleanup(struct atmel_tdes_dev *dd)
 			 DMA_FROM_DEVICE);
 	dma_unmap_single(dd->dev, dd->dma_addr_in, dd->buflen,
 		DMA_TO_DEVICE);
-	free_page((unsigned long)dd->buf_out);
-	free_page((unsigned long)dd->buf_in);
+	kfree((void *)(unsigned long)dd->buf_out);
+	kfree((void *)(unsigned long)dd->buf_in);
 }
 
 static int atmel_tdes_crypt_pdc(struct atmel_tdes_dev *dd,

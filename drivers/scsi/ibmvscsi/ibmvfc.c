@@ -882,7 +882,7 @@ static void ibmvfc_free_queue(struct ibmvfc_host *vhost,
 	struct device *dev = vhost->dev;
 
 	dma_unmap_single(dev, queue->msg_token, PAGE_SIZE, DMA_BIDIRECTIONAL);
-	free_page((unsigned long)queue->msgs.handle);
+	kfree(queue->msgs.handle);
 	queue->msgs.handle = NULL;
 
 	ibmvfc_free_event_pool(vhost, queue);
@@ -5834,7 +5834,7 @@ static int ibmvfc_alloc_queue(struct ibmvfc_host *vhost,
 		return -ENOMEM;
 	}
 
-	queue->msgs.handle = (void *)get_zeroed_page(GFP_KERNEL);
+	queue->msgs.handle = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!queue->msgs.handle)
 		return -ENOMEM;
 
@@ -5842,7 +5842,7 @@ static int ibmvfc_alloc_queue(struct ibmvfc_host *vhost,
 					  DMA_BIDIRECTIONAL);
 
 	if (dma_mapping_error(dev, queue->msg_token)) {
-		free_page((unsigned long)queue->msgs.handle);
+		kfree(queue->msgs.handle);
 		queue->msgs.handle = NULL;
 		return -ENOMEM;
 	}

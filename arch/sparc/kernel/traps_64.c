@@ -10,6 +10,7 @@
  */
 
 #include <linux/cpu.h>
+#include <linux/slab.h>
 #include <linux/extable.h>
 #include <linux/sched/mm.h>
 #include <linux/sched/debug.h>
@@ -902,8 +903,7 @@ void __init cheetah_ecache_flush_init(void)
 		if ((PAGE_SIZE << order) >= sz)
 			break;
 	}
-	cheetah_error_log = (struct cheetah_err_info *)
-		__get_free_pages(GFP_KERNEL, order);
+	cheetah_error_log = kmalloc(PAGE_SIZE << (order), GFP_KERNEL);
 	if (!cheetah_error_log) {
 		prom_printf("cheetah_ecache_flush_init: Failed to allocate "
 			    "error logging scoreboard (%d bytes).\n", sz);

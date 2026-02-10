@@ -689,7 +689,7 @@ static dma_cookie_t nbpf_tx_submit(struct dma_async_tx_descriptor *tx)
 static int nbpf_desc_page_alloc(struct nbpf_channel *chan)
 {
 	struct dma_chan *dchan = &chan->dma_chan;
-	struct nbpf_desc_page *dpage = (void *)get_zeroed_page(GFP_KERNEL | GFP_DMA);
+	struct nbpf_desc_page *dpage = kzalloc(PAGE_SIZE, GFP_KERNEL | GFP_DMA);
 	struct nbpf_link_desc *ldesc;
 	struct nbpf_link_reg *hwdesc;
 	struct nbpf_desc *desc;
@@ -1093,7 +1093,7 @@ static void nbpf_free_chan_resources(struct dma_chan *dchan)
 		     i++, ldesc++)
 			dma_unmap_single(dchan->device->dev, ldesc->hwdesc_dma_addr,
 					 sizeof(*ldesc->hwdesc), DMA_TO_DEVICE);
-		free_page((unsigned long)dpage);
+		kfree((void *)(unsigned long)dpage);
 	}
 }
 

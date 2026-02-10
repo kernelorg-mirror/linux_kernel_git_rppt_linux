@@ -83,6 +83,7 @@
 #define SCSI_NCR_DEBUG_FLAGS	(0)
 
 #include <linux/blkdev.h>
+#include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/errno.h>
@@ -351,7 +352,7 @@ static void __m_free(m_pool_s *mp, void *ptr, int size, char *name)
 
 static m_addr_t ___mp0_getp(m_pool_s *mp)
 {
-	m_addr_t m = __get_free_pages(MEMO_GFP_FLAGS, MEMO_PAGE_ORDER);
+	m_addr_t m = (m_addr_t)kmalloc(PAGE_SIZE << (MEMO_PAGE_ORDER), MEMO_GFP_FLAGS);
 	if (m)
 		++mp->nump;
 	return m;
@@ -359,7 +360,7 @@ static m_addr_t ___mp0_getp(m_pool_s *mp)
 
 static void ___mp0_freep(m_pool_s *mp, m_addr_t m)
 {
-	free_pages(m, MEMO_PAGE_ORDER);
+	kfree((void *)m);
 	--mp->nump;
 }
 

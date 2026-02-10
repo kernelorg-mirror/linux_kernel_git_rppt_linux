@@ -308,8 +308,7 @@ static void tracing_map_array_free(struct tracing_map_array *a)
 	for (i = 0; i < a->n_pages; i++) {
 		if (!a->pages[i])
 			break;
-		kmemleak_free(a->pages[i]);
-		free_page((unsigned long)a->pages[i]);
+		kfree(a->pages[i]);
 	}
 
 	kfree(a->pages);
@@ -341,10 +340,9 @@ static struct tracing_map_array *tracing_map_array_alloc(unsigned int n_elts,
 		goto free;
 
 	for (i = 0; i < a->n_pages; i++) {
-		a->pages[i] = (void *)get_zeroed_page(GFP_KERNEL);
+		a->pages[i] = kzalloc(PAGE_SIZE, GFP_KERNEL);
 		if (!a->pages[i])
 			goto free;
-		kmemleak_alloc(a->pages[i], PAGE_SIZE, 1, GFP_KERNEL);
 	}
  out:
 	return a;

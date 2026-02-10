@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0+
 // Copyright 2017 IBM Corp.
 #include <linux/sched/mm.h>
+#include <linux/slab.h>
 #include <linux/mutex.h>
 #include <linux/mm.h>
 #include <linux/mm_types.h>
@@ -354,8 +355,7 @@ static int alloc_spa(struct pci_dev *dev, struct ocxl_link *link)
 	INIT_WORK(&spa->xsl_fault.fault_work, xsl_fault_handler_bh);
 
 	spa->spa_order = SPA_SPA_SIZE_LOG - PAGE_SHIFT;
-	spa->spa_mem = (struct ocxl_process_element *)
-		__get_free_pages(GFP_KERNEL | __GFP_ZERO, spa->spa_order);
+	spa->spa_mem = (struct ocxl_process_element *)kzalloc(PAGE_SIZE << (spa->spa_order), GFP_KERNEL);
 	if (!spa->spa_mem) {
 		dev_err(&dev->dev, "Can't allocate Shared Process Area\n");
 		kfree(spa);
@@ -376,7 +376,7 @@ static void free_spa(struct ocxl_link *link)
 		link->dev);
 
 	if (spa && spa->spa_mem) {
-		free_pages((unsigned long) spa->spa_mem, spa->spa_order);
+		kfree((void *)(unsigned long) spa->spa_mem);
 		kfree(spa);
 		link->spa = NULL;
 	}

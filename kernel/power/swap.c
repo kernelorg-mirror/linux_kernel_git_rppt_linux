@@ -387,7 +387,7 @@ sync_io:
 static void release_swap_writer(struct swap_map_handle *handle)
 {
 	if (handle->cur)
-		free_page((unsigned long)handle->cur);
+		kfree((void *)(unsigned long)handle->cur);
 	handle->cur = NULL;
 }
 
@@ -401,7 +401,7 @@ static int get_swap_writer(struct swap_map_handle *handle)
 			pr_err("Cannot find swap device, try swapon -a\n");
 		return ret;
 	}
-	handle->cur = (struct swap_map_page *)get_zeroed_page(GFP_KERNEL);
+	handle->cur = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!handle->cur) {
 		ret = -ENOMEM;
 		goto err_close;
@@ -913,7 +913,7 @@ out_clean:
 		vfree(data);
 	}
 	if (page)
-		free_page((unsigned long)page);
+		kfree((void *)(unsigned long)page);
 
 	return ret;
 }
@@ -992,7 +992,7 @@ static void release_swap_reader(struct swap_map_handle *handle)
 
 	while (handle->maps) {
 		if (handle->maps->map)
-			free_page((unsigned long)handle->maps->map);
+			kfree((void *)(unsigned long)handle->maps->map);
 		tmp = handle->maps;
 		handle->maps = handle->maps->next;
 		kfree(tmp);
@@ -1066,7 +1066,7 @@ static int swap_read_page(struct swap_map_handle *handle, void *buf,
 		return error;
 	if (++handle->k >= MAP_PAGE_ENTRIES) {
 		handle->k = 0;
-		free_page((unsigned long)handle->maps->map);
+		kfree((void *)(unsigned long)handle->maps->map);
 		tmp = handle->maps;
 		handle->maps = handle->maps->next;
 		kfree(tmp);
@@ -1498,7 +1498,7 @@ out_finish:
 out_clean:
 	hib_finish_batch(&hb);
 	for (i = 0; i < ring_size; i++)
-		free_page((unsigned long)page[i]);
+		kfree((void *)(unsigned long)page[i]);
 	free_crc_data(crc);
 	if (data) {
 		for (thr = 0; thr < nr_threads; thr++) {

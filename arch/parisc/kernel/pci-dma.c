@@ -19,6 +19,7 @@
 */
 
 #include <linux/init.h>
+#include <linux/slab.h>
 #include <linux/gfp.h>
 #include <linux/mm.h>
 #include <linux/proc_fs.h>
@@ -411,7 +412,7 @@ void *arch_dma_alloc(struct device *dev, size_t size,
 	order = get_order(size);
 	size = 1 << (order + PAGE_SHIFT);
 	vaddr = pcxl_alloc_range(size);
-	paddr = __get_free_pages(gfp | __GFP_ZERO, order);
+	paddr = (unsigned long)kzalloc(PAGE_SIZE << (order), gfp);
 	flush_kernel_dcache_range(paddr, size);
 	paddr = __pa(paddr);
 	map_uncached_pages(vaddr, size, paddr);
@@ -432,7 +433,7 @@ void arch_dma_free(struct device *dev, size_t size, void *vaddr,
 	unmap_uncached_pages((unsigned long)vaddr, size);
 	pcxl_free_range((unsigned long)vaddr, size);
 
-	free_pages((unsigned long)__va(dma_handle), order);
+	kfree((void *)(unsigned long)__va(dma_handle));
 }
 
 void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,

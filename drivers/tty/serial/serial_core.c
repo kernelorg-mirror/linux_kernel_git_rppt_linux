@@ -252,7 +252,7 @@ static int uart_alloc_xmit_buf(struct tty_port *port)
 	 * Initialise and allocate the transmit and temporary
 	 * buffer.
 	 */
-	page = get_zeroed_page(GFP_KERNEL);
+	page = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!page)
 		return -ENOMEM;
 
@@ -268,7 +268,7 @@ static int uart_alloc_xmit_buf(struct tty_port *port)
 		 * Do not free() the page under the port lock, see
 		 * uart_free_xmit_buf().
 		 */
-		free_page(page);
+		kfree((void *)page);
 	}
 
 	return 0;
@@ -293,7 +293,7 @@ static void uart_free_xmit_buf(struct tty_port *port)
 	INIT_KFIFO(port->xmit_fifo);
 	uart_port_unlock_deref(uport, flags);
 
-	free_page((unsigned long)xmit_buf);
+	kfree((void *)(unsigned long)xmit_buf);
 }
 
 /*

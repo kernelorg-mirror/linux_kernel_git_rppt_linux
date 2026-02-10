@@ -388,7 +388,7 @@ dasd_diag_check_device(struct dasd_device *device)
 	mdsk_term_io(device);
 
 	/* figure out blocksize of device */
-	label = (struct vtoc_cms_label *) get_zeroed_page(GFP_KERNEL);
+	label = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (label == NULL)  {
 		DBF_DEV_EVENT(DBF_WARNING, device, "%s",
 			    "No memory to allocate initialization request");
@@ -467,7 +467,7 @@ dasd_diag_check_device(struct dasd_device *device)
 out_bio:
 	kfree(bio);
 out_label:
-	free_page((long) label);
+	kfree((void *)(long) label);
 out:
 	if (rc) {
 		device->block = NULL;

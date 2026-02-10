@@ -3,6 +3,7 @@
  * Copyright (c) 2017-2019 Borislav Petkov, SUSE Labs.
  */
 #include <linux/mm.h>
+#include <linux/slab.h>
 #include <linux/gfp.h>
 #include <linux/ras.h>
 #include <linux/kernel.h>
@@ -570,14 +571,14 @@ static int __init cec_init(void)
 	if (boot_cpu_data.x86_vendor == X86_VENDOR_INTEL)
 		action_threshold = 2;
 
-	ce_arr.array = (void *)get_zeroed_page(GFP_KERNEL);
+	ce_arr.array = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!ce_arr.array) {
 		pr_err("Error allocating CE array page!\n");
 		return -ENOMEM;
 	}
 
 	if (create_debugfs_nodes()) {
-		free_page((unsigned long)ce_arr.array);
+		kfree((void *)(unsigned long)ce_arr.array);
 		return -ENOMEM;
 	}
 

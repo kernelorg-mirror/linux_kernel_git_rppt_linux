@@ -191,11 +191,11 @@ static void free_sampling_buffer(struct sf_buffer *sfb)
 		if (is_link_entry(curr)) {
 			/* Process table-link entries */
 			curr = get_next_sdbt(curr);
-			free_page((unsigned long)sdbt);
+			kfree((void *)(unsigned long)sdbt);
 			sdbt = curr;
 		} else {
 			/* Process SDB pointer */
-			free_page((unsigned long)phys_to_virt(*curr));
+			kfree((void *)(unsigned long)phys_to_virt(*curr));
 			curr++;
 		}
 	} while (curr != head);
@@ -208,7 +208,7 @@ static int alloc_sample_data_block(unsigned long *sdbt, gfp_t gfp_flags)
 	unsigned long sdb;
 
 	/* Allocate and initialize sample-data-block */
-	sdb = get_zeroed_page(gfp_flags);
+	sdb = (unsigned long)kzalloc(PAGE_SIZE, gfp_flags);
 	if (!sdb)
 		return -ENOMEM;
 	te = trailer_entry_ptr(sdb);
@@ -265,7 +265,7 @@ static int realloc_sampling_buffer(struct sf_buffer *sfb,
 	for (i = 0; i < num_sdb; i++) {
 		/* Allocate a new SDB-table if it is full. */
 		if (require_table_link(tail)) {
-			new = (unsigned long *)get_zeroed_page(gfp_flags);
+			new = kzalloc(PAGE_SIZE, gfp_flags);
 			if (!new) {
 				rc = -ENOMEM;
 				break;
@@ -291,7 +291,7 @@ static int realloc_sampling_buffer(struct sf_buffer *sfb,
 			 */
 			if (tail_prev) {
 				sfb->num_sdbt--;
-				free_page((unsigned long)new);
+				kfree((void *)(unsigned long)new);
 				tail = tail_prev;
 			}
 			break;
@@ -327,7 +327,7 @@ static int alloc_sampling_buffer(struct sf_buffer *sfb, unsigned long num_sdb)
 		return -EINVAL;
 
 	/* Allocate the sample-data-block-table origin */
-	sfb->sdbt = (unsigned long *)get_zeroed_page(GFP_KERNEL);
+	sfb->sdbt = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!sfb->sdbt)
 		return -ENOMEM;
 	sfb->num_sdb = 0;
@@ -1557,7 +1557,7 @@ static void aux_buffer_free(void *data)
 	/* Free SDBT. SDB is freed by the caller */
 	num_sdbt = aux->sfb.num_sdbt;
 	for (i = 0; i < num_sdbt; i++)
-		free_page(aux->sdbt_index[i]);
+		kfree((void *)aux->sdbt_index[i]);
 
 	kfree(aux->sdbt_index);
 	kfree(aux->sdb_index);
@@ -1631,7 +1631,7 @@ static void *aux_buffer_setup(struct perf_event *event, void **pages,
 
 	/* Allocate the first SDBT */
 	sfb->num_sdbt = 0;
-	sfb->sdbt = (unsigned long *)get_zeroed_page(GFP_KERNEL);
+	sfb->sdbt = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!sfb->sdbt)
 		goto no_sdbt;
 	aux->sdbt_index[sfb->num_sdbt++] = (unsigned long)sfb->sdbt;
@@ -1643,7 +1643,7 @@ static void *aux_buffer_setup(struct perf_event *event, void **pages,
 	 */
 	for (i = 0; i < nr_pages; i++, tail++) {
 		if (require_table_link(tail)) {
-			new = (unsigned long *)get_zeroed_page(GFP_KERNEL);
+			new = kzalloc(PAGE_SIZE, GFP_KERNEL);
 			if (!new)
 				goto no_sdbt;
 			aux->sdbt_index[sfb->num_sdbt++] = (unsigned long)new;
@@ -1674,7 +1674,7 @@ static void *aux_buffer_setup(struct perf_event *event, void **pages,
 no_sdbt:
 	/* SDBs (AUX buffer pages) are freed by caller */
 	for (i = 0; i < sfb->num_sdbt; i++)
-		free_page(aux->sdbt_index[i]);
+		kfree((void *)aux->sdbt_index[i]);
 	kfree(aux->sdb_index);
 no_sdb_index:
 	kfree(aux->sdbt_index);

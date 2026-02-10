@@ -2117,7 +2117,7 @@ static struct aead_alg aes_authenc_algs[] = {
 
 static int atmel_aes_buff_init(struct atmel_aes_dev *dd)
 {
-	dd->buf = (void *)__get_free_pages(GFP_KERNEL, ATMEL_AES_BUFFER_ORDER);
+	dd->buf = kmalloc(PAGE_SIZE << (ATMEL_AES_BUFFER_ORDER), GFP_KERNEL);
 	dd->buflen = ATMEL_AES_BUFFER_SIZE;
 	dd->buflen &= ~(AES_BLOCK_SIZE - 1);
 
@@ -2131,7 +2131,7 @@ static int atmel_aes_buff_init(struct atmel_aes_dev *dd)
 
 static void atmel_aes_buff_cleanup(struct atmel_aes_dev *dd)
 {
-	free_pages((unsigned long)dd->buf, ATMEL_AES_BUFFER_ORDER);
+	kfree(dd->buf);
 }
 
 static int atmel_aes_dma_init(struct atmel_aes_dev *dd)

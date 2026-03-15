@@ -75,6 +75,8 @@ extern void abort_hooks(void);
 				__FILE__, __LINE__,	\
 				test_nr, iteration_nr);	\
 		dprintf0("errno at assert: %d", errno);	\
+		ksft_test_result_fail("test %d (iteration %d)\n",	\
+				      test_nr, iteration_nr);		\
 		abort_hooks();			\
 		exit(__LINE__);			\
 	}					\

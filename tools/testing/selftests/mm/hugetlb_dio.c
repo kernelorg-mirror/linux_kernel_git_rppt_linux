@@ -19,6 +19,7 @@
 #include <sys/mman.h>
 #include "vm_util.h"
 #include "kselftest.h"
+#include "hugepage_settings.h"
 
 void run_dio_using_hugetlb(unsigned int start_off, unsigned int end_off)
 {

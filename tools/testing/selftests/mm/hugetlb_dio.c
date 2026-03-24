@@ -37,8 +37,6 @@ void run_dio_using_hugetlb(unsigned int start_off, unsigned int end_off)
 
 	/* Get the default huge page size */
 	h_pagesize = default_huge_page_size();
-	if (!h_pagesize)
-		ksft_exit_fail_msg("Unable to determine huge page size\n");
 
 	/* Open the file to DIO */
 	fd = open("/tmp", O_TMPFILE | O_RDWR | O_DIRECT, 0664);
@@ -47,10 +45,6 @@ void run_dio_using_hugetlb(unsigned int start_off, unsigned int end_off)
 
 	/* Get the free huge pages before allocation */
 	free_hpage_b = hugetlb_free_default_pages();
-	if (free_hpage_b == 0) {
-		close(fd);
-		ksft_exit_skip("No free hugepage, exiting!\n");
-	}
 
 	/* Allocate a hugetlb page */
 	orig_buffer = mmap(NULL, h_pagesize, mmap_prot, mmap_flags, -1, 0);
@@ -101,9 +95,8 @@ int main(void)
 		ksft_exit_skip("Unable to allocate file: %s\n", strerror(errno));
 	close(fd);
 
-	/* Check if huge pages are free */
-	if (!hugetlb_free_default_pages())
-		ksft_exit_skip("No free hugepage, exiting\n");
+	if (!hugetlb_prepare_default(1))
+		ksft_exit_skip("No free hugepage, exiting!\n");
 
 	ksft_set_plan(4);
 

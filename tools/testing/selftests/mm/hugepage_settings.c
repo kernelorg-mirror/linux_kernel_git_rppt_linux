@@ -443,6 +443,18 @@ unsigned long hugetlb_free_pages(unsigned long size)
        return read_num(path);
 }
 
+unsigned long hugetlb_request_pages(unsigned long size, unsigned long nr)
+{
+	unsigned long current = hugetlb_free_pages(size);
+
+	if (nr <= current)
+		return nr;
+
+	hugetlb_set_nr_pages(size, current + (nr - current));
+
+	return hugetlb_free_pages(size);
+}
+
 static void __hugetlb_save_settings(void)
 {
 	struct hugetlb_settings *settings = &hugetlb_saved_settings;

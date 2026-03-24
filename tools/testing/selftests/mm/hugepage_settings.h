@@ -98,6 +98,7 @@ unsigned long default_huge_page_size(void);
 unsigned long hugetlb_nr_pages(unsigned long size);
 void hugetlb_set_nr_pages(unsigned long size, unsigned long nr);
 unsigned long hugetlb_free_pages(unsigned long size);
+unsigned long hugetlb_request_pages(unsigned long size, unsigned long nr);
 
 void hugetlb_disable_restore_settings(void);
 
@@ -134,6 +135,16 @@ static inline unsigned long hugetlb_free_default_pages(void)
 		return 0;
 
 	return hugetlb_free_pages(size);
+}
+
+static inline unsigned long hugetlb_request_default_pages(unsigned long nr)
+{
+	return hugetlb_request_pages(default_huge_page_size(), nr);
+}
+
+static inline bool hugetlb_available(void)
+{
+	return default_huge_page_size() != 0;
 }
 
 #endif /* __THP_SETTINGS_H__ */

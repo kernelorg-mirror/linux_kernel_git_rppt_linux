@@ -464,7 +464,7 @@ unsigned long hugetlb_free_pages(unsigned long size)
        return read_num(path);
 }
 
-void hugetlb_save_settings(void)
+static void __hugetlb_save_settings(void)
 {
 	struct hugetlb_settings *settings = &hugetlb_saved_settings;
 	int nr_sizes;
@@ -493,7 +493,7 @@ void hugetlb_save_settings(void)
 	settings->nr_sizes = nr_sizes;
 }
 
-void hugetlb_restore_settings(void)
+static void hugetlb_restore_settings(void)
 {
 	struct hugetlb_settings *settings = &hugetlb_saved_settings;
 
@@ -508,4 +508,41 @@ void hugetlb_restore_settings(void)
 
 		hugetlb_set_nr_pages(sz, settings->nr_hugepages[i]);
 	}
+}
+
+bool hugetlb_skip_settings_restore;
+
+void hugetlb_disable_restore_settings(void)
+{
+	hugetlb_skip_settings_restore = true;
+}
+
+static void hugetlb_restore_settings_atexit(void)
+{
+	if (hugetlb_skip_settings_restore)
+		return;
+
+	hugetlb_restore_settings();
+	hugetlb_skip_settings_restore = true;
+}
+
+static void hugetlb_restore_settings_sighandler(int sig)
+{
+	/* exit() will invoke the hugetlb_restore_settings_atexit handler. */
+	exit(KSFT_FAIL);
+}
+
+void hugetlb_save_settings(void)
+{
+	__hugetlb_save_settings();
+
+	/*
+	 * setup exit hooks to make sure THP settings are restored on gracefull
+	 * and error exits and signals
+	 */
+	atexit(hugetlb_restore_settings_atexit);
+	signal(SIGTERM, hugetlb_restore_settings_sighandler);
+	signal(SIGINT, hugetlb_restore_settings_sighandler);
+	signal(SIGHUP, hugetlb_restore_settings_sighandler);
+	signal(SIGQUIT, hugetlb_restore_settings_sighandler);
 }

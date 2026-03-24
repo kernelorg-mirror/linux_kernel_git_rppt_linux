@@ -46,7 +46,7 @@ void run_dio_using_hugetlb(unsigned int start_off, unsigned int end_off)
 		ksft_exit_fail_perror("Error opening file\n");
 
 	/* Get the free huge pages before allocation */
-	free_hpage_b = get_free_hugepages();
+	free_hpage_b = hugetlb_free_default_pages();
 	if (free_hpage_b == 0) {
 		close(fd);
 		ksft_exit_skip("No free hugepage, exiting!\n");
@@ -75,7 +75,7 @@ void run_dio_using_hugetlb(unsigned int start_off, unsigned int end_off)
 	close(fd);
 
 	/* Get the free huge pages after unmap*/
-	free_hpage_a = get_free_hugepages();
+	free_hpage_a = hugetlb_free_default_pages();
 
 	ksft_print_msg("No. Free pages before allocation : %d\n", free_hpage_b);
 	ksft_print_msg("No. Free pages after munmap : %d\n", free_hpage_a);
@@ -102,7 +102,7 @@ int main(void)
 	close(fd);
 
 	/* Check if huge pages are free */
-	if (!get_free_hugepages())
+	if (!hugetlb_free_default_pages())
 		ksft_exit_skip("No free hugepage, exiting\n");
 
 	ksft_set_plan(4);

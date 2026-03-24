@@ -265,31 +265,9 @@ void thp_restore_settings(void)
 		thp_write_settings(&saved_settings);
 }
 
-static void thp_restore_settings_atexit(void)
-{
-	thp_restore_settings();
-}
-
-static void thp_restore_settings_sighandler(int sig)
-{
-	/* exit() will invoke the thp_restore_settings_atexit handler. */
-	exit(KSFT_FAIL);
-}
-
-void thp_save_settings(void)
+static void __thp_save_settings(void)
 {
 	thp_read_settings(&saved_settings);
-
-	/*
-	 * setup exit hooks to make sure THP settings are restored on gracefull
-	 * and error exits and signals
-	 */
-	atexit(thp_restore_settings_atexit);
-	signal(SIGTERM, thp_restore_settings_sighandler);
-	signal(SIGINT, thp_restore_settings_sighandler);
-	signal(SIGHUP, thp_restore_settings_sighandler);
-	signal(SIGQUIT, thp_restore_settings_sighandler);
-
 	thp_settings_saved = true;
 }
 
@@ -369,6 +347,7 @@ struct hugetlb_settings {
 };
 
 static struct hugetlb_settings hugetlb_saved_settings;
+bool hugetlb_settings_saved;
 
 int detect_hugetlb_page_sizes(unsigned long sizes[], int max)
 {
@@ -491,13 +470,14 @@ static void __hugetlb_save_settings(void)
 	}
 
 	settings->nr_sizes = nr_sizes;
+	hugetlb_settings_saved = true;
 }
 
 static void hugetlb_restore_settings(void)
 {
 	struct hugetlb_settings *settings = &hugetlb_saved_settings;
 
-	if (!settings->default_size)
+	if (!hugetlb_settings_saved || !settings->default_size)
 		return;
 
 	for (int i = 0; i < HUGETLB_MAX_NR_PAGESIZES; i++) {
@@ -510,39 +490,42 @@ static void hugetlb_restore_settings(void)
 	}
 }
 
-bool hugetlb_skip_settings_restore;
-
-void hugetlb_disable_restore_settings(void)
+static void hugepage_restore_settings_atexit(void)
 {
-	hugetlb_skip_settings_restore = true;
-}
-
-static void hugetlb_restore_settings_atexit(void)
-{
-	if (hugetlb_skip_settings_restore)
+	if (skip_settings_restore)
 		return;
 
-	hugetlb_restore_settings();
-	hugetlb_skip_settings_restore = true;
+	if (thp_settings_saved)
+		thp_restore_settings();
+	if (hugetlb_settings_saved)
+		hugetlb_restore_settings();
+
+	skip_settings_restore = true;
 }
 
-static void hugetlb_restore_settings_sighandler(int sig)
+static void hugepage_restore_settings_sighandler(int sig)
 {
 	/* exit() will invoke the hugetlb_restore_settings_atexit handler. */
 	exit(KSFT_FAIL);
 }
 
-void hugetlb_save_settings(void)
+void hugepage_save_settings(bool thp, bool hugetlb)
 {
-	__hugetlb_save_settings();
+	if (!thp && !hugetlb)
+		return;
+
+	if (thp)
+		__thp_save_settings();
+	if (hugetlb)
+		__hugetlb_save_settings();
 
 	/*
 	 * setup exit hooks to make sure THP settings are restored on gracefull
 	 * and error exits and signals
 	 */
-	atexit(hugetlb_restore_settings_atexit);
-	signal(SIGTERM, hugetlb_restore_settings_sighandler);
-	signal(SIGINT, hugetlb_restore_settings_sighandler);
-	signal(SIGHUP, hugetlb_restore_settings_sighandler);
-	signal(SIGQUIT, hugetlb_restore_settings_sighandler);
+	atexit(hugepage_restore_settings_atexit);
+	signal(SIGTERM, hugepage_restore_settings_sighandler);
+	signal(SIGINT, hugepage_restore_settings_sighandler);
+	signal(SIGHUP, hugepage_restore_settings_sighandler);
+	signal(SIGQUIT, hugepage_restore_settings_sighandler);
 }

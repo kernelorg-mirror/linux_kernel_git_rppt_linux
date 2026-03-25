@@ -749,6 +749,6 @@ void write_num(const char *path, unsigned long num)
 {
 	char buf[21];
 
-	sprintf(buf, "%ld", num);
+	sprintf(buf, "%lu", num);
 	write_file(path, buf, strlen(buf) + 1);
 }

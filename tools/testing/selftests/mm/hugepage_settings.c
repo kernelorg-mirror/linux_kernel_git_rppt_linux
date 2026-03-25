@@ -443,16 +443,21 @@ unsigned long hugetlb_free_pages(unsigned long size)
        return read_num(path);
 }
 
-unsigned long hugetlb_request_pages(unsigned long size, unsigned long nr)
+bool hugetlb_prepare_default(unsigned long nr)
 {
-	unsigned long current = hugetlb_free_pages(size);
+	unsigned long free, needed, size;
 
-	if (nr <= current)
-		return nr;
+	hugetlb_save_settings();
 
-	hugetlb_set_nr_pages(size, current + (nr - current));
+	size = default_huge_page_size();
+	free = hugetlb_free_pages(size);
+	if (nr <= free)
+		return true;
 
-	return hugetlb_free_pages(size);
+	needed = nr - free;
+	hugetlb_set_nr_pages(size, needed);
+
+	return hugetlb_free_pages(size) >= needed;
 }
 
 static void __hugetlb_save_settings(void)

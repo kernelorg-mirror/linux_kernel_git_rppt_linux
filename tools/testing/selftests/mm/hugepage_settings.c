@@ -267,6 +267,9 @@ void thp_restore_settings(void)
 
 static void __thp_save_settings(void)
 {
+	if (!thp_available())
+		return;
+
 	thp_read_settings(&saved_settings);
 	thp_settings_saved = true;
 }

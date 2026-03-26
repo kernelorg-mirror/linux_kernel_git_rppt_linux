@@ -509,15 +509,10 @@ static void hugetlb_restore_settings(void)
 
 static void hugepage_restore_settings_atexit(void)
 {
-	if (skip_settings_restore)
-		return;
-
 	if (thp_settings_saved)
 		thp_restore_settings();
 	if (hugetlb_settings_saved)
 		hugetlb_restore_settings();
-
-	skip_settings_restore = true;
 }
 
 static void hugepage_restore_settings_sighandler(int sig)

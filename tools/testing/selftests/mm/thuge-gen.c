@@ -120,31 +120,38 @@ void test_shmget(unsigned long size, unsigned flags)
 		ksft_exit_fail_perror("shmdt");
 }
 
+static void hugetlb_prepare(void)
+{
+	size_t sizes[10];
+	int nr_sizes;
+
+	nr_sizes = detect_hugetlb_page_sizes(sizes, ARRAY_SIZE(sizes));
+
+	if (!nr_sizes)
+		return;
+
+	/* If HugeTLB is supported, request 2 HugeTLB pages of every size. */
+	for (int i = 0; i < nr_sizes; i++) {
+		hugetlb_set_nr_pages(sizes[i], NUM_PAGES);
+		if (hugetlb_free_pages(sizes[i]) < NUM_PAGES)
+			continue;
+
+		page_sizes[num_page_sizes] = sizes[i];
+		num_page_sizes++;
+	}
+}
+
 void find_pagesizes(void)
 {
 	unsigned long largest = getpagesize();
 	unsigned long shmmax_val = 0;
 	int i;
-	glob_t g;
 
-	glob("/sys/kernel/mm/hugepages/hugepages-*kB", 0, NULL, &g);
-	assert(g.gl_pathc <= NUM_PAGESIZES);
-	for (i = 0; (i < g.gl_pathc) && (num_page_sizes < NUM_PAGESIZES); i++) {
-		sscanf(g.gl_pathv[i], "/sys/kernel/mm/hugepages/hugepages-%lukB",
-				&page_sizes[num_page_sizes]);
-		page_sizes[num_page_sizes] <<= 10;
-		ksft_print_msg("Found %luMB\n", page_sizes[i] >> 20);
+	hugetlb_prepare();
 
-		if (page_sizes[num_page_sizes] > largest)
+	for (i = 0; i < num_page_sizes; i++)
+		if (page_sizes[i] > largest)
 			largest = page_sizes[i];
-
-		if (hugetlb_free_pages(page_sizes[num_page_sizes]) >= NUM_PAGES)
-			num_page_sizes++;
-		else
-			ksft_print_msg("SKIP for size %lu MB as not enough huge pages, need %u\n",
-				       page_sizes[num_page_sizes] >> 20, NUM_PAGES);
-	}
-	globfree(&g);
 
 	read_sysfs("/proc/sys/kernel/shmmax", &shmmax_val);
 	if (shmmax_val < NUM_PAGES * largest) {
@@ -153,13 +160,6 @@ void find_pagesizes(void)
 		ksft_print_msg("echo %lu > /proc/sys/kernel/shmmax\n", largest * NUM_PAGES);
 		ksft_exit_skip("Test skipped due to insufficient shmmax value.\n");
 	}
-
-#if defined(__x86_64__)
-	if (largest != 1U<<30) {
-		ksft_exit_skip("No GB pages available on x86-64\n"
-				   "Please boot with hugepagesz=1G hugepages=%d\n", NUM_PAGES);
-	}
-#endif
 }
 
 int main(void)

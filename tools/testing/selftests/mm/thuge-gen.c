@@ -45,6 +45,34 @@
 unsigned long page_sizes[NUM_PAGESIZES];
 int num_page_sizes;
 
+static unsigned long shmall, shmmax;
+
+static void __attribute__((destructor)) restore_shm_limits(void)
+{
+	if (shmmax)
+		write_num("/proc/sys/kernel/shmmax", shmmax);
+	if (shmall)
+		write_num("/proc/sys/kernel/shmall", shmall);
+}
+
+static void prepare_shm_limits(unsigned long length)
+{
+	unsigned long nr = length / psize();
+	unsigned long val;
+
+	val = read_num("/proc/sys/kernel/shmmax");
+	if (val < length) {
+		write_num("/proc/sys/kernel/shmmax", length);
+		shmmax = val;
+	}
+
+	val = read_num("/proc/sys/kernel/shmall");
+	if (val < nr) {
+		write_num("/proc/sys/kernel/shmall", nr);
+		shmall = val;
+	}
+}
+
 int ilog2(unsigned long v)
 {
 	int l = 0;
@@ -144,7 +172,6 @@ static void hugetlb_prepare(void)
 void find_pagesizes(void)
 {
 	unsigned long largest = getpagesize();
-	unsigned long shmmax_val = 0;
 	int i;
 
 	hugetlb_prepare();
@@ -153,13 +180,7 @@ void find_pagesizes(void)
 		if (page_sizes[i] > largest)
 			largest = page_sizes[i];
 
-	read_sysfs("/proc/sys/kernel/shmmax", &shmmax_val);
-	if (shmmax_val < NUM_PAGES * largest) {
-		ksft_print_msg("WARNING: shmmax is too small to run this test.\n");
-		ksft_print_msg("Please run the following command to increase shmmax:\n");
-		ksft_print_msg("echo %lu > /proc/sys/kernel/shmmax\n", largest * NUM_PAGES);
-		ksft_exit_skip("Test skipped due to insufficient shmmax value.\n");
-	}
+	prepare_shm_limits(NUM_PAGES * largest);
 }
 
 int main(void)

@@ -101,7 +101,7 @@ void test_mmap(unsigned long size, unsigned flags)
 	map = mmap(NULL, size*NUM_PAGES, PROT_READ|PROT_WRITE,
 			MAP_PRIVATE|MAP_ANONYMOUS|MAP_HUGETLB|flags, -1, 0);
 	if (map == MAP_FAILED)
-		ksft_exit_fail_msg("mmap: %s\n", strerror(errno));
+		ksft_exit_fail_perror("mmap");
 
 	memset(map, 0xff, size*NUM_PAGES);
 	after = read_free(size);
@@ -111,7 +111,7 @@ void test_mmap(unsigned long size, unsigned flags)
 			 "%s mmap %lu %x\n", __func__, size, flags);
 
 	if (munmap(map, size * NUM_PAGES))
-		ksft_exit_fail_msg("%s: unmap %s\n", __func__, strerror(errno));
+		ksft_exit_fail_perror("unmap");
 }
 
 void test_shmget(unsigned long size, unsigned flags)
@@ -129,15 +129,15 @@ void test_shmget(unsigned long size, unsigned flags)
 					      strerror(errno));
 			return;
 		}
-		ksft_exit_fail_msg("shmget: %s\n", strerror(errno));
+		ksft_exit_fail_perror("shmget");
 	}
 
 	if (shmctl(id, SHM_INFO, (void *)&i) < 0)
-		ksft_exit_fail_msg("shmctl: %s\n", strerror(errno));
+		ksft_exit_fail_perror("shmctl");
 
 	map = shmat(id, NULL, 0600);
 	if (map == MAP_FAILED)
-		ksft_exit_fail_msg("shmat: %s\n", strerror(errno));
+		ksft_exit_fail_perror("shmat");
 
 	shmctl(id, IPC_RMID, NULL);
 
@@ -148,7 +148,7 @@ void test_shmget(unsigned long size, unsigned flags)
 	ksft_test_result(size == getpagesize() || (before - after) == NUM_PAGES,
 			 "%s: mmap %lu %x\n", __func__, size, flags);
 	if (shmdt(map))
-		ksft_exit_fail_msg("%s: shmdt: %s\n", __func__, strerror(errno));
+		ksft_exit_fail_perror("shmdt");
 }
 
 void find_pagesizes(void)

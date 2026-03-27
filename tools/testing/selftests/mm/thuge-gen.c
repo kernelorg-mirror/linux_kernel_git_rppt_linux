@@ -148,33 +148,12 @@ void test_shmget(unsigned long size, unsigned flags)
 		ksft_exit_fail_perror("shmdt");
 }
 
-static void hugetlb_prepare(void)
-{
-	size_t sizes[10];
-	int nr_sizes;
-
-	nr_sizes = detect_hugetlb_page_sizes(sizes, ARRAY_SIZE(sizes));
-
-	if (!nr_sizes)
-		return;
-
-	/* If HugeTLB is supported, request 2 HugeTLB pages of every size. */
-	for (int i = 0; i < nr_sizes; i++) {
-		hugetlb_set_nr_pages(sizes[i], NUM_PAGES);
-		if (hugetlb_free_pages(sizes[i]) < NUM_PAGES)
-			continue;
-
-		page_sizes[num_page_sizes] = sizes[i];
-		num_page_sizes++;
-	}
-}
-
 void find_pagesizes(void)
 {
 	unsigned long largest = getpagesize();
 	int i;
 
-	hugetlb_prepare();
+	num_page_sizes = hugetlb_prepare_all_sizes(NUM_PAGES, page_sizes, ARRAY_SIZE(page_sizes));
 
 	for (i = 0; i < num_page_sizes; i++)
 		if (page_sizes[i] > largest)

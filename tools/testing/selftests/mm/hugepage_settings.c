@@ -448,14 +448,12 @@ unsigned long hugetlb_free_pages(unsigned long size)
 
 bool hugetlb_prepare_default(unsigned long nr)
 {
-	unsigned long free, needed, size;
+	unsigned long size;
 
 	hugetlb_save_settings();
 
 	size = default_huge_page_size();
-	free = hugetlb_free_pages(size);
-	if (nr <= free)
-		return true;
+	hugetlb_set_nr_pages(size, nr);
 
 	return hugetlb_free_pages(size) == nr;
 }

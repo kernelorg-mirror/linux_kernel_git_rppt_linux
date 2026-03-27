@@ -142,5 +142,7 @@ static inline bool hugetlb_available(void)
 }
 
 bool hugetlb_prepare_default(unsigned long nr);
+unsigned long hugetlb_prepare_all_sizes(unsigned long nr, unsigned long sizes[],
+					int max);
 
 #endif /* __THP_SETTINGS_H__ */

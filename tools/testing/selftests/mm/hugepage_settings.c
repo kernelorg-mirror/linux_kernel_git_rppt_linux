@@ -463,6 +463,34 @@ bool hugetlb_prepare_default(unsigned long nr)
 	return hugetlb_free_pages(size) >= needed;
 }
 
+unsigned long hugetlb_prepare_all_sizes(unsigned long nr, unsigned long sizes[],
+					int max)
+{
+	unsigned long enabled[10];
+	int nr_sizes = 0;
+	int nr_enabled;
+
+	nr_enabled = detect_hugetlb_page_sizes(enabled, ARRAY_SIZE(enabled));
+	if (!nr_enabled)
+		return 0;
+
+	if (nr_enabled > max) {
+		ksft_print_msg("detected %d huge page sizes, will only test %d\n", nr_enabled, max);
+		nr_enabled = max;
+	}
+
+	/* If HugeTLB is supported, request 2 HugeTLB pages of every size. */
+	for (int i = 0; i < nr_enabled; i++) {
+		hugetlb_set_nr_pages(enabled[i], nr);
+		if (hugetlb_free_pages(enabled[i]) < nr)
+			continue;
+
+		sizes[nr_sizes++] = enabled[i];
+	}
+
+	return nr_sizes;
+}
+
 static void __hugetlb_save_settings(void)
 {
 	struct hugetlb_settings *settings = &hugetlb_saved_settings;

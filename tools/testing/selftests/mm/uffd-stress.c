@@ -480,11 +480,9 @@ int main(int argc, char **argv)
 	 * for racy extra reservation of hugepages.
 	 */
 	if (gopts->test_type == TEST_HUGETLB) {
-		unsigned long required_nr = 2 * (bytes / gopts->page_size) + gopts->nr_parallel - 1;
+		unsigned long nr = 2 * (bytes / gopts->page_size) + gopts->nr_parallel - 1;
 
-		hugetlb_save_settings();
-		hugetlb_set_nr_default_pages(required_nr);
-		if (hugetlb_free_default_pages() < required_nr)
+		if (!hugetlb_prepare_default(nr))
 			ksft_exit_skip("Skipping userfaultfd... not enough hugepages\n");
 	}
 

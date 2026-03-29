@@ -10,8 +10,10 @@
 #include <sys/statfs.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <signal.h>
 
 #include "vm_util.h"
+#include "hugepage_settings.h"
 
 #define MAX_WRITE_READ_CHUNK_SIZE (getpagesize() * 16)
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -263,6 +265,11 @@ static void report_status(enum test_status status, const char *test_name,
 	}
 }
 
+static void sigbus_handler(int sig)
+{
+	ksft_print_msg("received SIGBUS\n");
+}
+
 int main(void)
 {
 	int fd;
@@ -275,7 +282,13 @@ int main(void)
 	};
 	size_t i;
 
+	signal(SIGBUS, sigbus_handler);
+
 	ksft_print_header();
+
+	if (!hugetlb_prepare_default(ARRAY_SIZE(wr_chunk_sizes) * 3))
+		ksft_exit_skip("Not enough huge pages\n");
+
 	ksft_set_plan(ARRAY_SIZE(wr_chunk_sizes) * 3);
 
 	for (i = 0; i < ARRAY_SIZE(wr_chunk_sizes); ++i) {

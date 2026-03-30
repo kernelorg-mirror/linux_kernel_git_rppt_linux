@@ -99,12 +99,14 @@ unsigned long hugetlb_nr_pages(unsigned long size);
 void hugetlb_set_nr_pages(unsigned long size, unsigned long nr);
 unsigned long hugetlb_free_pages(unsigned long size);
 
-void hugetlb_disable_restore_settings(void);
+void __hugetlb_save_settings(void);
 
 static inline void hugetlb_save_settings(void)
 {
 	hugepage_save_settings(/* thp = */ false, /* hugetlb = */ true);
 }
+
+void hugetlb_restore_settings(void);
 
 static inline unsigned long hugetlb_nr_default_pages(void)
 {

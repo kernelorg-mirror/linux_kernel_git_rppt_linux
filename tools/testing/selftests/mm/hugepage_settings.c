@@ -491,7 +491,7 @@ unsigned long hugetlb_prepare_all_sizes(unsigned long nr, unsigned long sizes[],
 	return nr_sizes;
 }
 
-static void __hugetlb_save_settings(void)
+void __hugetlb_save_settings(void)
 {
 	struct hugetlb_settings *settings = &hugetlb_saved_settings;
 	int nr_sizes;
@@ -521,7 +521,7 @@ static void __hugetlb_save_settings(void)
 	hugetlb_settings_saved = true;
 }
 
-static void hugetlb_restore_settings(void)
+void hugetlb_restore_settings(void)
 {
 	struct hugetlb_settings *settings = &hugetlb_saved_settings;
 

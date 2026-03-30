@@ -457,10 +457,7 @@ bool hugetlb_prepare_default(unsigned long nr)
 	if (nr <= free)
 		return true;
 
-	needed = nr - free;
-	hugetlb_set_nr_pages(size, needed);
-
-	return hugetlb_free_pages(size) >= needed;
+	return hugetlb_free_pages(size) == nr;
 }
 
 unsigned long hugetlb_prepare_all_sizes(unsigned long nr, unsigned long sizes[],

@@ -17,7 +17,7 @@ static int nr_pagesizes = 1;
 static int nr_thpsizes;
 static size_t thpsizes[20];
 static int nr_hugetlbsizes;
-static size_t hugetlbsizes[10];
+static unsigned long hugetlbsizes[10];
 
 static int detect_thp_sizes(size_t sizes[], int max)
 {
@@ -245,7 +245,7 @@ out:
 }
 
 struct testcase {
-	size_t *sizes;
+	unsigned long *sizes;
 	int *nr_sizes;
 	bool private;
 	bool swapout;

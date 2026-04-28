@@ -107,9 +107,9 @@ static void test_file_mmap(size_t length, int shift)
 
 int main(int argc, char **argv)
 {
-	size_t hugepage_size;
+	size_t hugepage_size, nr;
 	size_t length = LENGTH;
-	int shift = 0, nr;
+	int shift = 0;
 
 	ksft_print_header();
 

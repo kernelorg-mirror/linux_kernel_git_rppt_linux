@@ -70,8 +70,9 @@ FIXTURE_TEARDOWN(migration)
 static bool kill_children(FIXTURE_DATA(migration) * self)
 {
 	bool err = false;
-	int i, status;
+	int status = 0;
 	pid_t pid;
+	int i;
 
 	for (i = 0; i < self->nthreads; i++) {
 		pid = self->pids[i];

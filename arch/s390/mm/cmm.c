@@ -21,6 +21,7 @@
 #include <linux/oom.h>
 #include <linux/uaccess.h>
 
+#include <linux/slab.h>
 #include <asm/diag.h>
 
 #ifdef CONFIG_CMM_IUCV
@@ -66,7 +67,7 @@ static long cmm_alloc_pages(long nr, long *counter,
 	unsigned long addr;
 
 	while (nr) {
-		addr = __get_free_page(GFP_NOIO);
+		addr = (unsigned long)kmalloc(PAGE_SIZE, GFP_NOIO);
 		if (!addr)
 			break;
 		spin_lock(&cmm_lock);
@@ -75,9 +76,9 @@ static long cmm_alloc_pages(long nr, long *counter,
 			/* Need a new page for the page list. */
 			spin_unlock(&cmm_lock);
 			npa = (struct cmm_page_array *)
-				__get_free_page(GFP_NOIO);
+				kmalloc(PAGE_SIZE, GFP_NOIO);
 			if (!npa) {
-				free_page(addr);
+				kfree((void *)addr);
 				break;
 			}
 			spin_lock(&cmm_lock);
@@ -88,7 +89,7 @@ static long cmm_alloc_pages(long nr, long *counter,
 				pa = npa;
 				*list = pa;
 			} else
-				free_page((unsigned long) npa);
+				kfree((void *)(unsigned long) npa);
 		}
 		diag10_range(virt_to_pfn((void *)addr), 1);
 		pa->pages[pa->index++] = addr;
@@ -113,10 +114,10 @@ static long __cmm_free_pages(long nr, long *counter, struct cmm_page_array **lis
 		addr = pa->pages[--pa->index];
 		if (pa->index == 0) {
 			pa = pa->next;
-			free_page((unsigned long) *list);
+			kfree((void *)(unsigned long) *list);
 			*list = pa;
 		}
-		free_page(addr);
+		kfree((void *)addr);
 		(*counter)--;
 		nr--;
 	}

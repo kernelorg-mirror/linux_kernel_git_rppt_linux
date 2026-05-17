@@ -29,6 +29,7 @@
 #include <linux/mutex.h>
 #include <linux/fips.h>
 #include <linux/string.h>
+#include <linux/slab.h>
 #include <crypto/xts.h>
 #include <asm/cpacf.h>
 
@@ -963,7 +964,7 @@ static void aes_s390_fini(void)
 	while (aes_s390_skciphers_num--)
 		crypto_unregister_skcipher(aes_s390_skcipher_algs[aes_s390_skciphers_num]);
 	if (ctrblk)
-		free_page((unsigned long) ctrblk);
+		kfree(ctrblk);
 
 	if (aes_s390_aead_alg)
 		crypto_unregister_aead(aes_s390_aead_alg);
@@ -1012,7 +1013,7 @@ static int __init aes_s390_init(void)
 	if (cpacf_test_func(&kmctr_functions, CPACF_KMCTR_AES_128) ||
 	    cpacf_test_func(&kmctr_functions, CPACF_KMCTR_AES_192) ||
 	    cpacf_test_func(&kmctr_functions, CPACF_KMCTR_AES_256)) {
-		ctrblk = (u8 *) __get_free_page(GFP_KERNEL);
+		ctrblk = kmalloc(PAGE_SIZE, GFP_KERNEL);
 		if (!ctrblk) {
 			ret = -ENOMEM;
 			goto out_err;

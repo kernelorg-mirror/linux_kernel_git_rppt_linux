@@ -552,7 +552,7 @@ int nfs4_replace_transport(struct nfs_server *server,
 	page = (char *) __get_free_page(GFP_USER);
 	if (!page)
 		goto out;
-	page2 = (char *) __get_free_page(GFP_USER);
+	page2 = kmalloc(PAGE_SIZE, GFP_USER);
 	if (!page2)
 		goto out;
 
@@ -572,6 +572,6 @@ int nfs4_replace_transport(struct nfs_server *server,
 
 out:
 	free_page((unsigned long)page);
-	free_page((unsigned long)page2);
+	kfree((void *)(unsigned long)page2);
 	return error;
 }

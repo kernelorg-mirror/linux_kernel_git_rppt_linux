@@ -194,7 +194,7 @@ static int hotplug_tests(void)
 	nb_cpu_group = alloc_init_cpu_groups(&cpu_groups);
 	if (nb_cpu_group < 0)
 		goto out_free_cpus;
-	page_buf = (char *)__get_free_page(GFP_KERNEL);
+	page_buf = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!page_buf)
 		goto out_free_cpu_groups;
 
@@ -219,7 +219,7 @@ static int hotplug_tests(void)
 		err += down_and_up_cpus(cpu_groups[i], offlined_cpus);
 	}
 
-	free_page((unsigned long)page_buf);
+	kfree((void *)(unsigned long)page_buf);
 out_free_cpu_groups:
 	free_cpu_groups(nb_cpu_group, &cpu_groups);
 out_free_cpus:

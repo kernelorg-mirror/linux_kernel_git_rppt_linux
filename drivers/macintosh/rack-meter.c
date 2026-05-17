@@ -441,7 +441,7 @@ static int rackmeter_probe(struct macio_dev* mdev,
 	pr_debug("  dma @0x%08x\n", (unsigned int)rdma.start);
 	pr_debug("  irq %d\n", rm->irq);
 
-	rm->ubuf = (u8 *)__get_free_page(GFP_KERNEL);
+	rm->ubuf = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (rm->ubuf == NULL) {
 		printk(KERN_ERR
 		       "rackmeter: failed to allocate samples page !\n");
@@ -509,7 +509,7 @@ static int rackmeter_probe(struct macio_dev* mdev,
 			  sizeof(struct rackmeter_dma),
 			  rm->dma_buf_v, rm->dma_buf_p);
  bail_free_samples:
-	free_page((unsigned long)rm->ubuf);
+	kfree((void *)(unsigned long)rm->ubuf);
  bail_release:
 #if 0
 	macio_release_resources(mdev);
@@ -549,7 +549,7 @@ static void rackmeter_remove(struct macio_dev *mdev)
 			  rm->dma_buf_v, rm->dma_buf_p);
 
 	/* Free samples */
-	free_page((unsigned long)rm->ubuf);
+	kfree((void *)(unsigned long)rm->ubuf);
 
 #if 0
 	/* Release resources */

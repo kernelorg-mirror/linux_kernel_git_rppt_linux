@@ -9,6 +9,7 @@
 #include <linux/gfp.h>
 #include <linux/types.h>
 
+#include <linux/slab.h>
 #include "fbnic.h"
 #include "fbnic_tlv.h"
 
@@ -163,7 +164,7 @@ static void fbnic_mbx_unmap_and_free_msg(struct fbnic_dev *fbd, int mbx_idx,
 	dma_unmap_single(fbd->dev, mbx->buf_info[desc_idx].addr,
 			 PAGE_SIZE, direction);
 
-	free_page((unsigned long)mbx->buf_info[desc_idx].msg);
+	kfree((void *)(unsigned long)mbx->buf_info[desc_idx].msg);
 	mbx->buf_info[desc_idx].msg = NULL;
 }
 
@@ -205,7 +206,7 @@ static int fbnic_mbx_alloc_rx_msgs(struct fbnic_dev *fbd)
 	while (!err && count--) {
 		struct fbnic_tlv_msg *msg;
 
-		msg = (struct fbnic_tlv_msg *)__get_free_page(GFP_KERNEL);
+		msg = kmalloc(PAGE_SIZE, GFP_KERNEL);
 		if (!msg) {
 			err = -ENOMEM;
 			break;
@@ -214,7 +215,7 @@ static int fbnic_mbx_alloc_rx_msgs(struct fbnic_dev *fbd)
 		err = fbnic_mbx_map_msg(fbd, FBNIC_IPC_MBX_RX_IDX, msg,
 					FBNIC_RX_PAGE_SIZE, 0);
 		if (err)
-			free_page((unsigned long)msg);
+			kfree((void *)(unsigned long)msg);
 	}
 
 	return err;
@@ -404,7 +405,7 @@ int fbnic_fw_xmit_test_msg(struct fbnic_dev *fbd,
 
 	err = fbnic_mbx_map_req_w_cmpl(fbd, test_msg, cmpl);
 	if (err)
-		free_page((unsigned long)test_msg);
+		kfree((void *)(unsigned long)test_msg);
 
 	return err;
 }
@@ -441,7 +442,7 @@ static int fbnic_fw_xmit_simple_msg(struct fbnic_dev *fbd, u32 msg_type)
 
 	err = fbnic_mbx_map_tlv_msg(fbd, msg);
 	if (err)
-		free_page((unsigned long)msg);
+		kfree((void *)(unsigned long)msg);
 
 	return err;
 }
@@ -548,7 +549,7 @@ int fbnic_fw_xmit_ownership_msg(struct fbnic_dev *fbd, bool take_ownership)
 	return err;
 
 free_message:
-	free_page((unsigned long)msg);
+	kfree((void *)(unsigned long)msg);
 	return err;
 }
 
@@ -766,7 +767,7 @@ static int fbnic_fw_xmit_heartbeat_message(struct fbnic_dev *fbd)
 	return err;
 
 free_message:
-	free_page((unsigned long)msg);
+	kfree((void *)(unsigned long)msg);
 	return err;
 }
 
@@ -870,7 +871,7 @@ int fbnic_fw_xmit_coredump_info_msg(struct fbnic_dev *fbd,
 	return 0;
 
 free_msg:
-	free_page((unsigned long)msg);
+	kfree((void *)(unsigned long)msg);
 	return err;
 }
 
@@ -959,7 +960,7 @@ int fbnic_fw_xmit_coredump_read_msg(struct fbnic_dev *fbd,
 	return 0;
 
 free_message:
-	free_page((unsigned long)msg);
+	kfree((void *)(unsigned long)msg);
 	return err;
 }
 
@@ -1077,7 +1078,7 @@ int fbnic_fw_xmit_fw_start_upgrade(struct fbnic_dev *fbd,
 	return 0;
 
 free_message:
-	free_page((unsigned long)msg);
+	kfree((void *)(unsigned long)msg);
 	return err;
 }
 
@@ -1153,7 +1154,7 @@ int fbnic_fw_xmit_fw_write_chunk(struct fbnic_dev *fbd,
 	return 0;
 
 free_message:
-	free_page((unsigned long)msg);
+	kfree((void *)(unsigned long)msg);
 	return err;
 }
 
@@ -1278,7 +1279,7 @@ int fbnic_fw_xmit_qsfp_read_msg(struct fbnic_dev *fbd,
 	return 0;
 
 free_message:
-	free_page((unsigned long)msg);
+	kfree((void *)(unsigned long)msg);
 	return err;
 }
 
@@ -1388,7 +1389,7 @@ int fbnic_fw_xmit_tsene_read_msg(struct fbnic_dev *fbd,
 	return 0;
 
 free_message:
-	free_page((unsigned long)msg);
+	kfree((void *)(unsigned long)msg);
 	return err;
 }
 
@@ -1594,7 +1595,7 @@ int fbnic_fw_xmit_send_logs(struct fbnic_dev *fbd, bool enable,
 	return 0;
 
 free_message:
-	free_page((unsigned long)msg);
+	kfree((void *)(unsigned long)msg);
 	return err;
 }
 
@@ -1997,7 +1998,7 @@ int fbnic_fw_xmit_rpc_macda_sync(struct fbnic_dev *fbd)
 free_message_nospc:
 	err = -ENOSPC;
 free_message:
-	free_page((unsigned long)msg);
+	kfree((void *)(unsigned long)msg);
 	return err;
 }
 

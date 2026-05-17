@@ -5,6 +5,7 @@
 
 #include <linux/prime_numbers.h>
 
+#include <linux/slab.h>
 #include "gem/i915_gem_internal.h"
 
 #include "i915_drv.h"
@@ -166,7 +167,7 @@ static int live_lrc_layout(void *arg)
 	 * match the layout saved by HW.
 	 */
 
-	lrc = (u32 *)__get_free_page(GFP_KERNEL); /* requires page alignment */
+	lrc = kmalloc(PAGE_SIZE, GFP_KERNEL); /* requires page alignment */
 	if (!lrc)
 		return -ENOMEM;
 	GEM_BUG_ON(offset_in_page(lrc));
@@ -268,7 +269,7 @@ static int live_lrc_layout(void *arg)
 			break;
 	}
 
-	free_page((unsigned long)lrc);
+	kfree((void *)(unsigned long)lrc);
 	return err;
 }
 

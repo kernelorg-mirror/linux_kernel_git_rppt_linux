@@ -21,6 +21,7 @@
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/spinlock.h>
+#include <linux/slab.h>
 #include <crypto/aes.h>
 #include <crypto/algapi.h>
 #include <crypto/engine.h>
@@ -1637,7 +1638,7 @@ static void paes_s390_fini(void)
 	__crypto_unregister_skcipher(&cbc_paes_alg);
 	__crypto_unregister_skcipher(&ecb_paes_alg);
 	if (ctrblk)
-		free_page((unsigned long)ctrblk);
+		kfree((void *)(unsigned long)ctrblk);
 	misc_deregister(&paes_dev);
 }
 
@@ -1699,7 +1700,7 @@ static int __init paes_s390_init(void)
 	if (cpacf_test_func(&kmctr_functions, CPACF_KMCTR_PAES_128) ||
 	    cpacf_test_func(&kmctr_functions, CPACF_KMCTR_PAES_192) ||
 	    cpacf_test_func(&kmctr_functions, CPACF_KMCTR_PAES_256)) {
-		ctrblk = (u8 *)__get_free_page(GFP_KERNEL);
+		ctrblk = kmalloc(PAGE_SIZE, GFP_KERNEL);
 		if (!ctrblk) {
 			rc = -ENOMEM;
 			goto out_err;

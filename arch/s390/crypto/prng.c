@@ -149,7 +149,7 @@ static int generate_entropy(u8 *ebuf, size_t nbytes)
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00 };
 
 	/* allocate one page stckf buffer */
-	pg = (u8 *) __get_free_page(GFP_KERNEL);
+	pg = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!pg) {
 		prng_errorflag = PRNG_GEN_ENTROPY_FAILED;
 		return -ENOMEM;
@@ -176,7 +176,7 @@ static int generate_entropy(u8 *ebuf, size_t nbytes)
 
 	memzero_explicit(pblock, sizeof(pblock));
 	memzero_explicit(pg, PAGE_SIZE);
-	free_page((unsigned long)pg);
+	kfree((void *)(unsigned long)pg);
 	return ret;
 }
 

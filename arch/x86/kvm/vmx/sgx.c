@@ -1,3 +1,4 @@
+#include <linux/slab.h>
 // SPDX-License-Identifier: GPL-2.0
 /*  Copyright(c) 2021 Intel Corporation. */
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -274,13 +275,13 @@ static int handle_encls_ecreate(struct kvm_vcpu *vcpu)
 	 * simultaneously set SGX_ATTR_PROVISIONKEY to bypass the check to
 	 * enforce restriction of access to the PROVISIONKEY.
 	 */
-	contents = (struct sgx_secs *)__get_free_page(GFP_KERNEL);
+	contents = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!contents)
 		return -ENOMEM;
 
 	/* Exit to userspace if copying from a host userspace address fails. */
 	if (sgx_read_hva(vcpu, contents_hva, (void *)contents, PAGE_SIZE)) {
-		free_page((unsigned long)contents);
+		kfree((void *)(unsigned long)contents);
 		return 0;
 	}
 
@@ -289,7 +290,7 @@ static int handle_encls_ecreate(struct kvm_vcpu *vcpu)
 
 	r = __handle_encls_ecreate(vcpu, &pageinfo, secs_hva, secs_gva);
 
-	free_page((unsigned long)contents);
+	kfree((void *)(unsigned long)contents);
 
 	return r;
 }

@@ -17,6 +17,7 @@
 #include <linux/of_fdt.h>
 #include <linux/of.h>
 #include <linux/cache.h>
+#include <linux/slab.h>
 #include <uapi/linux/mount.h>
 #include <asm/sections.h>
 #include <asm/arcregs.h>
@@ -581,7 +582,7 @@ static int show_cpuinfo(struct seq_file *m, void *v)
 		goto done;
 	}
 
-	str = (char *)__get_free_page(GFP_KERNEL);
+	str = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!str)
 		goto done;
 
@@ -604,7 +605,7 @@ static int show_cpuinfo(struct seq_file *m, void *v)
 
 	seq_printf(m, arc_platform_smp_cpuinfo());
 
-	free_page((unsigned long)str);
+	kfree((void *)(unsigned long)str);
 done:
 	seq_printf(m, "\n");
 

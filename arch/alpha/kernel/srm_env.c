@@ -18,6 +18,7 @@
 #include <linux/init.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/slab.h>
 #include <asm/console.h>
 #include <linux/uaccess.h>
 #include <asm/machvec.h>
@@ -66,7 +67,7 @@ static int srm_env_proc_show(struct seq_file *m, void *v)
 	unsigned long	id = (unsigned long)m->private;
 	char		*page;
 
-	page = (char *)__get_free_page(GFP_USER);
+	page = kmalloc(PAGE_SIZE, GFP_USER);
 	if (!page)
 		return -ENOMEM;
 
@@ -77,7 +78,7 @@ static int srm_env_proc_show(struct seq_file *m, void *v)
 		ret = 0;
 	} else
 		ret = -EFAULT;
-	free_page((unsigned long)page);
+	kfree((void *)(unsigned long)page);
 	return ret;
 }
 
@@ -91,7 +92,7 @@ static ssize_t srm_env_proc_write(struct file *file, const char __user *buffer,
 {
 	int res;
 	unsigned long	id = (unsigned long)pde_data(file_inode(file));
-	char		*buf = (char *) __get_free_page(GFP_USER);
+	char		*buf = kmalloc(PAGE_SIZE, GFP_USER);
 	unsigned long	ret1, ret2;
 
 	if (!buf)
@@ -115,7 +116,7 @@ static ssize_t srm_env_proc_write(struct file *file, const char __user *buffer,
 	}
 
  out:
-	free_page((unsigned long)buf);
+	kfree((void *)(unsigned long)buf);
 	return res;
 }
 

@@ -28,6 +28,7 @@
 #include <linux/unaligned.h>
 #include <linux/vmalloc.h>
 
+#include <linux/slab.h>
 #include <asm/early_ioremap.h>
 
 /*
@@ -186,7 +187,7 @@ int kho_radix_add_page(struct kho_radix_tree *tree,
 		}
 
 		/* Next node is empty, create a new node for it */
-		new_node = (struct kho_radix_node *)get_zeroed_page(GFP_KERNEL);
+		new_node = kzalloc(PAGE_SIZE, GFP_KERNEL);
 		if (!new_node) {
 			err = -ENOMEM;
 			goto err_free_nodes;
@@ -217,7 +218,7 @@ int kho_radix_add_page(struct kho_radix_tree *tree,
 err_free_nodes:
 	for (i = KHO_TREE_MAX_DEPTH - 1; i > 0; i--) {
 		if (intermediate_nodes[i])
-			free_page((unsigned long)intermediate_nodes[i]);
+			kfree((void *)(unsigned long)intermediate_nodes[i]);
 	}
 	if (anchor_node)
 		anchor_node->table[anchor_idx] = 0;

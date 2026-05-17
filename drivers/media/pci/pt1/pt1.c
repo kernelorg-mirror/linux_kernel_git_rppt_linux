@@ -817,7 +817,7 @@ static void pt1_free_adapter(struct pt1_adapter *adap)
 	dvb_dmxdev_release(&adap->dmxdev);
 	dvb_dmx_release(&adap->demux);
 	dvb_unregister_adapter(&adap->adap);
-	free_page((unsigned long)adap->buf);
+	kfree((void *)(unsigned long)adap->buf);
 	kfree(adap);
 }
 
@@ -844,7 +844,7 @@ pt1_alloc_adapter(struct pt1 *pt1)
 	adap->voltage = SEC_VOLTAGE_OFF;
 	adap->sleep = 1;
 
-	buf = (u8 *)__get_free_page(GFP_KERNEL);
+	buf = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!buf) {
 		ret = -ENOMEM;
 		goto err_kfree;
@@ -889,7 +889,7 @@ err_dmx_release:
 err_unregister_adapter:
 	dvb_unregister_adapter(dvb_adap);
 err_free_page:
-	free_page((unsigned long)buf);
+	kfree((void *)(unsigned long)buf);
 err_kfree:
 	kfree(adap);
 err:

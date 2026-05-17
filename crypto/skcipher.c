@@ -133,7 +133,7 @@ finish:
 	if (walk->buffer != walk->page)
 		kfree(walk->buffer);
 	if (walk->page)
-		free_page((unsigned long)walk->page);
+		kfree((void *)(unsigned long)walk->page);
 
 out:
 	return res;
@@ -230,7 +230,7 @@ slow_path:
 		if (!walk->page) {
 			gfp_t gfp = skcipher_walk_gfp(walk);
 
-			walk->page = (void *)__get_free_page(gfp);
+			walk->page = kmalloc(PAGE_SIZE, gfp);
 			if (!walk->page)
 				goto slow_path;
 		}

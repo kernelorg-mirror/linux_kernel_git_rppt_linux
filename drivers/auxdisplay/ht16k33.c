@@ -27,6 +27,7 @@
 
 #include <linux/unaligned.h>
 
+#include <linux/slab.h>
 #include "line-display.h"
 
 /* Registers */
@@ -591,7 +592,7 @@ static int ht16k33_fbdev_probe(struct device *dev, struct ht16k33_priv *priv,
 
 	/* Framebuffer (2 bytes per column) */
 	BUILD_BUG_ON(PAGE_SIZE < HT16K33_FB_SIZE);
-	fbdev->buffer = (unsigned char *) get_zeroed_page(GFP_KERNEL);
+	fbdev->buffer = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!fbdev->buffer)
 		return -ENOMEM;
 
@@ -636,7 +637,7 @@ static int ht16k33_fbdev_probe(struct device *dev, struct ht16k33_priv *priv,
 err_fbdev_info:
 	framebuffer_release(fbdev->info);
 err_fbdev_buffer:
-	free_page((unsigned long) fbdev->buffer);
+	kfree((void *)(unsigned long) fbdev->buffer);
 
 	return err;
 }
@@ -731,7 +732,7 @@ static void ht16k33_remove(struct i2c_client *client)
 	case DISP_MATRIX:
 		unregister_framebuffer(fbdev->info);
 		framebuffer_release(fbdev->info);
-		free_page((unsigned long)fbdev->buffer);
+		kfree((void *)(unsigned long)fbdev->buffer);
 		break;
 
 	case DISP_QUAD_7SEG:

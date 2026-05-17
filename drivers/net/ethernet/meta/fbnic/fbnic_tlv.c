@@ -6,6 +6,7 @@
 #include <linux/once.h>
 #include <linux/random.h>
 #include <linux/string.h>
+#include <linux/slab.h>
 #include <uapi/linux/if_ether.h>
 
 #include "fbnic_tlv.h"
@@ -24,7 +25,7 @@ struct fbnic_tlv_msg *fbnic_tlv_msg_alloc(u16 msg_id)
 	struct fbnic_tlv_hdr hdr = { 0 };
 	struct fbnic_tlv_msg *msg;
 
-	msg = (struct fbnic_tlv_msg *)__get_free_page(GFP_KERNEL);
+	msg = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!msg)
 		return NULL;
 
@@ -713,7 +714,7 @@ struct fbnic_tlv_msg *fbnic_tlv_test_create(struct fbnic_dev *fbd)
 
 	return msg;
 free_message:
-	free_page((unsigned long)msg);
+	kfree((void *)(unsigned long)msg);
 	return NULL;
 }
 

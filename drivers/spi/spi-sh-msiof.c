@@ -30,6 +30,7 @@
 
 #include <linux/unaligned.h>
 
+#include <linux/slab.h>
 #define SH_MSIOF_FLAG_FIXED_DTDL_200	BIT(0)
 
 struct sh_msiof_chipdata {
@@ -1128,11 +1129,11 @@ static int sh_msiof_request_dma(struct sh_msiof_spi_priv *p)
 	if (!ctlr->dma_rx)
 		goto free_tx_chan;
 
-	p->tx_dma_page = (void *)__get_free_page(GFP_KERNEL | GFP_DMA);
+	p->tx_dma_page = kmalloc(PAGE_SIZE, GFP_KERNEL | GFP_DMA);
 	if (!p->tx_dma_page)
 		goto free_rx_chan;
 
-	p->rx_dma_page = (void *)__get_free_page(GFP_KERNEL | GFP_DMA);
+	p->rx_dma_page = kmalloc(PAGE_SIZE, GFP_KERNEL | GFP_DMA);
 	if (!p->rx_dma_page)
 		goto free_tx_page;
 
@@ -1154,9 +1155,9 @@ static int sh_msiof_request_dma(struct sh_msiof_spi_priv *p)
 unmap_tx_page:
 	dma_unmap_single(tx_dev, p->tx_dma_addr, PAGE_SIZE, DMA_TO_DEVICE);
 free_rx_page:
-	free_page((unsigned long)p->rx_dma_page);
+	kfree(p->rx_dma_page);
 free_tx_page:
-	free_page((unsigned long)p->tx_dma_page);
+	kfree(p->tx_dma_page);
 free_rx_chan:
 	dma_release_channel(ctlr->dma_rx);
 free_tx_chan:
@@ -1176,8 +1177,8 @@ static void sh_msiof_release_dma(struct sh_msiof_spi_priv *p)
 			 DMA_FROM_DEVICE);
 	dma_unmap_single(ctlr->dma_tx->device->dev, p->tx_dma_addr, PAGE_SIZE,
 			 DMA_TO_DEVICE);
-	free_page((unsigned long)p->rx_dma_page);
-	free_page((unsigned long)p->tx_dma_page);
+	kfree(p->rx_dma_page);
+	kfree(p->tx_dma_page);
 	dma_release_channel(ctlr->dma_rx);
 	dma_release_channel(ctlr->dma_tx);
 }

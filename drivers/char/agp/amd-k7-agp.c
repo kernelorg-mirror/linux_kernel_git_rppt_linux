@@ -38,7 +38,7 @@ static int amd_create_page_map(struct amd_page_map *page_map)
 {
 	int i;
 
-	page_map->real = (unsigned long *) __get_free_page(GFP_KERNEL);
+	page_map->real = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (page_map->real == NULL)
 		return -ENOMEM;
 
@@ -56,7 +56,7 @@ static int amd_create_page_map(struct amd_page_map *page_map)
 static void amd_free_page_map(struct amd_page_map *page_map)
 {
 	set_memory_wb((unsigned long)page_map->real, 1);
-	free_page((unsigned long) page_map->real);
+	kfree((void *)(unsigned long) page_map->real);
 }
 
 static void amd_free_gatt_pages(void)

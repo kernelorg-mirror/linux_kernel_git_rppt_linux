@@ -7,6 +7,7 @@
 #include <linux/module.h>
 #include <linux/tpm.h>
 
+#include <linux/slab.h>
 /**
  * tpm_buf_init() - Allocate and initialize a TPM command
  * @buf:	A &tpm_buf
@@ -17,7 +18,7 @@
  */
 int tpm_buf_init(struct tpm_buf *buf, u16 tag, u32 ordinal)
 {
-	buf->data = (u8 *)__get_free_page(GFP_KERNEL);
+	buf->data = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!buf->data)
 		return -ENOMEM;
 
@@ -56,7 +57,7 @@ EXPORT_SYMBOL_GPL(tpm_buf_reset);
  */
 int tpm_buf_init_sized(struct tpm_buf *buf)
 {
-	buf->data = (u8 *)__get_free_page(GFP_KERNEL);
+	buf->data = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!buf->data)
 		return -ENOMEM;
 
@@ -80,7 +81,7 @@ EXPORT_SYMBOL_GPL(tpm_buf_reset_sized);
 
 void tpm_buf_destroy(struct tpm_buf *buf)
 {
-	free_page((unsigned long)buf->data);
+	kfree((void *)(unsigned long)buf->data);
 }
 EXPORT_SYMBOL_GPL(tpm_buf_destroy);
 

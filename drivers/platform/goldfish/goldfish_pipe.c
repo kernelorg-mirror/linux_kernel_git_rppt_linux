@@ -714,7 +714,7 @@ static int goldfish_pipe_open(struct inode *inode, struct file *file)
 	 */
 	BUILD_BUG_ON(sizeof(struct goldfish_pipe_command) > PAGE_SIZE);
 	pipe->command_buffer =
-		(struct goldfish_pipe_command *)__get_free_page(GFP_KERNEL);
+		kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!pipe->command_buffer) {
 		status = -ENOMEM;
 		goto err_pipe;
@@ -750,7 +750,7 @@ err_cmd:
 	dev->pipes[id] = NULL;
 err_id_locked:
 	spin_unlock_irqrestore(&dev->lock, flags);
-	free_page((unsigned long)pipe->command_buffer);
+	kfree((void *)(unsigned long)pipe->command_buffer);
 err_pipe:
 	kfree(pipe);
 	return status;
@@ -771,7 +771,7 @@ static int goldfish_pipe_release(struct inode *inode, struct file *filp)
 	spin_unlock_irqrestore(&dev->lock, flags);
 
 	filp->private_data = NULL;
-	free_page((unsigned long)pipe->command_buffer);
+	kfree((void *)(unsigned long)pipe->command_buffer);
 	kfree(pipe);
 	return 0;
 }
@@ -839,8 +839,7 @@ static int goldfish_pipe_device_init(struct platform_device *pdev,
 	 * is to just allocate a page and place the buffers in it.
 	 */
 	BUILD_BUG_ON(sizeof(struct goldfish_pipe_dev_buffers) > PAGE_SIZE);
-	dev->buffers = (struct goldfish_pipe_dev_buffers *)
-		__get_free_page(GFP_KERNEL);
+	dev->buffers = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!dev->buffers) {
 		kfree(dev->pipes);
 		misc_deregister(&dev->miscdev);
@@ -868,7 +867,7 @@ static void goldfish_pipe_device_deinit(struct platform_device *pdev,
 {
 	misc_deregister(&dev->miscdev);
 	kfree(dev->pipes);
-	free_page((unsigned long)dev->buffers);
+	kfree((void *)(unsigned long)dev->buffers);
 }
 
 static int goldfish_pipe_probe(struct platform_device *pdev)

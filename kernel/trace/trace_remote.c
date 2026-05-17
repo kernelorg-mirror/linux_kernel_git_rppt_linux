@@ -12,6 +12,7 @@
 #include <linux/trace_seq.h>
 #include <linux/types.h>
 
+#include <linux/slab.h>
 #include "trace.h"
 
 #define TRACEFS_DIR		"remotes"
@@ -954,10 +955,10 @@ void trace_remote_free_buffer(struct trace_buffer_desc *desc)
 	for_each_ring_buffer_desc(rb_desc, cpu, desc) {
 		unsigned int id;
 
-		free_page(rb_desc->meta_va);
+		kfree((void *)rb_desc->meta_va);
 
 		for (id = 0; id < rb_desc->nr_page_va; id++)
-			free_page(rb_desc->page_va[id]);
+			kfree((void *)rb_desc->page_va[id]);
 	}
 }
 EXPORT_SYMBOL_GPL(trace_remote_free_buffer);
@@ -1002,12 +1003,12 @@ int trace_remote_alloc_buffer(struct trace_buffer_desc *desc, size_t desc_size, 
 
 		rb_desc->cpu = cpu;
 		rb_desc->nr_page_va = 0;
-		rb_desc->meta_va = (unsigned long)__get_free_page(GFP_KERNEL);
+		rb_desc->meta_va = (unsigned long)kmalloc(PAGE_SIZE, GFP_KERNEL);
 		if (!rb_desc->meta_va)
 			goto err;
 
 		for (id = 0; id < nr_pages; id++) {
-			rb_desc->page_va[id] = (unsigned long)__get_free_page(GFP_KERNEL);
+			rb_desc->page_va[id] = (unsigned long)kmalloc(PAGE_SIZE, GFP_KERNEL);
 			if (!rb_desc->page_va[id])
 				goto err;
 

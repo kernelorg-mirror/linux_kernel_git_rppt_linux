@@ -42,7 +42,7 @@ static void __scm_free_rq(struct scm_request *scmrq)
 {
 	struct aob_rq_header *aobrq = to_aobrq(scmrq);
 
-	free_page((unsigned long) scmrq->aob);
+	kfree((void *)(unsigned long) scmrq->aob);
 	kfree(scmrq->request);
 	kfree(aobrq);
 }
@@ -73,7 +73,7 @@ static int __scm_alloc_rq(void)
 		return -ENOMEM;
 
 	scmrq = (void *) aobrq->data;
-	scmrq->aob = (void *) get_zeroed_page(GFP_DMA);
+	scmrq->aob = kzalloc(PAGE_SIZE, GFP_DMA);
 	if (!scmrq->aob)
 		goto free;
 

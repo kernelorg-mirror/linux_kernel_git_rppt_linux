@@ -1129,13 +1129,13 @@ int __ref efi_mem_reserve_persistent(phys_addr_t addr, u64 size)
 	}
 
 	/* no slot found - allocate a new linked list entry */
-	rsv = (struct linux_efi_memreserve *)__get_free_page(GFP_ATOMIC);
+	rsv = kmalloc(PAGE_SIZE, GFP_ATOMIC);
 	if (!rsv)
 		return -ENOMEM;
 
 	rc = efi_mem_reserve_iomem(__pa(rsv), SZ_4K);
 	if (rc) {
-		free_page((unsigned long)rsv);
+		kfree((void *)(unsigned long)rsv);
 		return rc;
 	}
 

@@ -17,6 +17,7 @@
 #include <linux/security.h>
 #include <linux/cred.h>
 #include <linux/idr.h>
+#include <linux/slab.h>
 #include <linux/init.h>		/* init_rootfs */
 #include <linux/fs_struct.h>	/* get_fs_root et.al. */
 #include <linux/fsnotify.h>	/* fsnotify_vfsmount_delete */
@@ -3303,7 +3304,7 @@ static void mnt_warn_timestamp_expiry(const struct path *mountpoint,
 	   (ktime_get_real_seconds() + TIME_UPTIME_SEC_MAX > sb->s_time_max)) {
 		char *buf, *mntpath;
 
-		buf = (char *)__get_free_page(GFP_KERNEL);
+		buf = kmalloc(PAGE_SIZE, GFP_KERNEL);
 		if (buf)
 			mntpath = d_path(mountpoint, buf, PAGE_SIZE);
 		else
@@ -3319,7 +3320,7 @@ static void mnt_warn_timestamp_expiry(const struct path *mountpoint,
 
 		sb->s_iflags |= SB_I_TS_EXPIRY_WARNED;
 		if (buf)
-			free_page((unsigned long)buf);
+			kfree((void *)(unsigned long)buf);
 	}
 }
 

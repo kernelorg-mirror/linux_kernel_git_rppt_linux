@@ -448,7 +448,7 @@ static int kvmppc_core_vcpu_create_e500(struct kvm_vcpu *vcpu)
 	if (err)
 		goto uninit_id;
 
-	vcpu->arch.shared = (void*)__get_free_page(GFP_KERNEL|__GFP_ZERO);
+	vcpu->arch.shared = kzalloc(PAGE_SIZE, GFP_KERNEL|__GFP_ZERO);
 	if (!vcpu->arch.shared) {
 		err = -ENOMEM;
 		goto uninit_tlb;
@@ -467,7 +467,7 @@ static void kvmppc_core_vcpu_free_e500(struct kvm_vcpu *vcpu)
 {
 	struct kvmppc_vcpu_e500 *vcpu_e500 = to_e500(vcpu);
 
-	free_page((unsigned long)vcpu->arch.shared);
+	kfree((void *)(unsigned long)vcpu->arch.shared);
 	kvmppc_e500_tlb_uninit(vcpu_e500);
 	kvmppc_e500_id_table_free(vcpu_e500);
 }

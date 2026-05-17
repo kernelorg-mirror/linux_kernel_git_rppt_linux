@@ -40,6 +40,7 @@
 #include <linux/percpu.h>
 #include <linux/cpu.h>
 
+#include <linux/slab.h>
 #include <asm/barrier.h>
 #include <asm/sync_bitops.h>
 #include <asm/xen/hypercall.h>
@@ -125,7 +126,7 @@ static void free_unused_array_pages(void)
 	for (i = event_array_pages; i < MAX_EVENT_ARRAY_PAGES; i++) {
 		if (!event_array[i])
 			break;
-		free_page((unsigned long)event_array[i]);
+		kfree((void *)(unsigned long)event_array[i]);
 		event_array[i] = NULL;
 	}
 }
@@ -155,7 +156,7 @@ static int evtchn_fifo_setup(evtchn_port_t port)
 		/* Might already have a page if we've resumed. */
 		array_page = event_array[event_array_pages];
 		if (!array_page) {
-			array_page = (void *)__get_free_page(GFP_KERNEL);
+			array_page = kmalloc(PAGE_SIZE, GFP_KERNEL);
 			if (array_page == NULL) {
 				ret = -ENOMEM;
 				goto error;
@@ -355,7 +356,7 @@ static void evtchn_fifo_resume(void)
 		 * used.
 		 */
 		if (!cpu_online(cpu)) {
-			free_page((unsigned long)control_block);
+			kfree((void *)(unsigned long)control_block);
 			per_cpu(cpu_control_block, cpu) = NULL;
 			continue;
 		}
@@ -377,7 +378,7 @@ static int evtchn_fifo_alloc_control_block(unsigned cpu)
 	void *control_block = NULL;
 	int ret = -ENOMEM;
 
-	control_block = (void *)__get_free_page(GFP_KERNEL);
+	control_block = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (control_block == NULL)
 		goto error;
 
@@ -390,7 +391,7 @@ static int evtchn_fifo_alloc_control_block(unsigned cpu)
 	return 0;
 
   error:
-	free_page((unsigned long)control_block);
+	kfree((void *)(unsigned long)control_block);
 	return ret;
 }
 

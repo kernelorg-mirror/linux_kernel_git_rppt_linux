@@ -22,6 +22,7 @@
 #include <linux/scatterlist.h>
 #include <linux/sys_soc.h>
 
+#include <linux/slab.h>
 #include "renesas_sdhi.h"
 #include "tmio_mmc.h"
 
@@ -398,7 +399,7 @@ static void renesas_sdhi_sys_dmac_request_dma(struct tmio_mmc_host *host,
 		if (ret < 0)
 			goto ecfgrx;
 
-		host->bounce_buf = (u8 *)__get_free_page(GFP_KERNEL | GFP_DMA);
+		host->bounce_buf = kmalloc(PAGE_SIZE, GFP_KERNEL | GFP_DMA);
 		if (!host->bounce_buf)
 			goto ebouncebuf;
 
@@ -436,7 +437,7 @@ static void renesas_sdhi_sys_dmac_release_dma(struct tmio_mmc_host *host)
 		dma_release_channel(chan);
 	}
 	if (host->bounce_buf) {
-		free_pages((unsigned long)host->bounce_buf, 0);
+		kfree((void *)(unsigned long)host->bounce_buf);
 		host->bounce_buf = NULL;
 	}
 }

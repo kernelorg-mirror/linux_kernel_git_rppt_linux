@@ -935,7 +935,7 @@ static int kaweth_probe(
 	} else {
 		/* Download the firmware */
 		dev_info(dev, "Downloading firmware...\n");
-		kaweth->firmware_buf = (__u8 *)__get_free_page(GFP_KERNEL);
+		kaweth->firmware_buf = kmalloc(PAGE_SIZE, GFP_KERNEL);
 		if (!kaweth->firmware_buf) {
 			rv = -ENOMEM;
 			goto err_free_netdev;
@@ -985,7 +985,7 @@ static int kaweth_probe(
 		/* Device will now disappear for a moment...  */
 		dev_info(dev, "Firmware loaded.  I'll be back...\n");
 err_fw:
-		free_page((unsigned long)kaweth->firmware_buf);
+		kfree((void *)(unsigned long)kaweth->firmware_buf);
 		free_netdev(netdev);
 		return -EIO;
 	}

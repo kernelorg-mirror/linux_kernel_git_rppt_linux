@@ -32,6 +32,7 @@
 #include <linux/fs.h>
 #include <linux/cleanup.h>
 
+#include <linux/slab.h>
 #include <acpi/cppc_acpi.h>
 
 #include <asm/msr.h>
@@ -42,7 +43,7 @@ static char *test_list;
 module_param(test_list, charp, 0444);
 MODULE_PARM_DESC(test_list,
 	"Comma-delimited list of tests to run (empty means run all tests)");
-DEFINE_FREE(cleanup_page, void *, if (_T) free_page((unsigned long)_T))
+DEFINE_FREE(cleanup_page, void *, if (_T) kfree((void *)(unsigned long)_T)
 
 struct amd_pstate_ut_struct {
 	const char *name;
@@ -303,7 +304,7 @@ static int amd_pstate_ut_epp(u32 index)
 		amd_pstate_clear_dynamic_epp(policy);
 	}
 
-	buf = (char *)__get_free_page(GFP_KERNEL);
+	buf = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
 

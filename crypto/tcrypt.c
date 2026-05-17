@@ -80,7 +80,7 @@ static int testmgr_alloc_buf(char *buf[XBUFSIZE])
 	int i;
 
 	for (i = 0; i < XBUFSIZE; i++) {
-		buf[i] = (void *)__get_free_page(GFP_KERNEL);
+		buf[i] = kmalloc(PAGE_SIZE, GFP_KERNEL);
 		if (!buf[i])
 			goto err_free_buf;
 	}
@@ -89,7 +89,7 @@ static int testmgr_alloc_buf(char *buf[XBUFSIZE])
 
 err_free_buf:
 	while (i-- > 0)
-		free_page((unsigned long)buf[i]);
+		kfree((void *)(unsigned long)buf[i]);
 
 	return -ENOMEM;
 }
@@ -99,7 +99,7 @@ static void testmgr_free_buf(char *buf[XBUFSIZE])
 	int i;
 
 	for (i = 0; i < XBUFSIZE; i++)
-		free_page((unsigned long)buf[i]);
+		kfree((void *)(unsigned long)buf[i]);
 }
 
 static void sg_init_aead(struct scatterlist *sg, char *xbuf[XBUFSIZE],
@@ -2796,7 +2796,7 @@ static int __init tcrypt_mod_init(void)
 	int i;
 
 	for (i = 0; i < TVMEMSIZE; i++) {
-		tvmem[i] = (void *)__get_free_page(GFP_KERNEL);
+		tvmem[i] = kmalloc(PAGE_SIZE, GFP_KERNEL);
 		if (!tvmem[i])
 			goto err_free_tv;
 	}
@@ -2827,7 +2827,7 @@ static int __init tcrypt_mod_init(void)
 
 err_free_tv:
 	for (i = 0; i < TVMEMSIZE && tvmem[i]; i++)
-		free_page((unsigned long)tvmem[i]);
+		kfree((void *)(unsigned long)tvmem[i]);
 
 	return err;
 }

@@ -49,6 +49,7 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/vmalloc.h>
+#include <linux/slab.h>
 #include <linux/sw842.h>
 #include <linux/spinlock.h>
 
@@ -112,8 +113,8 @@ void *nx842_crypto_alloc_ctx(struct nx842_driver *driver)
 	spin_lock_init(&ctx->lock);
 	ctx->driver = driver;
 	ctx->wmem = kmalloc(driver->workmem_size, GFP_KERNEL);
-	ctx->sbounce = (u8 *)__get_free_pages(GFP_KERNEL, BOUNCE_BUFFER_ORDER);
-	ctx->dbounce = (u8 *)__get_free_pages(GFP_KERNEL, BOUNCE_BUFFER_ORDER);
+	ctx->sbounce = kmalloc(PAGE_SIZE << (BOUNCE_BUFFER_ORDER), GFP_KERNEL);
+	ctx->dbounce = kmalloc(PAGE_SIZE << (BOUNCE_BUFFER_ORDER), GFP_KERNEL);
 	if (!ctx->wmem || !ctx->sbounce || !ctx->dbounce) {
 		nx842_crypto_free_ctx(ctx);
 		return ERR_PTR(-ENOMEM);
@@ -128,8 +129,8 @@ void nx842_crypto_free_ctx(void *p)
 	struct nx842_crypto_ctx *ctx = p;
 
 	kfree(ctx->wmem);
-	free_pages((unsigned long)ctx->sbounce, BOUNCE_BUFFER_ORDER);
-	free_pages((unsigned long)ctx->dbounce, BOUNCE_BUFFER_ORDER);
+	kfree(ctx->sbounce);
+	kfree(ctx->dbounce);
 	kfree(ctx);
 }
 EXPORT_SYMBOL_GPL(nx842_crypto_free_ctx);

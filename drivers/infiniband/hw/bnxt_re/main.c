@@ -44,6 +44,7 @@
 #include <linux/rculist.h>
 #include <linux/spinlock.h>
 #include <linux/pci.h>
+#include <linux/slab.h>
 #include <net/dcbnl.h>
 #include <net/ipv6.h>
 #include <net/addrconf.h>
@@ -862,7 +863,7 @@ void bnxt_re_pacing_alert(struct bnxt_re_dev *rdev)
 static int bnxt_re_initialize_dbr_pacing(struct bnxt_re_dev *rdev)
 {
 	/* Allocate a page for app use */
-	rdev->pacing.dbr_page = (void *)__get_free_page(GFP_KERNEL);
+	rdev->pacing.dbr_page = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!rdev->pacing.dbr_page)
 		return -ENOMEM;
 
@@ -870,7 +871,7 @@ static int bnxt_re_initialize_dbr_pacing(struct bnxt_re_dev *rdev)
 	rdev->qplib_res.pacing_data = (struct bnxt_qplib_db_pacing_data *)rdev->pacing.dbr_page;
 
 	if (bnxt_re_hwrm_dbr_pacing_qcfg(rdev)) {
-		free_page((u64)rdev->pacing.dbr_page);
+		kfree((void *)(u64)rdev->pacing.dbr_page);
 		rdev->pacing.dbr_page = NULL;
 		return -EIO;
 	}
@@ -885,7 +886,7 @@ static int bnxt_re_initialize_dbr_pacing(struct bnxt_re_dev *rdev)
 		pci_resource_start(rdev->qplib_res.pdev, 0) + rdev->pacing.dbr_db_fifo_reg_off;
 
 	if (is_dbr_fifo_full(rdev)) {
-		free_page((u64)rdev->pacing.dbr_page);
+		kfree((void *)(u64)rdev->pacing.dbr_page);
 		rdev->pacing.dbr_page = NULL;
 		return -EIO;
 	}
@@ -907,7 +908,7 @@ static void bnxt_re_deinitialize_dbr_pacing(struct bnxt_re_dev *rdev)
 	cancel_work_sync(&rdev->dbq_fifo_check_work);
 	cancel_delayed_work_sync(&rdev->dbq_pacing_work);
 	if (rdev->pacing.dbr_page)
-		free_page((u64)rdev->pacing.dbr_page);
+		kfree((void *)(u64)rdev->pacing.dbr_page);
 
 	rdev->pacing.dbr_page = NULL;
 	rdev->pacing.dbr_pacing = false;

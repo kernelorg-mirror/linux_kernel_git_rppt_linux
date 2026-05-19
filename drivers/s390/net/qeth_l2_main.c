@@ -559,7 +559,7 @@ static int qeth_l2_pnso(struct qeth_card *card, u8 oc, int cnc,
 	int i, size, elems;
 	int rc;
 
-	rr = (struct chsc_pnso_area *)get_zeroed_page(GFP_KERNEL);
+	rr = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (rr == NULL)
 		return -ENOMEM;
 	do {
@@ -598,7 +598,7 @@ static int qeth_l2_pnso(struct qeth_card *card, u8 oc, int cnc,
 	if (rc)
 		QETH_CARD_TEXT_(card, 2, "PNrp%04x", rr->response.code);
 
-	free_page((unsigned long)rr);
+	kfree(rr);
 	return rc;
 }
 

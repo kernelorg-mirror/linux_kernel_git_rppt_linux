@@ -445,19 +445,19 @@ static int rs_startup(struct tty_struct *tty, struct serial_state *info)
 	int	retval=0;
 	unsigned long page;
 
-	page = get_zeroed_page(GFP_KERNEL);
+	page = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!page)
 		return -ENOMEM;
 
 	local_irq_save(flags);
 
 	if (tty_port_initialized(port)) {
-		free_page(page);
+		kfree((void *)page);
 		goto errout;
 	}
 
 	if (info->xmit.buf)
-		free_page(page);
+		kfree((void *)page);
 	else
 		info->xmit.buf = (unsigned char *) page;
 
@@ -537,7 +537,7 @@ static void rs_shutdown(struct tty_struct *tty, struct serial_state *info)
 	 */
 	free_irq(IRQ_AMIGA_VERTB, info);
 
-	free_page((unsigned long)info->xmit.buf);
+	kfree(info->xmit.buf);
 	info->xmit.buf = NULL;
 
 	info->IER = 0;

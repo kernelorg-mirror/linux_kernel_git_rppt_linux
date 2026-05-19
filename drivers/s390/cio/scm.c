@@ -229,7 +229,7 @@ int scm_update_information(void)
 	size_t num;
 	int ret;
 
-	scm_info = (void *)__get_free_page(GFP_KERNEL);
+	scm_info = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!scm_info)
 		return -ENOMEM;
 
@@ -250,7 +250,7 @@ int scm_update_information(void)
 		token = scm_info->restok;
 	} while (token);
 
-	free_page((unsigned long)scm_info);
+	kfree(scm_info);
 
 	return ret;
 }

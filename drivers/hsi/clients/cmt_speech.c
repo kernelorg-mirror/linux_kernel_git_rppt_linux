@@ -1286,7 +1286,7 @@ static int cs_char_open(struct inode *unused, struct file *file)
 	cs_char_data.dataind_pending = 0;
 	spin_unlock_bh(&cs_char_data.lock);
 
-	p = get_zeroed_page(GFP_KERNEL);
+	p = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!p) {
 		ret = -ENOMEM;
 		goto out2;
@@ -1307,7 +1307,7 @@ static int cs_char_open(struct inode *unused, struct file *file)
 	return 0;
 
 out3:
-	free_page(p);
+	kfree((void *)p);
 out2:
 	spin_lock_bh(&cs_char_data.lock);
 	cs_char_data.opened = 0;
@@ -1338,7 +1338,7 @@ static int cs_char_release(struct inode *unused, struct file *file)
 	cs_hsi_stop(csdata->hi);
 	spin_lock_bh(&csdata->lock);
 	csdata->hi = NULL;
-	free_page(csdata->mmap_base);
+	kfree((void *)csdata->mmap_base);
 	cs_free_char_queue(&csdata->chardev_queue);
 	cs_free_char_queue(&csdata->dataind_queue);
 	csdata->opened = 0;

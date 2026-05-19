@@ -19,7 +19,7 @@ static int pool_op_alloc(struct tee_shm_pool *pool, struct tee_shm *shm,
 	 * Ignore alignment since this is already going to be page aligned
 	 * and there's no need for any larger alignment.
 	 */
-	va = __get_free_pages(GFP_KERNEL | __GFP_ZERO, order);
+	va = (unsigned long)kzalloc(PAGE_SIZE << (order), GFP_KERNEL);
 	if (!va)
 		return -ENOMEM;
 
@@ -30,7 +30,7 @@ static int pool_op_alloc(struct tee_shm_pool *pool, struct tee_shm *shm,
 	/* Map the allocated memory in to TEE */
 	rc = amdtee_map_shmem(shm);
 	if (rc) {
-		free_pages(va, order);
+		kfree((void *)va);
 		shm->kaddr = NULL;
 		return rc;
 	}
@@ -42,7 +42,7 @@ static void pool_op_free(struct tee_shm_pool *pool, struct tee_shm *shm)
 {
 	/* Unmap the shared memory from TEE */
 	amdtee_unmap_shmem(shm);
-	free_pages((unsigned long)shm->kaddr, get_order(shm->size));
+	kfree(shm->kaddr);
 	shm->kaddr = NULL;
 }
 

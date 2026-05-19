@@ -152,7 +152,7 @@ static struct rds_cong_map *rds_cong_from_addr(const struct in6_addr *addr)
 	INIT_LIST_HEAD(&map->m_conn_list);
 
 	for (i = 0; i < RDS_CONG_MAP_PAGES; i++) {
-		zp = get_zeroed_page(GFP_KERNEL);
+		zp = (unsigned long)kzalloc(PAGE_SIZE, GFP_KERNEL);
 		if (zp == 0)
 			goto out;
 		map->m_page_addrs[i] = zp;
@@ -170,7 +170,7 @@ static struct rds_cong_map *rds_cong_from_addr(const struct in6_addr *addr)
 out:
 	if (map) {
 		for (i = 0; i < RDS_CONG_MAP_PAGES && map->m_page_addrs[i]; i++)
-			free_page(map->m_page_addrs[i]);
+			kfree((void *)map->m_page_addrs[i]);
 		kfree(map);
 	}
 
@@ -407,7 +407,7 @@ void rds_cong_exit(void)
 		rdsdebug("freeing map %p\n", map);
 		rb_erase(&map->m_rb_node, &rds_cong_tree);
 		for (i = 0; i < RDS_CONG_MAP_PAGES && map->m_page_addrs[i]; i++)
-			free_page(map->m_page_addrs[i]);
+			kfree((void *)map->m_page_addrs[i]);
 		kfree(map);
 	}
 }

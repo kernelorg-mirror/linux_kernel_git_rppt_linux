@@ -5,6 +5,7 @@
  */
 
 #include <linux/buildid.h>
+#include <linux/slab.h>
 #include <linux/init.h>
 #include <linux/utsname.h>
 #include <linux/vmalloc.h>
@@ -139,9 +140,7 @@ EXPORT_SYMBOL_GPL(hwerr_log_error_type);
 
 static int __init crash_save_vmcoreinfo_init(void)
 {
-	int order;
-	order = get_order(VMCOREINFO_BYTES);
-	vmcoreinfo_data = (unsigned char *)__get_free_pages(GFP_KERNEL | __GFP_ZERO, order);
+	vmcoreinfo_data = kzalloc(VMCOREINFO_BYTES, GFP_KERNEL);
 	if (!vmcoreinfo_data) {
 		pr_warn("Memory allocation for vmcoreinfo_data failed\n");
 		return -ENOMEM;
@@ -150,7 +149,7 @@ static int __init crash_save_vmcoreinfo_init(void)
 	vmcoreinfo_note = alloc_pages_exact(VMCOREINFO_NOTE_SIZE,
 						GFP_KERNEL | __GFP_ZERO);
 	if (!vmcoreinfo_note) {
-		free_pages((unsigned long)vmcoreinfo_data, order);
+		kfree(vmcoreinfo_data);
 		vmcoreinfo_data = NULL;
 		pr_warn("Memory allocation for vmcoreinfo_note failed\n");
 		return -ENOMEM;

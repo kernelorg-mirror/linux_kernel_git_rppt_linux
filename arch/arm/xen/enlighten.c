@@ -18,6 +18,7 @@
 #include <asm/system_misc.h>
 #include <asm/efi.h>
 #include <linux/interrupt.h>
+#include <linux/slab.h>
 #include <linux/irqreturn.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -463,7 +464,7 @@ static int __init xen_guest_init(void)
 	if (efi_enabled(EFI_RUNTIME_SERVICES))
 		xen_efi_runtime_setup();
 
-	shared_info_page = (struct shared_info *)get_zeroed_page(GFP_KERNEL);
+	shared_info_page = kzalloc(PAGE_SIZE, GFP_KERNEL);
 
 	if (!shared_info_page) {
 		pr_err("not enough memory\n");

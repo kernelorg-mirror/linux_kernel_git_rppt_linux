@@ -8,6 +8,7 @@
  */
 
 #include <linux/memblock.h>
+#include <linux/slab.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -326,11 +327,11 @@ void *dvma_malloc_align(unsigned long len, unsigned long align)
 	pr_debug("dvma_malloc request %lx bytes\n", len);
 	len = ((len + (DVMA_PAGE_SIZE-1)) & DVMA_PAGE_MASK);
 
-        if((kaddr = __get_free_pages(GFP_ATOMIC, get_order(len))) == 0)
+        if((kaddr = (unsigned long)kmalloc(PAGE_SIZE << get_order(len), GFP_ATOMIC)) == 0)
 		return NULL;
 
 	if((baddr = (unsigned long)dvma_map_align(kaddr, len, align)) == 0) {
-		free_pages(kaddr, get_order(len));
+		kfree((void *)kaddr);
 		return NULL;
 	}
 
@@ -338,7 +339,7 @@ void *dvma_malloc_align(unsigned long len, unsigned long align)
 
 	if(dvma_map_cpu(kaddr, vaddr, len) < 0) {
 		dvma_unmap((void *)baddr);
-		free_pages(kaddr, get_order(len));
+		kfree((void *)kaddr);
 		return NULL;
 	}
 

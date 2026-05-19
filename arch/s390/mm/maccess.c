@@ -14,6 +14,7 @@
 #include <linux/cpu.h>
 #include <linux/uio.h>
 #include <linux/io.h>
+#include <linux/slab.h>
 #include <asm/asm-extable.h>
 #include <asm/abs_lowcore.h>
 #include <asm/stacktrace.h>
@@ -163,7 +164,7 @@ void *xlate_dev_mem_ptr(phys_addr_t addr)
 		if (cpu < 0)
 			goto out;
 	}
-	bounce = (void *)__get_free_page(GFP_ATOMIC);
+	bounce = kmalloc(PAGE_SIZE, GFP_ATOMIC);
 	if (!bounce)
 		goto out;
 	size = PAGE_SIZE - (addr & ~PAGE_MASK);
@@ -190,5 +191,5 @@ out:
 void unxlate_dev_mem_ptr(phys_addr_t addr, void *ptr)
 {
 	if (addr != virt_to_phys(ptr))
-		free_page((unsigned long)ptr);
+		kfree(ptr);
 }

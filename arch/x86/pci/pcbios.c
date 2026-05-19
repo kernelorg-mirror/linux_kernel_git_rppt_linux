@@ -372,7 +372,7 @@ struct irq_routing_table * pcibios_get_irq_routing_table(void)
 
 	if (!pci_bios_present)
 		return NULL;
-	page = __get_free_page(GFP_KERNEL);
+	page = (unsigned long)kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!page)
 		return NULL;
 	opt.table = (struct irq_info *) page;
@@ -411,7 +411,7 @@ struct irq_routing_table * pcibios_get_irq_routing_table(void)
 			printk(KERN_INFO "PCI: Using BIOS Interrupt Routing Table\n");
 		}
 	}
-	free_page(page);
+	kfree((void *)page);
 	return rt;
 }
 EXPORT_SYMBOL(pcibios_get_irq_routing_table);

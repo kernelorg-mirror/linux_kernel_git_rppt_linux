@@ -6,6 +6,7 @@
 #define pr_fmt(fmt) "xive-kvm: " fmt
 
 #include <linux/kernel.h>
+#include <linux/slab.h>
 #include <linux/kvm_host.h>
 #include <linux/err.h>
 #include <linux/gfp.h>
@@ -514,10 +515,10 @@ static int xive_vm_h_cppr(struct kvm_vcpu *vcpu, unsigned long cppr)
 
 static int xive_vm_h_eoi(struct kvm_vcpu *vcpu, unsigned long xirr)
 {
-	struct kvmppc_xive *xive = vcpu->kvm->arch.xive;
 	struct kvmppc_xive_src_block *sb;
 	struct kvmppc_xive_irq_state *state;
 	struct kvmppc_xive_vcpu *xc = vcpu->arch.xive_vcpu;
+	struct kvmppc_xive *xive = vcpu->kvm->arch.xive;
 	struct xive_irq_data *xd;
 	u8 new_cppr = xirr >> 24;
 	u32 irq = xirr & 0x00ffffff, hw_num;
@@ -944,7 +945,7 @@ static int xive_provision_queue(struct kvm_vcpu *vcpu, u8 prio)
 		return 0;
 
 	/* Allocate the queue and retrieve infos on current node for now */
-	qpage = (__be32 *)__get_free_pages(GFP_KERNEL, xive->q_page_order);
+	qpage = kmalloc(PAGE_SIZE << (xive->q_page_order), GFP_KERNEL);
 	if (!qpage) {
 		pr_err("Failed to allocate queue %d for VCPU %d\n",
 		       prio, xc->server_num);
@@ -1802,7 +1803,6 @@ void xive_cleanup_single_escalation(struct kvm_vcpu *vcpu, int irq)
 void kvmppc_xive_cleanup_vcpu(struct kvm_vcpu *vcpu)
 {
 	struct kvmppc_xive_vcpu *xc = vcpu->arch.xive_vcpu;
-	struct kvmppc_xive *xive = vcpu->kvm->arch.xive;
 	int i;
 
 	if (!kvmppc_xics_enabled(vcpu))
@@ -1843,8 +1843,7 @@ void kvmppc_xive_cleanup_vcpu(struct kvm_vcpu *vcpu)
 
 		xive_native_disable_queue(xc->vp_id, q, i);
 		if (q->qpage) {
-			free_pages((unsigned long)q->qpage,
-				   xive->q_page_order);
+			kfree(q->qpage);
 			q->qpage = NULL;
 		}
 	}

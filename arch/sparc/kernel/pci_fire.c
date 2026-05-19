@@ -234,7 +234,7 @@ static int pci_fire_msiq_alloc(struct pci_pbm_info *pbm)
 	unsigned long pages, order, i;
 
 	order = get_order(512 * 1024);
-	pages = __get_free_pages(GFP_KERNEL | __GFP_COMP, order);
+	pages = (unsigned long)kmalloc(PAGE_SIZE << (order), GFP_KERNEL | __GFP_COMP);
 	if (pages == 0UL) {
 		printk(KERN_ERR "MSI: Cannot allocate MSI queues (o=%lu).\n",
 		       order);
@@ -263,12 +263,11 @@ static int pci_fire_msiq_alloc(struct pci_pbm_info *pbm)
 
 static void pci_fire_msiq_free(struct pci_pbm_info *pbm)
 {
-	unsigned long pages, order;
+	unsigned long pages;
 
-	order = get_order(512 * 1024);
 	pages = (unsigned long) pbm->msi_queues;
 
-	free_pages(pages, order);
+	kfree((void *)pages);
 
 	pbm->msi_queues = NULL;
 }

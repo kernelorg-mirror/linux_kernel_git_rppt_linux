@@ -91,12 +91,12 @@ static __always_inline int clp_req(void *data, unsigned int lps)
 
 static void *clp_alloc_block(gfp_t gfp_mask)
 {
-	return (void *) __get_free_pages(gfp_mask, get_order(CLP_BLK_SIZE));
+	return kmalloc(PAGE_SIZE << get_order(CLP_BLK_SIZE), gfp_mask);
 }
 
 static void clp_free_block(void *ptr)
 {
-	free_pages((unsigned long) ptr, get_order(CLP_BLK_SIZE));
+	kfree(ptr);
 }
 
 static void clp_store_query_pci_fngrp(struct zpci_dev *zdev,

@@ -2644,17 +2644,17 @@ static int __set_pages_np(const void *addr, int numpages)
 	return __change_page_attr_set_clr(&cpa, 1);
 }
 
-int set_direct_map_invalid_noflush(const void *addr)
+int set_direct_map_invalid(const void *addr)
 {
 	return __set_pages_np(addr, 1);
 }
 
-int set_direct_map_default_noflush(const void *addr)
+int set_direct_map_default(const void *addr)
 {
 	return __set_pages_p(addr, 1);
 }
 
-int set_direct_map_valid_noflush(const void *addr, unsigned long numpages,
+int set_direct_map_valid(const void *addr, unsigned long numpages,
 				 bool valid)
 {
 	if (valid)

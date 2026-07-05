@@ -198,7 +198,7 @@ bool kernel_page_present(struct page *page)
 	return pte_present(ptep_get(pte));
 }
 
-int set_direct_map_default_noflush(const void *_addr)
+int set_direct_map_default(const void *_addr)
 {
 	unsigned long addr = (unsigned long)_addr;
 
@@ -208,7 +208,7 @@ int set_direct_map_default_noflush(const void *_addr)
 	return __set_memory(addr, 1, PAGE_KERNEL, __pgprot(0));
 }
 
-int set_direct_map_invalid_noflush(const void *_addr)
+int set_direct_map_invalid(const void *_addr)
 {
 	unsigned long addr = (unsigned long)_addr;
 
@@ -219,7 +219,7 @@ int set_direct_map_invalid_noflush(const void *_addr)
 			    __pgprot(_PAGE_PRESENT | _PAGE_VALID));
 }
 
-int set_direct_map_valid_noflush(const void *_addr, unsigned long numpages,
+int set_direct_map_valid(const void *_addr, unsigned long numpages,
 				 bool valid)
 {
 	unsigned long addr = (unsigned long)_addr;

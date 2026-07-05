@@ -374,19 +374,19 @@ int set_memory_nx(unsigned long addr, int numpages)
 	return __set_memory(addr, numpages, __pgprot(0), __pgprot(_PAGE_EXEC));
 }
 
-int set_direct_map_invalid_noflush(const void *addr)
+int set_direct_map_invalid(const void *addr)
 {
 	return __set_memory((unsigned long)addr, 1, __pgprot(0),
 			    __pgprot(_PAGE_PRESENT));
 }
 
-int set_direct_map_default_noflush(const void *addr)
+int set_direct_map_default(const void *addr)
 {
 	return __set_memory((unsigned long)addr, 1, PAGE_KERNEL,
 			    __pgprot(_PAGE_EXEC));
 }
 
-int set_direct_map_valid_noflush(const void *addr, unsigned long numpages,
+int set_direct_map_valid(const void *addr, unsigned long numpages,
 				 bool valid)
 {
 	pgprot_t set, clear;

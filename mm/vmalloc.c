@@ -3381,9 +3381,9 @@ static void vm_reset_perms(struct vm_struct *area)
 	 * there are any accesses after the TLB flush, then flush the TLB and
 	 * reset the direct map permissions to the default.
 	 */
-	set_area_direct_map(area, set_direct_map_invalid_noflush);
+	set_area_direct_map(area, set_direct_map_invalid);
 	_vm_unmap_aliases(start, end, flush_dmap);
-	set_area_direct_map(area, set_direct_map_default_noflush);
+	set_area_direct_map(area, set_direct_map_default);
 }
 
 static void delayed_vfree_work(struct work_struct *w)

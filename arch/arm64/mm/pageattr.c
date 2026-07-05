@@ -251,7 +251,7 @@ int set_memory_valid(unsigned long addr, int numpages, int enable)
 					__pgprot(PTE_PRESENT_VALID_KERNEL));
 }
 
-int set_direct_map_invalid_noflush(const void *addr)
+int set_direct_map_invalid(const void *addr)
 {
 	pgprot_t clear_mask = __pgprot(PTE_PRESENT_VALID_KERNEL);
 	pgprot_t set_mask = __pgprot(PTE_PRESENT_INVALID);
@@ -263,7 +263,7 @@ int set_direct_map_invalid_noflush(const void *addr)
 				 clear_mask);
 }
 
-int set_direct_map_default_noflush(const void *addr)
+int set_direct_map_default(const void *addr)
 {
 	pgprot_t set_mask = __pgprot(PTE_PRESENT_VALID_KERNEL | PTE_WRITE);
 	pgprot_t clear_mask = __pgprot(PTE_PRESENT_INVALID | PTE_RDONLY);
@@ -355,7 +355,7 @@ int realm_register_memory_enc_ops(void)
 	return arm64_mem_crypt_ops_register(&realm_crypt_ops);
 }
 
-int set_direct_map_valid_noflush(const void *addr, unsigned long numpages,
+int set_direct_map_valid(const void *addr, unsigned long numpages,
 				 bool valid)
 {
 	if (!can_set_direct_map())
@@ -367,7 +367,7 @@ int set_direct_map_valid_noflush(const void *addr, unsigned long numpages,
 #ifdef CONFIG_DEBUG_PAGEALLOC
 /*
  * This is - apart from the return value - doing the same
- * thing as the new set_direct_map_valid_noflush() function.
+ * thing as the new set_direct_map_valid() function.
  *
  * Unify? Explain the conceptual differences?
  */

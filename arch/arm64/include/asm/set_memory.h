@@ -11,9 +11,9 @@ bool can_set_direct_map(void);
 
 int set_memory_valid(unsigned long addr, int numpages, int enable);
 
-int set_direct_map_invalid_noflush(const void *addr);
-int set_direct_map_default_noflush(const void *addr);
-int set_direct_map_valid_noflush(const void *addr, unsigned long numpages,
+int set_direct_map_invalid(const void *addr);
+int set_direct_map_default(const void *addr);
+int set_direct_map_valid(const void *addr, unsigned long numpages,
 				 bool valid);
 bool kernel_page_present(struct page *page);
 

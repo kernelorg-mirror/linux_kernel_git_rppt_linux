@@ -387,17 +387,17 @@ out:
 	return rc;
 }
 
-int set_direct_map_invalid_noflush(const void *addr)
+int set_direct_map_invalid(const void *addr)
 {
 	return __set_memory((unsigned long)addr, 1, SET_MEMORY_INV);
 }
 
-int set_direct_map_default_noflush(const void *addr)
+int set_direct_map_default(const void *addr)
 {
 	return __set_memory((unsigned long)addr, 1, SET_MEMORY_DEF);
 }
 
-int set_direct_map_valid_noflush(const void *addr, unsigned long numpages,
+int set_direct_map_valid(const void *addr, unsigned long numpages,
 				 bool valid)
 {
 	unsigned long flags;

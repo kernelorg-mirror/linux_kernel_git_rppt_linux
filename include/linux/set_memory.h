@@ -25,16 +25,16 @@ static inline int set_memory_rox(unsigned long addr, int numpages)
 #endif
 
 #ifndef CONFIG_ARCH_HAS_SET_DIRECT_MAP
-static inline int set_direct_map_invalid_noflush(const void *addr)
+static inline int set_direct_map_invalid(const void *addr)
 {
 	return 0;
 }
-static inline int set_direct_map_default_noflush(const void *addr)
+static inline int set_direct_map_default(const void *addr)
 {
 	return 0;
 }
 
-static inline int set_direct_map_valid_noflush(const void *addr,
+static inline int set_direct_map_valid(const void *addr,
 					       unsigned long numpages,
 					       bool valid)
 {

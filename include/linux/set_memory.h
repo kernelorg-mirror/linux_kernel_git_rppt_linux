@@ -36,13 +36,6 @@ static inline int set_direct_map_default(const void *addr,
 	return 0;
 }
 
-static inline int set_direct_map_valid(const void *addr,
-					       unsigned long numpages,
-					       bool valid)
-{
-	return 0;
-}
-
 static inline bool kernel_page_present(struct page *page)
 {
 	return true;

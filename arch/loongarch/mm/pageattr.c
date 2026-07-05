@@ -218,23 +218,3 @@ int set_direct_map_invalid(const void *_addr, unsigned long numpages)
 	return __set_memory(addr, numpages, __pgprot(0),
 			    __pgprot(_PAGE_PRESENT | _PAGE_VALID));
 }
-
-int set_direct_map_valid(const void *_addr, unsigned long numpages,
-				 bool valid)
-{
-	unsigned long addr = (unsigned long)_addr;
-	pgprot_t set, clear;
-
-	if (addr < vm_map_base)
-		return 0;
-
-	if (valid) {
-		set = PAGE_KERNEL;
-		clear = __pgprot(0);
-	} else {
-		set = __pgprot(0);
-		clear = __pgprot(_PAGE_PRESENT | _PAGE_VALID);
-	}
-
-	return __set_memory(addr, numpages, set, clear);
-}

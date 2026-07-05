@@ -386,22 +386,6 @@ int set_direct_map_default(const void *addr, unsigned long numpages)
 			    __pgprot(_PAGE_EXEC));
 }
 
-int set_direct_map_valid(const void *addr, unsigned long numpages,
-				 bool valid)
-{
-	pgprot_t set, clear;
-
-	if (valid) {
-		set = PAGE_KERNEL;
-		clear = __pgprot(_PAGE_EXEC);
-	} else {
-		set = __pgprot(0);
-		clear = __pgprot(_PAGE_PRESENT);
-	}
-
-	return __set_memory((unsigned long)addr, numpages, set, clear);
-}
-
 #ifdef CONFIG_DEBUG_PAGEALLOC
 static int debug_pagealloc_set_page(pte_t *pte, unsigned long addr, void *data)
 {

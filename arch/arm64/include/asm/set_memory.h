@@ -13,8 +13,6 @@ int set_memory_valid(unsigned long addr, int numpages, int enable);
 
 int set_direct_map_invalid(const void *addr, unsigned long numpages);
 int set_direct_map_default(const void *addr, unsigned long numpages);
-int set_direct_map_valid(const void *addr, unsigned long numpages,
-				 bool valid);
 bool kernel_page_present(struct page *page);
 
 int set_memory_encrypted(unsigned long addr, int numpages);

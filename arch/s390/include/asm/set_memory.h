@@ -62,8 +62,6 @@ __SET_MEMORY_FUNC(set_memory_4k, SET_MEMORY_4K)
 
 int set_direct_map_invalid(const void *addr, unsigned long numpages);
 int set_direct_map_default(const void *addr, unsigned long numpages);
-int set_direct_map_valid(const void *addr, unsigned long numpages,
-				 bool valid);
 bool kernel_page_present(struct page *page);
 
 #endif

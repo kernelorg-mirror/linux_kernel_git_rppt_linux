@@ -2654,15 +2654,6 @@ int set_direct_map_default(const void *addr, unsigned long numpages)
 	return __set_pages_p(addr, numpages);
 }
 
-int set_direct_map_valid(const void *addr, unsigned long numpages,
-				 bool valid)
-{
-	if (valid)
-		return __set_pages_p(addr, numpages);
-
-	return __set_pages_np(addr, numpages);
-}
-
 #ifdef CONFIG_DEBUG_PAGEALLOC
 void __kernel_map_pages(struct page *page, int numpages, int enable)
 {

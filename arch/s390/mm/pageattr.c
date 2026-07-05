@@ -397,34 +397,6 @@ int set_direct_map_default(const void *addr, unsigned long numpages)
 	return __set_memory((unsigned long)addr, numpages, SET_MEMORY_DEF);
 }
 
-int set_direct_map_valid(const void *addr, unsigned long numpages,
-				 bool valid)
-{
-	unsigned long flags;
-
-	if (valid)
-		flags = SET_MEMORY_DEF;
-	else
-		flags = SET_MEMORY_INV;
-
-	return __set_memory((unsigned long)addr, numpages, flags);
-}
-
-bool kernel_page_present(struct page *page)
-{
-	unsigned long addr;
-	unsigned int cc;
-
-	addr = (unsigned long)page_address(page);
-	asm volatile(
-		"	lra	%[addr],0(%[addr])\n"
-		CC_IPM(cc)
-		: CC_OUT(cc, cc), [addr] "+a" (addr)
-		:
-		: CC_CLOBBER);
-	return CC_TRANSFORM(cc) == 0;
-}
-
 #if defined(CONFIG_DEBUG_PAGEALLOC) || defined(CONFIG_KFENCE)
 
 static void ipte_range(pte_t *pte, unsigned long address, int nr)

@@ -5,6 +5,8 @@
 #ifndef __MM_VMALLOC_H
 #define __MM_VMALLOC_H
 
+#include <linux/set_memory.h>
+
 #ifdef CONFIG_MMU
 void __init vmalloc_init(void);
 int __must_check vmap_pages_range_noflush(unsigned long addr, unsigned long end,
@@ -33,4 +35,25 @@ void vunmap_range_noflush(unsigned long start, unsigned long end);
 
 void __vunmap_range_noflush(unsigned long start, unsigned long end);
 
+static inline void vm_area_set_direct_map(struct vm_struct *vm,
+		int (*set_direct_map)(const void *addr, unsigned long numpages))
+{
+	unsigned int nr = (1 << get_vm_area_page_order(vm));
+	int err = 0;
+
+	for (int i = 0; i < vm->nr_pages; i += nr) {
+		err = set_direct_map(page_address(vm->pages[i]), nr);
+		WARN_ON_ONCE(err);
+	}
+}
+
+static inline void vm_area_set_direct_map_invalid(struct vm_struct *vm)
+{
+	vm_area_set_direct_map(vm, set_direct_map_invalid);
+}
+
+static inline void vm_area_set_direct_map_default(struct vm_struct *vm)
+{
+	vm_area_set_direct_map(vm, set_direct_map_default);
+}
 #endif /* __MM_VMALLOC_H */

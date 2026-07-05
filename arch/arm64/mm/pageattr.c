@@ -251,7 +251,7 @@ int set_memory_valid(unsigned long addr, int numpages, int enable)
 					__pgprot(PTE_PRESENT_VALID_KERNEL));
 }
 
-int set_direct_map_invalid(const void *addr)
+int set_direct_map_invalid(const void *addr, unsigned long numpages)
 {
 	pgprot_t clear_mask = __pgprot(PTE_PRESENT_VALID_KERNEL);
 	pgprot_t set_mask = __pgprot(PTE_PRESENT_INVALID);
@@ -259,11 +259,11 @@ int set_direct_map_invalid(const void *addr)
 	if (!can_set_direct_map())
 		return 0;
 
-	return update_range_prot((unsigned long)addr, PAGE_SIZE, set_mask,
-				 clear_mask);
+	return update_range_prot((unsigned long)addr, PAGE_SIZE * numpages,
+				 set_mask, clear_mask);
 }
 
-int set_direct_map_default(const void *addr)
+int set_direct_map_default(const void *addr, unsigned long numpages)
 {
 	pgprot_t set_mask = __pgprot(PTE_PRESENT_VALID_KERNEL | PTE_WRITE);
 	pgprot_t clear_mask = __pgprot(PTE_PRESENT_INVALID | PTE_RDONLY);
@@ -271,8 +271,8 @@ int set_direct_map_default(const void *addr)
 	if (!can_set_direct_map())
 		return 0;
 
-	return update_range_prot((unsigned long)addr, PAGE_SIZE, set_mask,
-				 clear_mask);
+	return update_range_prot((unsigned long)addr, PAGE_SIZE * numpages,
+				 set_mask, clear_mask);
 }
 
 static int __set_memory_enc_dec(unsigned long addr,

@@ -2644,14 +2644,14 @@ static int __set_pages_np(const void *addr, int numpages)
 	return __change_page_attr_set_clr(&cpa, 1);
 }
 
-int set_direct_map_invalid(const void *addr)
+int set_direct_map_invalid(const void *addr, unsigned long numpages)
 {
-	return __set_pages_np(addr, 1);
+	return __set_pages_np(addr, numpages);
 }
 
-int set_direct_map_default(const void *addr)
+int set_direct_map_default(const void *addr, unsigned long numpages)
 {
-	return __set_pages_p(addr, 1);
+	return __set_pages_p(addr, numpages);
 }
 
 int set_direct_map_valid(const void *addr, unsigned long numpages,

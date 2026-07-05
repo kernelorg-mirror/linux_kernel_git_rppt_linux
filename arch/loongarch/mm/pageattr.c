@@ -198,24 +198,24 @@ bool kernel_page_present(struct page *page)
 	return pte_present(ptep_get(pte));
 }
 
-int set_direct_map_default(const void *_addr)
+int set_direct_map_default(const void *_addr, unsigned long numpages)
 {
 	unsigned long addr = (unsigned long)_addr;
 
 	if (addr < vm_map_base)
 		return 0;
 
-	return __set_memory(addr, 1, PAGE_KERNEL, __pgprot(0));
+	return __set_memory(addr, numpages, PAGE_KERNEL, __pgprot(0));
 }
 
-int set_direct_map_invalid(const void *_addr)
+int set_direct_map_invalid(const void *_addr, unsigned long numpages)
 {
 	unsigned long addr = (unsigned long)_addr;
 
 	if (addr < vm_map_base)
 		return 0;
 
-	return __set_memory(addr, 1, __pgprot(0),
+	return __set_memory(addr, numpages, __pgprot(0),
 			    __pgprot(_PAGE_PRESENT | _PAGE_VALID));
 }
 

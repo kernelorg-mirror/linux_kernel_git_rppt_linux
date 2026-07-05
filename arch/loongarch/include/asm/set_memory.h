@@ -15,8 +15,8 @@ int set_memory_ro(unsigned long addr, int numpages);
 int set_memory_rw(unsigned long addr, int numpages);
 
 bool kernel_page_present(struct page *page);
-int set_direct_map_invalid(const void *addr);
-int set_direct_map_default(const void *addr);
+int set_direct_map_invalid(const void *addr, unsigned long numpages);
+int set_direct_map_default(const void *addr, unsigned long numpages);
 int set_direct_map_valid(const void *addr, unsigned long numpages,
 				 bool valid);
 

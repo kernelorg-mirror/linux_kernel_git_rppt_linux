@@ -387,14 +387,14 @@ out:
 	return rc;
 }
 
-int set_direct_map_invalid(const void *addr)
+int set_direct_map_invalid(const void *addr, unsigned long numpages)
 {
-	return __set_memory((unsigned long)addr, 1, SET_MEMORY_INV);
+	return __set_memory((unsigned long)addr, numpages, SET_MEMORY_INV);
 }
 
-int set_direct_map_default(const void *addr)
+int set_direct_map_default(const void *addr, unsigned long numpages)
 {
-	return __set_memory((unsigned long)addr, 1, SET_MEMORY_DEF);
+	return __set_memory((unsigned long)addr, numpages, SET_MEMORY_DEF);
 }
 
 int set_direct_map_valid(const void *addr, unsigned long numpages,

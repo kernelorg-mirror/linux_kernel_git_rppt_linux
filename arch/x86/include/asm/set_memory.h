@@ -86,8 +86,8 @@ int set_pages_wb(struct page *page, int numpages);
 int set_pages_ro(struct page *page, int numpages);
 int set_pages_rw(struct page *page, int numpages);
 
-int set_direct_map_invalid(const void *addr);
-int set_direct_map_default(const void *addr);
+int set_direct_map_invalid(const void *addr, unsigned long numpages);
+int set_direct_map_default(const void *addr, unsigned long numpages);
 int set_direct_map_valid(const void *addr, unsigned long numpages,
 				 bool valid);
 bool kernel_page_present(struct page *page);

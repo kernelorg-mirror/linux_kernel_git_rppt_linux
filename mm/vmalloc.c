@@ -3336,7 +3336,8 @@ struct vm_struct *remove_vm_area(const void *addr)
 }
 
 static inline void set_area_direct_map(const struct vm_struct *area,
-				       int (*set_direct_map)(const void *addr))
+				       int (*set_direct_map)(const void *addr,
+							     unsigned long numpages))
 {
 	int i;
 
@@ -3345,7 +3346,7 @@ static inline void set_area_direct_map(const struct vm_struct *area,
 		const void *addr = page_address(area->pages[i]);
 
 		if (addr)
-			set_direct_map(addr);
+			set_direct_map(addr, 1);
 	}
 }
 

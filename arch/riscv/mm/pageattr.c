@@ -271,6 +271,10 @@ static int __set_memory(unsigned long addr, int numpages, pgprot_t set_mask,
 		.set_mask = set_mask,
 		.clear_mask = clear_mask
 	};
+	struct pageattr_masks __maybe_unused lm_masks = {
+		.set_mask = __pgprot(pgprot_val(set_mask) & ~_PAGE_EXEC),
+		.clear_mask = clear_mask
+	};
 
 	if (!numpages)
 		return 0;
@@ -300,7 +304,8 @@ static int __set_memory(unsigned long addr, int numpages, pgprot_t set_mask,
 				goto unlock;
 
 			ret = walk_kernel_page_table_range(lm_start, lm_end,
-						    &pageattr_ops, NULL, &masks);
+						    &pageattr_ops, NULL,
+						    &lm_masks);
 			if (ret)
 				goto unlock;
 		}
@@ -318,7 +323,7 @@ static int __set_memory(unsigned long addr, int numpages, pgprot_t set_mask,
 			goto unlock;
 
 		ret = walk_kernel_page_table_range(lm_start, lm_end,
-					    &pageattr_ops, NULL, &masks);
+					    &pageattr_ops, NULL, &lm_masks);
 		if (ret)
 			goto unlock;
 	}

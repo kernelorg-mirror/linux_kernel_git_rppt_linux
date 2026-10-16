@@ -428,7 +428,7 @@ bool kernel_page_present(struct page *page)
 	pgd_t *pgd;
 	pud_t *pud;
 	p4d_t *p4d;
-	pmd_t *pmd;
+	pmd_t *pmd, pmdval;
 	pte_t *pte;
 
 	pgd = pgd_offset_k(addr);
@@ -450,11 +450,13 @@ bool kernel_page_present(struct page *page)
 		return true;
 
 	pmd = pmd_offset(pud, addr);
-	if (!pmd_present(pmdp_get(pmd)))
+	pmdval = pmdp_get(pmd);
+	if (!pmd_present(pmdval))
 		return false;
-	if (pmd_leaf(pmdp_get(pmd)))
-		return true;
+	if (pmd_leaf(pmdval))
+		return pmd_val(pmdval) & _PAGE_PRESENT;
 
+	/* pte_present() is true for PAGE_KERNEL with _PAGE_PRESENT cleared */
 	pte = pte_offset_kernel(pmd, addr);
-	return pte_present(ptep_get(pte));
+	return pte_val(ptep_get(pte)) & _PAGE_PRESENT;
 }

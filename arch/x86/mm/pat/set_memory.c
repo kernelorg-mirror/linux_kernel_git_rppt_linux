@@ -2101,7 +2101,10 @@ static int __change_page_attr_set_clr(struct cpa_data *cpa, int primary)
 		 * CPA operation. Either a large page has been
 		 * preserved or a single page update happened.
 		 */
-		BUG_ON(cpa->numpages > rempages || !cpa->numpages);
+		if (WARN_ON_ONCE(cpa->numpages > rempages || !cpa->numpages)) {
+			ret = -EINVAL;
+			goto out;
+		}
 		rempages -= cpa->numpages;
 		cpa->curpage += cpa->numpages;
 	}

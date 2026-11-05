@@ -245,6 +245,9 @@ static void *arch_cpa_alloc_pgtable(struct cpa_data *cpa, struct cpa_leaf *leaf)
 
 static void arch_cpa_free_pgtable(struct cpa_leaf *leaf, void *table)
 {
+	if (!table)
+		return;
+
 	if (leaf->level == PGTABLE_LEVEL_PMD)
 		pte_free_kernel(&init_mm, table);
 	else
@@ -263,7 +266,7 @@ static int __should_split_large_page(struct cpa_data *cpa,
 	pgprot_t old_prot = leaf->prot;
 	unsigned long numpages, pfn;
 
-	if (level != PGTABLE_LEVEL_PMD && level != PGTABLE_LEVEL_PUD)
+	if (level > PGTABLE_LEVEL_PUD)
 		return -EINVAL;
 
 	cpa_inc_pxd_checked(level);
@@ -340,20 +343,24 @@ static int should_split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf)
 static int split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf)
 {
 	unsigned long address = cpa_addr(cpa, cpa->curpage);
+	enum pgtable_level level = leaf->level;
+	unsigned long size = leaf->size;
 	pte_t *kpte = leaf->kpte;
 	struct cpa_leaf tmp;
-	void *table;
+	void *table = NULL;
 	int ret;
 
-	spin_unlock(&cpa_lock);
-	if (cpa->state & CPA_ST_INIT_MM_LOCKED)
-		mmap_read_unlock(&init_mm);
-	table = arch_cpa_alloc_pgtable(cpa, leaf);
-	if (cpa->state & CPA_ST_INIT_MM_LOCKED)
-		mmap_read_lock(&init_mm);
-	spin_lock(&cpa_lock);
-	if (!table)
-		return -ENOMEM;
+	if (size == pgtable_level_size(level)) {
+		spin_unlock(&cpa_lock);
+		if (cpa->state & CPA_ST_INIT_MM_LOCKED)
+			mmap_read_unlock(&init_mm);
+		table = arch_cpa_alloc_pgtable(cpa, leaf);
+		if (cpa->state & CPA_ST_INIT_MM_LOCKED)
+			mmap_read_lock(&init_mm);
+		spin_lock(&cpa_lock);
+		if (!table)
+			return -ENOMEM;
+	}
 
 	/*
 	 * Check for races, another CPU might have split this page
@@ -371,7 +378,7 @@ static int split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf)
 		return ret;
 	}
 
-	if (cpa_is_direct_map(address))
+	if (table && cpa_is_direct_map(address))
 		direct_map_count_split(leaf->level);
 
 	return 0;
@@ -419,7 +426,7 @@ repeat:
 	if (!cpa_lookup(cpa, address, &leaf))
 		return arch_cpa_process_fault(cpa);
 
-	if (leaf.level == PGTABLE_LEVEL_PTE) {
+	if (leaf.size == PAGE_SIZE) {
 		pgprot_t old_prot = leaf.prot;
 		unsigned long pfn = leaf.pfn;
 		pgprot_t new_prot;

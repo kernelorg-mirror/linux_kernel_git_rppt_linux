@@ -61,13 +61,18 @@ struct cpa_data {
 
 /**
  * struct cpa_leaf - a mapping found by the lookup
- * @kpte: the page table entry
+ * @kpte: the page table entry, or the first entry of a contiguous block
  * @level: the level of @kpte
  * @addr: the first virtual address that @kpte maps
- * @size: the size of the mapping
+ * @size: the size of the mapping: the size of @level, or of the contiguous
+ *	block
  * @pfn: the first pfn that @kpte maps
  * @prot: the protection of the mapping in the architecture's PTE format, as
  *	decoded by arch_cpa_decode_leaf()
+ *
+ * A contiguous block is a run of adjacent entries that the architecture
+ * treats as one mapping, like the entries with the contiguous bit on arm64
+ * or a 16K or 512K page on powerpc 8xx.
  */
 struct cpa_leaf {
 	pte_t			*kpte;
@@ -150,6 +155,7 @@ void cpa_report_meminfo(struct seq_file *m, unsigned long levels);
  * @leaf: the mapping to decode
  *
  * Fill @leaf->pfn and @leaf->prot from the entry @leaf->kpte at @leaf->level.
+ * If the entry is a part of a contiguous block, extend @leaf to the block.
  */
 void arch_cpa_decode_leaf(struct cpa_leaf *leaf);
 
@@ -158,7 +164,8 @@ void arch_cpa_decode_leaf(struct cpa_leaf *leaf);
  * @leaf: the mapping to change
  * @prot: the new protection
  *
- * Store the entry of @leaf with @prot without flushing the TLB.
+ * Store the entry of @leaf, or every entry of its contiguous block, with
+ * @prot without flushing the TLB.
  */
 void arch_cpa_modify_leaf(struct cpa_leaf *leaf, pgprot_t prot);
 
@@ -194,11 +201,13 @@ static inline pgprot_t arch_cpa_new_prot(struct cpa_data *cpa,
  * arch_cpa_split_leaf() - split a large page
  * @cpa: the request
  * @leaf: the large page
- * @table: the page table from arch_cpa_alloc_pgtable()
+ * @table: the page table from arch_cpa_alloc_pgtable(), NULL for a
+ *	contiguous block
  *
  * Replace @leaf with @table, filled with entries that map the same memory
  * with the same protection, and do the TLB maintenance the CPU requires
- * when a table replaces a leaf.
+ * when a table replaces a leaf. A contiguous block is split by making each
+ * of its entries a mapping of its own.
  *
  * Return: 0 on success, -errno on failure.
  */

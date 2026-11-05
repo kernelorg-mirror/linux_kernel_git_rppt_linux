@@ -2294,6 +2294,7 @@ enum pgtable_level {
 	PGTABLE_LEVEL_P4D,
 	PGTABLE_LEVEL_PGD,
 };
+#define PGTABLE_LEVEL_NUM	(PGTABLE_LEVEL_PGD + 1)
 
 static inline const char *pgtable_level_to_str(enum pgtable_level level)
 {
@@ -2312,6 +2313,31 @@ static inline const char *pgtable_level_to_str(enum pgtable_level level)
 		return "unknown";
 	}
 }
+
+#ifdef CONFIG_MMU
+static inline unsigned long pgtable_level_size(enum pgtable_level level)
+{
+	switch (level) {
+	case PGTABLE_LEVEL_PTE:
+		return PAGE_SIZE;
+	case PGTABLE_LEVEL_PMD:
+		return PMD_SIZE;
+	case PGTABLE_LEVEL_PUD:
+		return PUD_SIZE;
+	case PGTABLE_LEVEL_P4D:
+		return P4D_SIZE;
+	case PGTABLE_LEVEL_PGD:
+		return PGDIR_SIZE;
+	}
+
+	return 0;
+}
+
+static inline unsigned long pgtable_level_mask(enum pgtable_level level)
+{
+	return ~(pgtable_level_size(level) - 1);
+}
+#endif
 
 void ptval_bytes_to_hex_str(char *buf, size_t buf_size, const void *entry, size_t entry_size);
 

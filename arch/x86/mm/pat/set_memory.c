@@ -307,6 +307,14 @@ static inline unsigned long fix_addr(unsigned long addr)
 #endif
 }
 
+static pgd_t *cpa_pgd(struct cpa_data *cpa, unsigned long address)
+{
+	if (!cpa->pgd)
+		return pgd_offset_k(address);
+
+	return cpa->pgd + pgd_index(address);
+}
+
 static unsigned long __cpa_addr(struct cpa_data *cpa, unsigned long idx)
 {
 	return cpa->addr + idx * PAGE_SIZE;
@@ -688,11 +696,14 @@ static inline pgprot_t static_protections(pgprot_t prot, unsigned long start,
 /*
  * Validate strict W^X semantics.
  */
-static inline pgprot_t verify_rwx(pgprot_t old, pgprot_t new, unsigned long start,
-				  unsigned long pfn, unsigned long npg,
-				  bool nx, bool rw)
+static inline pgprot_t verify_rwx(struct cpa_data *cpa, pgprot_t old,
+				  pgprot_t new, unsigned long start,
+				  unsigned long pfn, unsigned long npg)
 {
+	unsigned int level;
 	unsigned long end;
+	bool nx, rw;
+	pgd_t *pgd;
 
 	/*
 	 * 32-bit has some unfixable W+X issues, like EFI code
@@ -711,6 +722,13 @@ static inline pgprot_t verify_rwx(pgprot_t old, pgprot_t new, unsigned long star
 
 	if ((pgprot_val(new) & (_PAGE_RW | _PAGE_NX)) != _PAGE_RW)
 		return new;
+
+	/*
+	 * Only a mapping about to become W+X pays for the second walk that
+	 * collects the effective NX and RW bits of the upper levels.
+	 */
+	pgd = cpa_pgd(cpa, start);
+	lookup_address_in_pgd_attr(pgd, start, &level, &nx, &rw);
 
 	/* Non-leaf translation entries can disable writing or execution. */
 	if (!rw || nx)
@@ -825,16 +843,11 @@ pte_t *lookup_address(unsigned long address, unsigned int *level)
 EXPORT_SYMBOL_GPL(lookup_address);
 
 static pte_t *_lookup_address_cpa(struct cpa_data *cpa, unsigned long address,
-				  unsigned int *level, bool *nx, bool *rw)
+				  unsigned int *level)
 {
-	pgd_t *pgd;
+	pgd_t *pgd = cpa_pgd(cpa, address);
 
-	if (!cpa->pgd)
-		pgd = pgd_offset_k(address);
-	else
-		pgd = cpa->pgd + pgd_index(address);
-
-	return lookup_address_in_pgd_attr(pgd, address, level, nx, rw);
+	return lookup_address_in_pgd(pgd, address, level);
 }
 
 /*
@@ -966,7 +979,6 @@ static int should_split_large_page(pte_t *kpte, unsigned long address,
 	pgprot_t old_prot, new_prot, req_prot, chk_prot;
 	pte_t new_pte, *tmp;
 	enum pg_level level;
-	bool nx, rw;
 
 	if (cpa->flags & CPA_REQ_SPLIT)
 		return 1;
@@ -975,7 +987,7 @@ static int should_split_large_page(pte_t *kpte, unsigned long address,
 	 * Check for races, another CPU might have split this page
 	 * up already:
 	 */
-	tmp = _lookup_address_cpa(cpa, address, &level, &nx, &rw);
+	tmp = _lookup_address_cpa(cpa, address, &level);
 	if (tmp != kpte)
 		return 1;
 
@@ -1086,8 +1098,8 @@ static int should_split_large_page(pte_t *kpte, unsigned long address,
 	new_prot = static_protections(req_prot, lpaddr, old_pfn, numpages,
 				      psize, CPA_DETECT);
 
-	new_prot = verify_rwx(old_prot, new_prot, lpaddr, old_pfn, numpages,
-			      nx, rw);
+	new_prot = verify_rwx(cpa, old_prot, new_prot, lpaddr, old_pfn,
+			      numpages);
 
 	/*
 	 * If there is a conflict, split the large page.
@@ -1153,14 +1165,13 @@ __split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
 	struct page *base = virt_to_page(pbase);
 	unsigned int i, level;
 	pgprot_t ref_prot;
-	bool nx, rw;
 	pte_t *tmp;
 
 	/*
 	 * Check for races, another CPU might have split this page
 	 * up for us already:
 	 */
-	tmp = _lookup_address_cpa(cpa, address, &level, &nx, &rw);
+	tmp = _lookup_address_cpa(cpa, address, &level);
 	if (tmp != kpte)
 		return 1;
 
@@ -1866,11 +1877,10 @@ static int __change_page_attr(struct cpa_data *cpa)
 	int do_split, err;
 	unsigned int level;
 	pte_t *kpte, old_pte;
-	bool nx, rw;
 
 	address = __cpa_addr(cpa, cpa->curpage);
 repeat:
-	kpte = _lookup_address_cpa(cpa, address, &level, &nx, &rw);
+	kpte = _lookup_address_cpa(cpa, address, &level);
 	if (!kpte)
 		return __cpa_process_fault(cpa, address);
 
@@ -1892,8 +1902,7 @@ repeat:
 		new_prot = static_protections(new_prot, address, pfn, 1, 0,
 					      CPA_PROTECT);
 
-		new_prot = verify_rwx(old_prot, new_prot, address, pfn, 1,
-				      nx, rw);
+		new_prot = verify_rwx(cpa, old_prot, new_prot, address, pfn, 1);
 
 		new_prot = pgprot_clear_protnone_bits(new_prot);
 

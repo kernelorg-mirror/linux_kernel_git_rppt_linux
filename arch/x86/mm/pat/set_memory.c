@@ -84,7 +84,7 @@ static inline pgprot_t cachemode2pgprot(enum page_cache_mode pcm)
 }
 
 #ifdef CONFIG_PROC_FS
-static atomic_long_t direct_pages_count[PG_LEVEL_NUM];
+static atomic_long_t direct_pages_count[PGTABLE_LEVEL_NUM];
 
 void update_page_count(int level, unsigned long pages)
 {
@@ -97,9 +97,9 @@ static void split_page_count(int level)
 		return;
 
 	if (system_state == SYSTEM_RUNNING) {
-		if (level == PG_LEVEL_2M)
+		if (level == PGTABLE_LEVEL_PMD)
 			count_vm_event(DIRECT_MAP_LEVEL2_SPLIT);
-		else if (level == PG_LEVEL_1G)
+		else if (level == PGTABLE_LEVEL_PUD)
 			count_vm_event(DIRECT_MAP_LEVEL3_SPLIT);
 	}
 	atomic_long_add(PTRS_PER_PTE, &direct_pages_count[level - 1]);
@@ -109,9 +109,9 @@ static void collapse_page_count(int level)
 {
 	atomic_long_inc(&direct_pages_count[level]);
 	if (system_state == SYSTEM_RUNNING) {
-		if (level == PG_LEVEL_2M)
+		if (level == PGTABLE_LEVEL_PMD)
 			count_vm_event(DIRECT_MAP_LEVEL2_COLLAPSE);
-		else if (level == PG_LEVEL_1G)
+		else if (level == PGTABLE_LEVEL_PUD)
 			count_vm_event(DIRECT_MAP_LEVEL3_COLLAPSE);
 	}
 	atomic_long_sub(PTRS_PER_PTE, &direct_pages_count[level - 1]);
@@ -125,17 +125,17 @@ static unsigned long direct_pages(int level)
 void arch_report_meminfo(struct seq_file *m)
 {
 	seq_printf(m, "DirectMap4k:    %8lu kB\n",
-		   direct_pages(PG_LEVEL_4K) << 2);
+		   direct_pages(PGTABLE_LEVEL_PTE) << 2);
 #if defined(CONFIG_X86_64) || defined(CONFIG_X86_PAE)
 	seq_printf(m, "DirectMap2M:    %8lu kB\n",
-		   direct_pages(PG_LEVEL_2M) << 11);
+		   direct_pages(PGTABLE_LEVEL_PMD) << 11);
 #else
 	seq_printf(m, "DirectMap4M:    %8lu kB\n",
-		   direct_pages(PG_LEVEL_2M) << 12);
+		   direct_pages(PGTABLE_LEVEL_PMD) << 12);
 #endif
 	if (direct_gbpages)
 		seq_printf(m, "DirectMap1G:    %8lu kB\n",
-			   direct_pages(PG_LEVEL_1G) << 20);
+			   direct_pages(PGTABLE_LEVEL_PUD) << 20);
 }
 #else
 static inline void split_page_count(int level) { }
@@ -169,7 +169,7 @@ static inline void cpa_inc_4k_install(void)
 
 static inline void cpa_inc_lp_sameprot(int level)
 {
-	if (level == PG_LEVEL_1G)
+	if (level == PGTABLE_LEVEL_PUD)
 		cpa_1g_sameprot++;
 	else
 		cpa_2m_sameprot++;
@@ -177,7 +177,7 @@ static inline void cpa_inc_lp_sameprot(int level)
 
 static inline void cpa_inc_lp_preserved(int level)
 {
-	if (level == PG_LEVEL_1G)
+	if (level == PGTABLE_LEVEL_PUD)
 		cpa_1g_preserved++;
 	else
 		cpa_2m_preserved++;
@@ -826,12 +826,51 @@ pte_t *lookup_address(unsigned long address, unsigned int *level)
 }
 EXPORT_SYMBOL_GPL(lookup_address);
 
+static pte_t *cpa_lookup_in_pgd(pgd_t *pgdp, unsigned long address,
+				enum pgtable_level *level)
+{
+	p4d_t *p4dp, p4d;
+	pud_t *pudp, pud;
+	pmd_t *pmdp, pmd;
+
+	*level = PGTABLE_LEVEL_PGD;
+	if (pgd_none(*pgdp))
+		return NULL;
+
+	*level = PGTABLE_LEVEL_P4D;
+	p4dp = p4d_offset(pgdp, address);
+	p4d = p4dp_get(p4dp);
+	if (p4d_none(p4d))
+		return NULL;
+	if (p4d_leaf(p4d) || !p4d_present(p4d))
+		return (pte_t *)p4dp;
+
+	*level = PGTABLE_LEVEL_PUD;
+	pudp = pud_offset(p4dp, address);
+	pud = pudp_get(pudp);
+	if (pud_none(pud))
+		return NULL;
+	if (pud_leaf(pud) || !pud_present(pud))
+		return (pte_t *)pudp;
+
+	*level = PGTABLE_LEVEL_PMD;
+	pmdp = pmd_offset(pudp, address);
+	pmd = pmdp_get(pmdp);
+	if (pmd_none(pmd))
+		return NULL;
+	if (pmd_leaf(pmd) || !pmd_present(pmd))
+		return (pte_t *)pmdp;
+
+	*level = PGTABLE_LEVEL_PTE;
+	return pte_offset_kernel(pmdp, address);
+}
+
 static pte_t *_lookup_address_cpa(struct cpa_data *cpa, unsigned long address,
-				  unsigned int *level)
+				  enum pgtable_level *level)
 {
 	pgd_t *pgd = cpa_pgd(cpa, address);
 
-	return lookup_address_in_pgd(pgd, address, level);
+	return cpa_lookup_in_pgd(pgd, address, level);
 }
 
 /*
@@ -961,11 +1000,11 @@ static pgprot_t pgprot_clear_protnone_bits(pgprot_t prot)
  * in the 4K and large page formats, and _PAGE_PSE is only valid for present
  * large pages.
  */
-static pte_t cpa_pte(enum pg_level level, unsigned long pfn, pgprot_t prot)
+static pte_t cpa_pte(enum pgtable_level level, unsigned long pfn, pgprot_t prot)
 {
 	prot = pgprot_clear_protnone_bits(prot);
 
-	if (level != PG_LEVEL_4K) {
+	if (level != PGTABLE_LEVEL_PTE) {
 		prot = pgprot_4k_2_large(prot);
 		if (pgprot_val(prot) & _PAGE_PRESENT)
 			pgprot_val(prot) |= _PAGE_PSE;
@@ -975,19 +1014,20 @@ static pte_t cpa_pte(enum pg_level level, unsigned long pfn, pgprot_t prot)
 }
 
 static int __should_split_large_page(pte_t *kpte, unsigned long address,
-				     enum pg_level level, struct cpa_data *cpa)
+				     enum pgtable_level level,
+				     struct cpa_data *cpa)
 {
 	unsigned long numpages, pmask, psize, lpaddr, pfn, old_pfn;
 	pgprot_t old_prot, new_prot, req_prot;
 	pte_t new_pte;
 
 	switch (level) {
-	case PG_LEVEL_2M:
+	case PGTABLE_LEVEL_PMD:
 		old_prot = pmd_pgprot(*(pmd_t *)kpte);
 		old_pfn = pmd_pfn(*(pmd_t *)kpte);
 		cpa_inc_2m_checked();
 		break;
-	case PG_LEVEL_1G:
+	case PGTABLE_LEVEL_PUD:
 		old_prot = pud_pgprot(*(pud_t *)kpte);
 		old_pfn = pud_pfn(*(pud_t *)kpte);
 		cpa_inc_1g_checked();
@@ -996,8 +1036,8 @@ static int __should_split_large_page(pte_t *kpte, unsigned long address,
 		return -EINVAL;
 	}
 
-	psize = page_level_size(level);
-	pmask = page_level_mask(level);
+	psize = pgtable_level_size(level);
+	pmask = pgtable_level_mask(level);
 
 	/*
 	 * Calculate the number of pages, which fit into this large
@@ -1082,7 +1122,8 @@ static int __should_split_large_page(pte_t *kpte, unsigned long address,
 }
 
 static int should_split_large_page(pte_t *kpte, unsigned long address,
-				   enum pg_level level, struct cpa_data *cpa)
+				   enum pgtable_level level,
+				   struct cpa_data *cpa)
 {
 	if (cpa->flags & CPA_REQ_SPLIT)
 		return 1;
@@ -1092,7 +1133,7 @@ static int should_split_large_page(pte_t *kpte, unsigned long address,
 
 static int
 __split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
-		   unsigned int level, pte_t *pbase)
+		   enum pgtable_level level, pte_t *pbase)
 {
 	unsigned long ref_pfn, pfn, pfninc = 1;
 	struct page *base = virt_to_page(pbase);
@@ -1102,7 +1143,7 @@ __split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
 	paravirt_alloc_pte(&init_mm, page_to_pfn(base));
 
 	switch (level) {
-	case PG_LEVEL_2M:
+	case PGTABLE_LEVEL_PMD:
 		ref_prot = pmd_pgprot(*(pmd_t *)kpte);
 		/*
 		 * Clear PSE (aka _PAGE_PAT) and move
@@ -1112,7 +1153,7 @@ __split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
 		ref_pfn = pmd_pfn(*(pmd_t *)kpte);
 		break;
 
-	case PG_LEVEL_1G:
+	case PGTABLE_LEVEL_PUD:
 		ref_prot = pud_pgprot(*(pud_t *)kpte);
 		ref_pfn = pud_pfn(*(pud_t *)kpte);
 		pfninc = PMD_SIZE >> PAGE_SHIFT;
@@ -1172,7 +1213,7 @@ __split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
 static int split_large_page(struct cpa_data *cpa, pte_t *kpte,
 			    unsigned long address)
 {
-	unsigned int level;
+	enum pgtable_level level;
 	pte_t *pte;
 	int ret;
 
@@ -1269,7 +1310,7 @@ static int collapse_pmd_page(pmd_t *pmd, unsigned long addr,
 	}
 
 	if (virt_addr_valid(addr) && pfn_range_is_mapped(pfn, pfn + 1))
-		collapse_page_count(PG_LEVEL_2M);
+		collapse_page_count(PGTABLE_LEVEL_PMD);
 
 	return 1;
 }
@@ -1316,7 +1357,7 @@ static int collapse_pud_page(pud_t *pud, unsigned long addr,
 	set_pud(pud, pfn_pud(pfn, pmd_pgprot(first)));
 
 	if (virt_addr_valid(addr) && pfn_range_is_mapped(pfn, pfn + 1))
-		collapse_page_count(PG_LEVEL_1G);
+		collapse_page_count(PGTABLE_LEVEL_PUD);
 
 	return 1;
 }
@@ -1798,10 +1839,10 @@ static int __cpa_process_fault(struct cpa_data *cpa, unsigned long vaddr)
 
 static int __change_page_attr(struct cpa_data *cpa)
 {
+	enum pgtable_level level;
 	unsigned long address;
-	int do_split, err;
-	unsigned int level;
 	pte_t *kpte, old_pte;
+	int do_split, err;
 
 	address = __cpa_addr(cpa, cpa->curpage);
 repeat:
@@ -1813,7 +1854,7 @@ repeat:
 	if (pte_none(old_pte))
 		return __cpa_process_fault(cpa, address);
 
-	if (level == PG_LEVEL_4K) {
+	if (level == PGTABLE_LEVEL_PTE) {
 		pte_t new_pte;
 		pgprot_t old_prot = pte_pgprot(old_pte);
 		pgprot_t new_prot = pte_pgprot(old_pte);

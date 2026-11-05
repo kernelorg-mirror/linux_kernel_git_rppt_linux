@@ -1206,7 +1206,10 @@ __split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf, pte_t *pbase)
 	if (level != PGTABLE_LEVEL_PMD && level != PGTABLE_LEVEL_PUD)
 		return -EINVAL;
 
-	paravirt_alloc_pte(&init_mm, page_to_pfn(base));
+	if (level == PGTABLE_LEVEL_PMD)
+		paravirt_alloc_pte(&init_mm, page_to_pfn(base));
+	else
+		paravirt_alloc_pmd(&init_mm, page_to_pfn(base));
 
 	pfninc = pgtable_level_size(level - 1) >> PAGE_SHIFT;
 	for (i = 0; i < PTRS_PER_PTE; i++, pfn += pfninc)
@@ -1251,22 +1254,38 @@ __split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf, pte_t *pbase)
 	return 0;
 }
 
+static void *cpa_alloc_pgtable(struct cpa_leaf *leaf)
+{
+	if (leaf->level == PGTABLE_LEVEL_PMD)
+		return pte_alloc_one_kernel(&init_mm);
+
+	return pmd_alloc_one(&init_mm, leaf->addr);
+}
+
+static void cpa_free_pgtable(struct cpa_leaf *leaf, void *table)
+{
+	if (leaf->level == PGTABLE_LEVEL_PMD)
+		pte_free_kernel(&init_mm, table);
+	else
+		pmd_free(&init_mm, table);
+}
+
 static int split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf)
 {
 	unsigned long address = __cpa_addr(cpa, cpa->curpage);
 	pte_t *kpte = leaf->kpte;
 	struct cpa_leaf tmp;
-	pte_t *pte;
+	void *table;
 	int ret;
 
 	spin_unlock(&cpa_lock);
 	if (cpa->state & CPA_ST_INIT_MM_LOCKED)
 		mmap_read_unlock(&init_mm);
-	pte = pte_alloc_one_kernel(&init_mm);
+	table = cpa_alloc_pgtable(leaf);
 	if (cpa->state & CPA_ST_INIT_MM_LOCKED)
 		mmap_read_lock(&init_mm);
 	spin_lock(&cpa_lock);
-	if (!pte)
+	if (!table)
 		return -ENOMEM;
 
 	/*
@@ -1274,14 +1293,14 @@ static int split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf)
 	 * up for us already:
 	 */
 	if (cpa_lookup(cpa, address, &tmp) != kpte) {
-		pte_free_kernel(&init_mm, pte);
+		cpa_free_pgtable(leaf, table);
 		return 0;
 	}
 	*leaf = tmp;
 
-	ret = __split_large_page(cpa, leaf, pte);
+	ret = __split_large_page(cpa, leaf, table);
 	if (ret)
-		pte_free_kernel(&init_mm, pte);
+		cpa_free_pgtable(leaf, table);
 
 	return ret;
 }

@@ -81,56 +81,58 @@ static inline pgprot_t cachemode2pgprot(enum page_cache_mode pcm)
 }
 
 #ifdef CONFIG_PROC_FS
-static unsigned long direct_pages_count[PG_LEVEL_NUM];
+static atomic_long_t direct_pages_count[PG_LEVEL_NUM];
 
 void update_page_count(int level, unsigned long pages)
 {
-	/* Protect against CPA */
-	guard(spinlock)(&pgd_lock);
-	direct_pages_count[level] += pages;
+	atomic_long_add(pages, &direct_pages_count[level]);
 }
 
 static void split_page_count(int level)
 {
-	if (direct_pages_count[level] == 0)
+	if (atomic_long_dec_if_positive(&direct_pages_count[level]) < 0)
 		return;
 
-	direct_pages_count[level]--;
 	if (system_state == SYSTEM_RUNNING) {
 		if (level == PG_LEVEL_2M)
 			count_vm_event(DIRECT_MAP_LEVEL2_SPLIT);
 		else if (level == PG_LEVEL_1G)
 			count_vm_event(DIRECT_MAP_LEVEL3_SPLIT);
 	}
-	direct_pages_count[level - 1] += PTRS_PER_PTE;
+	atomic_long_add(PTRS_PER_PTE, &direct_pages_count[level - 1]);
 }
 
 static void collapse_page_count(int level)
 {
-	direct_pages_count[level]++;
+	atomic_long_inc(&direct_pages_count[level]);
 	if (system_state == SYSTEM_RUNNING) {
 		if (level == PG_LEVEL_2M)
 			count_vm_event(DIRECT_MAP_LEVEL2_COLLAPSE);
 		else if (level == PG_LEVEL_1G)
 			count_vm_event(DIRECT_MAP_LEVEL3_COLLAPSE);
 	}
-	direct_pages_count[level - 1] -= PTRS_PER_PTE;
+	atomic_long_sub(PTRS_PER_PTE, &direct_pages_count[level - 1]);
+}
+
+static unsigned long direct_pages(int level)
+{
+	return atomic_long_read(&direct_pages_count[level]);
 }
 
 void arch_report_meminfo(struct seq_file *m)
 {
 	seq_printf(m, "DirectMap4k:    %8lu kB\n",
-			direct_pages_count[PG_LEVEL_4K] << 2);
+		   direct_pages(PG_LEVEL_4K) << 2);
 #if defined(CONFIG_X86_64) || defined(CONFIG_X86_PAE)
 	seq_printf(m, "DirectMap2M:    %8lu kB\n",
-			direct_pages_count[PG_LEVEL_2M] << 11);
+		   direct_pages(PG_LEVEL_2M) << 11);
 #else
 	seq_printf(m, "DirectMap4M:    %8lu kB\n",
-			direct_pages_count[PG_LEVEL_2M] << 12);
+		   direct_pages(PG_LEVEL_2M) << 12);
 #endif
 	if (direct_gbpages)
 		seq_printf(m, "DirectMap1G:    %8lu kB\n",
-			direct_pages_count[PG_LEVEL_1G] << 20);
+			   direct_pages(PG_LEVEL_1G) << 20);
 }
 #else
 static inline void split_page_count(int level) { }

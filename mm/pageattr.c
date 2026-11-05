@@ -94,39 +94,63 @@ void cpa_report_meminfo(struct seq_file *m, unsigned long levels)
 
 #ifdef CONFIG_CPA_STATISTICS
 
-static unsigned long cpa_checked[PGTABLE_LEVEL_NUM];
-static unsigned long cpa_sameprot[PGTABLE_LEVEL_NUM];
-static unsigned long cpa_preserved[PGTABLE_LEVEL_NUM];
+struct cpa_stats {
+	unsigned long	checked;
+	unsigned long	sameprot;
+	unsigned long	preserved;
+};
 
-static inline void cpa_inc_pxd_checked(enum pgtable_level level)
+/* Large pages and contiguous blocks, by the level of their entries */
+static struct cpa_stats cpa_pages[PGTABLE_LEVEL_NUM];
+static struct cpa_stats cpa_blocks[PGTABLE_LEVEL_NUM];
+
+static struct cpa_stats *cpa_leaf_stats(const struct cpa_leaf *leaf)
 {
-	cpa_checked[level]++;
+	if (leaf->size != pgtable_level_size(leaf->level))
+		return &cpa_blocks[leaf->level];
+
+	return &cpa_pages[leaf->level];
+}
+
+static inline void cpa_inc_checked(const struct cpa_leaf *leaf)
+{
+	cpa_leaf_stats(leaf)->checked++;
 }
 
 static inline void cpa_inc_pte_install(void)
 {
-	cpa_checked[PGTABLE_LEVEL_PTE]++;
+	cpa_pages[PGTABLE_LEVEL_PTE].checked++;
 }
 
-static inline void cpa_inc_pxd_sameprot(enum pgtable_level level)
+static inline void cpa_inc_sameprot(const struct cpa_leaf *leaf)
 {
-	cpa_sameprot[level]++;
+	cpa_leaf_stats(leaf)->sameprot++;
 }
 
-static inline void cpa_inc_pxd_preserved(enum pgtable_level level)
+static inline void cpa_inc_preserved(const struct cpa_leaf *leaf)
 {
-	cpa_preserved[level]++;
+	cpa_leaf_stats(leaf)->preserved++;
 }
 
 static void cpastats_show_level(struct seq_file *m, enum pgtable_level level)
 {
+	struct cpa_stats *s = &cpa_pages[level];
 	char sz[20];
 
 	cpa_size_str(level, sz, sizeof(sz));
-	seq_printf(m, "%s pages checked:     %16lu\n", sz, cpa_checked[level]);
-	seq_printf(m, "%s pages sameprot:    %16lu\n", sz, cpa_sameprot[level]);
-	seq_printf(m, "%s pages preserved:   %16lu\n", sz,
-		   cpa_preserved[level]);
+	seq_printf(m, "%s pages checked:     %16lu\n", sz, s->checked);
+	seq_printf(m, "%s pages sameprot:    %16lu\n", sz, s->sameprot);
+	seq_printf(m, "%s pages preserved:   %16lu\n", sz, s->preserved);
+}
+
+static void cpastats_show_blocks(struct seq_file *m, enum pgtable_level level)
+{
+	const char *name = pgtable_level_to_str(level);
+	struct cpa_stats *s = &cpa_blocks[level];
+
+	seq_printf(m, "%s blocks checked:   %16lu\n", name, s->checked);
+	seq_printf(m, "%s blocks sameprot:  %16lu\n", name, s->sameprot);
+	seq_printf(m, "%s blocks preserved: %16lu\n", name, s->preserved);
 }
 
 static int cpastats_show(struct seq_file *m, void *p)
@@ -137,7 +161,9 @@ static int cpastats_show(struct seq_file *m, void *p)
 	cpastats_show_level(m, PGTABLE_LEVEL_PMD);
 	seq_printf(m, "%s pages set-checked: %16lu\n",
 		   cpa_size_str(PGTABLE_LEVEL_PTE, sz, sizeof(sz)),
-		   cpa_checked[PGTABLE_LEVEL_PTE]);
+		   cpa_pages[PGTABLE_LEVEL_PTE].checked);
+	cpastats_show_blocks(m, PGTABLE_LEVEL_PMD);
+	cpastats_show_blocks(m, PGTABLE_LEVEL_PTE);
 	return 0;
 }
 
@@ -160,10 +186,10 @@ static int __init cpa_stats_init(void)
 }
 late_initcall(cpa_stats_init);
 #else
-static inline void cpa_inc_pxd_checked(enum pgtable_level level) { }
+static inline void cpa_inc_checked(const struct cpa_leaf *leaf) { }
 static inline void cpa_inc_pte_install(void) { }
-static inline void cpa_inc_pxd_sameprot(enum pgtable_level level) { }
-static inline void cpa_inc_pxd_preserved(enum pgtable_level level) { }
+static inline void cpa_inc_sameprot(const struct cpa_leaf *leaf) { }
+static inline void cpa_inc_preserved(const struct cpa_leaf *leaf) { }
 #endif
 
 static pte_t *cpa_lookup_in_pgd(pgd_t *pgdp, unsigned long address,
@@ -253,10 +279,10 @@ static int should_split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf)
 	if (cpa->flags & CPA_REQ_SPLIT)
 		return 1;
 
-	if (level != PGTABLE_LEVEL_PMD && level != PGTABLE_LEVEL_PUD)
+	if (level > PGTABLE_LEVEL_PUD)
 		return -EINVAL;
 
-	cpa_inc_pxd_checked(level);
+	cpa_inc_checked(leaf);
 
 	/*
 	 * Calculate the number of pages, which fit into this large
@@ -284,7 +310,7 @@ static int should_split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf)
 	 * range.
 	 */
 	if (pgprot_val(req_prot) == pgprot_val(old_prot)) {
-		cpa_inc_pxd_sameprot(level);
+		cpa_inc_sameprot(leaf);
 		return 0;
 	}
 
@@ -307,7 +333,7 @@ static int should_split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf)
 	/* All checks passed. Update the large page mapping. */
 	arch_cpa_modify_leaf(leaf, new_prot);
 	cpa->state |= CPA_ST_FLUSHTLB;
-	cpa_inc_pxd_preserved(level);
+	cpa_inc_preserved(leaf);
 	return 0;
 }
 
@@ -318,6 +344,13 @@ static int split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf)
 	struct cpa_leaf tmp;
 	void *table;
 	int ret = 0;
+
+	/*
+	 * A block of entries is broken up in place, without a page table and
+	 * without dropping cpa_lock.
+	 */
+	if (leaf->size != pgtable_level_size(leaf->level))
+		return arch_cpa_split_leaf(cpa, leaf, NULL);
 
 	spin_unlock(&cpa_lock);
 	table = arch_cpa_alloc_pgtable(leaf);
@@ -389,7 +422,7 @@ repeat:
 	if (!cpa_lookup(cpa, address, &leaf))
 		return arch_cpa_process_fault(cpa);
 
-	if (leaf.level == PGTABLE_LEVEL_PTE) {
+	if (leaf.size == PAGE_SIZE) {
 		pgprot_t new_prot;
 		unsigned long pfn = leaf.pfn;
 

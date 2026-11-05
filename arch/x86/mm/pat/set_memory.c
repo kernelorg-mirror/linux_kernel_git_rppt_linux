@@ -1085,6 +1085,38 @@ static pte_t cpa_pte(enum pgtable_level level, unsigned long pfn, pgprot_t prot)
 	return pfn_pte(pfn, prot);
 }
 
+static pgprot_t cpa_req_prot(const struct cpa_data *cpa,
+			     const struct cpa_leaf *leaf)
+{
+	return __pgprot((pgprot_val(leaf->prot) & ~pgprot_val(cpa->mask_clr)) |
+			pgprot_val(cpa->mask_set));
+}
+
+static pgprot_t cpa_new_prot(struct cpa_data *cpa, struct cpa_leaf *leaf)
+{
+	pgprot_t prot = cpa_req_prot(cpa, leaf);
+	enum pgtable_level level = leaf->level;
+	unsigned long size = leaf->size;
+	unsigned long addr = leaf->addr;
+	pgprot_t old_prot = leaf->prot;
+	unsigned long pfn = leaf->pfn;
+	int warnlvl = CPA_PROTECT;
+	unsigned long lpsize = 0;
+	unsigned long numpages;
+
+	numpages = size >> PAGE_SHIFT;
+
+	if (level != PGTABLE_LEVEL_PTE) {
+		warnlvl = CPA_DETECT;
+		lpsize = size;
+	}
+
+	/* A PTE hands in lpsize = 0 to enforce the protection mechanism */
+	prot = static_protections(prot, addr, pfn, numpages, lpsize, warnlvl);
+
+	return verify_rwx(cpa, old_prot, prot, addr, pfn, numpages);
+}
+
 static int should_split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf)
 {
 	unsigned long address = __cpa_addr(cpa, cpa->curpage);
@@ -1114,9 +1146,7 @@ static int should_split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf)
 	if (numpages < cpa->numpages)
 		cpa->numpages = numpages;
 
-	req_prot = old_prot;
-	pgprot_val(req_prot) &= ~pgprot_val(cpa->mask_clr);
-	pgprot_val(req_prot) |= pgprot_val(cpa->mask_set);
+	req_prot = cpa_req_prot(cpa, leaf);
 
 	/*
 	 * old_pfn points to the large page base pfn. So we need to add the
@@ -1148,11 +1178,7 @@ static int should_split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf)
 	 * Check whether the requested pgprot is conflicting with a static
 	 * protection requirement in the large page.
 	 */
-	new_prot = static_protections(req_prot, lpaddr, old_pfn, numpages,
-				      psize, CPA_DETECT);
-
-	new_prot = verify_rwx(cpa, old_prot, new_prot, lpaddr, old_pfn,
-			      numpages);
+	new_prot = cpa_new_prot(cpa, leaf);
 
 	/*
 	 * If there is a conflict, split the large page.
@@ -1873,20 +1899,12 @@ repeat:
 
 	if (leaf.level == PGTABLE_LEVEL_PTE) {
 		pte_t old_pte = *leaf.kpte;
-		pgprot_t old_prot = leaf.prot;
-		pgprot_t new_prot = leaf.prot;
+		pgprot_t new_prot;
 		unsigned long pfn = leaf.pfn;
 		pte_t new_pte;
 
-		pgprot_val(new_prot) &= ~pgprot_val(cpa->mask_clr);
-		pgprot_val(new_prot) |= pgprot_val(cpa->mask_set);
-
 		cpa_inc_pte_install();
-		/* Hand in lpsize = 0 to enforce the protection mechanism */
-		new_prot = static_protections(new_prot, address, pfn, 1, 0,
-					      CPA_PROTECT);
-
-		new_prot = verify_rwx(cpa, old_prot, new_prot, address, pfn, 1);
+		new_prot = cpa_new_prot(cpa, &leaf);
 
 		/*
 		 * We need to keep the pfn from the existing PTE,

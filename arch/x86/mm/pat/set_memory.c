@@ -916,24 +916,29 @@ EXPORT_SYMBOL_GPL(slow_virt_to_phys);
  */
 static void __set_pmd_pte(pte_t *kpte, unsigned long address, pte_t pte)
 {
+	struct ptdesc *ptdesc;
+
+	if (!IS_ENABLED(CONFIG_X86_32)) {
+		set_pte_atomic(kpte, pte);
+		return;
+	}
+
+	guard(spinlock)(&pgd_lock);
+
 	/* change init_mm */
 	set_pte_atomic(kpte, pte);
 
-	if (IS_ENABLED(CONFIG_X86_32)) {
-		struct ptdesc *ptdesc;
+	list_for_each_entry(ptdesc, &pgd_list, pt_list) {
+		pgd_t *pgd;
+		p4d_t *p4d;
+		pud_t *pud;
+		pmd_t *pmd;
 
-		list_for_each_entry(ptdesc, &pgd_list, pt_list) {
-			pgd_t *pgd;
-			p4d_t *p4d;
-			pud_t *pud;
-			pmd_t *pmd;
-
-			pgd = (pgd_t *)ptdesc_address(ptdesc) + pgd_index(address);
-			p4d = p4d_offset(pgd, address);
-			pud = pud_offset(p4d, address);
-			pmd = pmd_offset(pud, address);
-			set_pte_atomic((pte_t *)pmd, pte);
-		}
+		pgd = (pgd_t *)ptdesc_address(ptdesc) + pgd_index(address);
+		p4d = p4d_offset(pgd, address);
+		pud = pud_offset(p4d, address);
+		pmd = pmd_offset(pud, address);
+		set_pte_atomic((pte_t *)pmd, pte);
 	}
 }
 
@@ -954,14 +959,17 @@ static pgprot_t pgprot_clear_protnone_bits(pgprot_t prot)
 	return prot;
 }
 
-static int __should_split_large_page(pte_t *kpte, unsigned long address,
-				     struct cpa_data *cpa)
+static int should_split_large_page(pte_t *kpte, unsigned long address,
+				   struct cpa_data *cpa)
 {
 	unsigned long numpages, pmask, psize, lpaddr, pfn, old_pfn;
 	pgprot_t old_prot, new_prot, req_prot, chk_prot;
 	pte_t new_pte, *tmp;
 	enum pg_level level;
 	bool nx, rw;
+
+	if (cpa->flags & CPA_REQ_SPLIT)
+		return 1;
 
 	/*
 	 * Check for races, another CPU might have split this page
@@ -1101,16 +1109,6 @@ static int __should_split_large_page(pte_t *kpte, unsigned long address,
 	return 0;
 }
 
-static int should_split_large_page(pte_t *kpte, unsigned long address,
-				   struct cpa_data *cpa)
-{
-	if (cpa->flags & CPA_REQ_SPLIT)
-		return 1;
-
-	guard(spinlock)(&pgd_lock);
-	return __should_split_large_page(kpte, address, cpa);
-}
-
 static void split_set_pte(struct cpa_data *cpa, pte_t *pte, unsigned long pfn,
 			  pgprot_t ref_prot, unsigned long address,
 			  unsigned long size)
@@ -1158,7 +1156,6 @@ __split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
 	bool nx, rw;
 	pte_t *tmp;
 
-	guard(spinlock)(&pgd_lock);
 	/*
 	 * Check for races, another CPU might have split this page
 	 * up for us already:
@@ -1304,6 +1301,8 @@ static int collapse_pmd_page(pmd_t *pmd, unsigned long addr,
 			return 0;
 	}
 
+	guard(spinlock)(&pgd_lock);
+
 	old_pmd = *pmd;
 
 	/* Success: set up a large page */
@@ -1404,7 +1403,6 @@ static int collapse_large_pages(unsigned long addr, struct list_head *pgtables)
 
 	addr &= PMD_MASK;
 
-	guard(spinlock)(&pgd_lock);
 	pgd = pgd_offset_k(addr);
 	if (pgd_none(*pgd))
 		return 0;

@@ -1917,26 +1917,18 @@ repeat:
 		return __cpa_process_fault(cpa, address);
 
 	if (leaf.level == PGTABLE_LEVEL_PTE) {
-		pte_t old_pte = *leaf.kpte;
 		pgprot_t new_prot;
 		unsigned long pfn = leaf.pfn;
-		pte_t new_pte;
 
 		cpa_inc_pte_install();
 		new_prot = cpa_new_prot(cpa, &leaf);
-
-		/*
-		 * We need to keep the pfn from the existing PTE,
-		 * after all we're only going to change its attributes
-		 * not the memory it points to
-		 */
-		new_pte = cpa_pte(leaf.level, pfn, new_prot);
 		cpa->pfn = pfn;
 		/*
 		 * Do we really change anything ?
 		 */
-		if (pte_val(old_pte) != pte_val(new_pte)) {
-			set_pte_atomic(leaf.kpte, new_pte);
+		if (pgprot_val(new_prot) != pgprot_val(leaf.prot)) {
+			set_pte_atomic(leaf.kpte,
+				       cpa_pte(leaf.level, pfn, new_prot));
 			cpa->state |= CPA_ST_FLUSHTLB;
 		}
 		cpa->numpages = 1;

@@ -956,6 +956,24 @@ static pgprot_t pgprot_clear_protnone_bits(pgprot_t prot)
 	return prot;
 }
 
+/*
+ * The caching mode includes the PAT bit located at different bit positions
+ * in the 4K and large page formats, and _PAGE_PSE is only valid for present
+ * large pages.
+ */
+static pte_t cpa_pte(enum pg_level level, unsigned long pfn, pgprot_t prot)
+{
+	prot = pgprot_clear_protnone_bits(prot);
+
+	if (level != PG_LEVEL_4K) {
+		prot = pgprot_4k_2_large(prot);
+		if (pgprot_val(prot) & _PAGE_PRESENT)
+			pgprot_val(prot) |= _PAGE_PSE;
+	}
+
+	return pfn_pte(pfn, prot);
+}
+
 static int __should_split_large_page(pte_t *kpte, unsigned long address,
 				     enum pg_level level, struct cpa_data *cpa)
 {
@@ -1003,16 +1021,6 @@ static int __should_split_large_page(pte_t *kpte, unsigned long address,
 	pgprot_val(req_prot) |= pgprot_val(cpa->mask_set);
 
 	/*
-	 * req_prot is in format of 4k pages. It must be converted to large
-	 * page format: the caching mode includes the PAT bit located at
-	 * different bit positions in the two formats.
-	 */
-	req_prot = pgprot_4k_2_large(req_prot);
-	req_prot = pgprot_clear_protnone_bits(req_prot);
-	if (pgprot_val(req_prot) & _PAGE_PRESENT)
-		pgprot_val(req_prot) |= _PAGE_PSE;
-
-	/*
 	 * old_pfn points to the large page base pfn. So we need to add the
 	 * offset of the virtual address:
 	 */
@@ -1032,7 +1040,7 @@ static int __should_split_large_page(pte_t *kpte, unsigned long address,
 	 * required independent of alignment and length of the requested
 	 * range.
 	 */
-	if (pgprot_val(req_prot) == pgprot_val(old_prot)) {
+	if (pgprot_val(req_prot) == pgprot_val(pgprot_large_2_4k(old_prot))) {
 		cpa_inc_lp_sameprot(level);
 		return 0;
 	}
@@ -1066,7 +1074,7 @@ static int __should_split_large_page(pte_t *kpte, unsigned long address,
 		return 1;
 
 	/* All checks passed. Update the large page mapping. */
-	new_pte = pfn_pte(old_pfn, new_prot);
+	new_pte = cpa_pte(level, old_pfn, new_prot);
 	__set_pmd_pte(kpte, address, new_pte);
 	cpa->state |= CPA_ST_FLUSHTLB;
 	cpa_inc_lp_preserved(level);
@@ -1108,27 +1116,19 @@ __split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
 		ref_prot = pud_pgprot(*(pud_t *)kpte);
 		ref_pfn = pud_pfn(*(pud_t *)kpte);
 		pfninc = PMD_SIZE >> PAGE_SHIFT;
-		/*
-		 * Clear the PSE flags if the PRESENT flag is not set
-		 * otherwise pmd_present() will return true even on a non
-		 * present pmd.
-		 */
-		if (!(pgprot_val(ref_prot) & _PAGE_PRESENT))
-			pgprot_val(ref_prot) &= ~_PAGE_PSE;
+		ref_prot = pgprot_large_2_4k(ref_prot);
 		break;
 
 	default:
 		return -EINVAL;
 	}
 
-	ref_prot = pgprot_clear_protnone_bits(ref_prot);
-
 	/*
 	 * Get the target pfn from the original entry:
 	 */
 	pfn = ref_pfn;
 	for (i = 0; i < PTRS_PER_PTE; i++, pfn += pfninc)
-		set_pte(pbase + i, pfn_pte(pfn, ref_prot));
+		set_pte(pbase + i, cpa_pte(level - 1, pfn, ref_prot));
 
 	if (virt_addr_valid(address)) {
 		unsigned long pfn = PFN_DOWN(__pa(address));
@@ -1829,14 +1829,12 @@ repeat:
 
 		new_prot = verify_rwx(cpa, old_prot, new_prot, address, pfn, 1);
 
-		new_prot = pgprot_clear_protnone_bits(new_prot);
-
 		/*
 		 * We need to keep the pfn from the existing PTE,
 		 * after all we're only going to change its attributes
 		 * not the memory it points to
 		 */
-		new_pte = pfn_pte(pfn, new_prot);
+		new_pte = cpa_pte(level, pfn, new_prot);
 		cpa->pfn = pfn;
 		/*
 		 * Do we really change anything ?

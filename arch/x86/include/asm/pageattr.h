@@ -16,7 +16,7 @@ int arch_cpa_split_leaf(struct cpa_data *cpa, struct cpa_leaf *leaf,
 			void *table);
 #define arch_cpa_split_leaf arch_cpa_split_leaf
 
-int arch_cpa_process_fault(struct cpa_data *cpa);
+int arch_cpa_process_fault(struct cpa_data *cpa, struct cpa_leaf *leaf);
 #define arch_cpa_process_fault arch_cpa_process_fault
 
 int arch_cpa_process_alias(struct cpa_data *cpa);

@@ -384,9 +384,11 @@ static int split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf)
 	return 0;
 }
 
-int cpa_process_fault(struct cpa_data *cpa)
+int cpa_process_fault(struct cpa_data *cpa, struct cpa_leaf *leaf)
 {
 	unsigned long vaddr = cpa_addr(cpa, cpa->curpage);
+	enum pgtable_level level = leaf->level;
+	unsigned long numpages;
 
 	/*
 	 * Ignore all non primary paths.
@@ -399,12 +401,11 @@ int cpa_process_fault(struct cpa_data *cpa)
 	/*
 	 * Ignore the NULL PTE for kernel identity mapping, as it is expected
 	 * to have holes.
-	 * Also set numpages to '1' indicating that we processed cpa req for
-	 * one virtual address page and its pfn. TBD: numpages can be set based
-	 * on the initial value and the level returned by cpa_lookup().
 	 */
 	if (cpa_is_direct_map(vaddr)) {
-		cpa->numpages = 1;
+		numpages = (pgtable_level_size(level) -
+			    (vaddr & ~pgtable_level_mask(level))) >> PAGE_SHIFT;
+		cpa->numpages = min(cpa->numpages, numpages);
 		cpa->pfn = __pa(vaddr) >> PAGE_SHIFT;
 		return 0;
 	}
@@ -424,7 +425,7 @@ static int __change_page_attr(struct cpa_data *cpa)
 	address = cpa_addr(cpa, cpa->curpage);
 repeat:
 	if (!cpa_lookup(cpa, address, &leaf))
-		return arch_cpa_process_fault(cpa);
+		return arch_cpa_process_fault(cpa, &leaf);
 
 	if (leaf.size == PAGE_SIZE) {
 		pgprot_t old_prot = leaf.prot;

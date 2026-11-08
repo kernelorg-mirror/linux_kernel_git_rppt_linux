@@ -116,7 +116,7 @@ static inline pgd_t *cpa_pgd(struct cpa_data *cpa, unsigned long address)
  * set_memory_*() and set_direct_map_*(); everything else uses those.
  */
 unsigned long cpa_addr(struct cpa_data *cpa, unsigned long idx);
-int cpa_process_fault(struct cpa_data *cpa);
+int cpa_process_fault(struct cpa_data *cpa, struct cpa_leaf *leaf);
 int cpa_change_alias(struct cpa_data *cpa, struct cpa_data *alias);
 void cpa_flush_tlb_kernel_range(struct cpa_data *cpa);
 
@@ -261,13 +261,19 @@ static inline bool cpa_is_direct_map(unsigned long addr)
 /**
  * arch_cpa_process_fault() - handle a page without a mapping
  * @cpa: the request, its current page has no mapping
+ * @leaf: @leaf->level is the level of the empty entry
+ *
+ * To skip pages, set @cpa->numpages to their number and return 0. The
+ * default skips a hole in the direct map up to the end of the empty entry,
+ * and fails for any other address.
  *
  * Return: 0 to continue the walk, -errno to fail the request.
  */
 #ifndef arch_cpa_process_fault
-static inline int arch_cpa_process_fault(struct cpa_data *cpa)
+static inline int arch_cpa_process_fault(struct cpa_data *cpa,
+					 struct cpa_leaf *leaf)
 {
-	return cpa_process_fault(cpa);
+	return cpa_process_fault(cpa, leaf);
 }
 #endif
 

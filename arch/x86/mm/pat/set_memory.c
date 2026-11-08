@@ -1470,7 +1470,7 @@ static int populate_pgd(struct cpa_data *cpa, unsigned long addr)
 	return 0;
 }
 
-int arch_cpa_process_fault(struct cpa_data *cpa)
+int arch_cpa_process_fault(struct cpa_data *cpa, struct cpa_leaf *leaf)
 {
 	unsigned long vaddr = cpa_addr(cpa, cpa->curpage);
 
@@ -1488,7 +1488,7 @@ int arch_cpa_process_fault(struct cpa_data *cpa)
 	    __cpa_pfn_in_highmap(cpa->pfn))
 		return -EFAULT;
 
-	return cpa_process_fault(cpa);
+	return cpa_process_fault(cpa, leaf);
 }
 
 /*

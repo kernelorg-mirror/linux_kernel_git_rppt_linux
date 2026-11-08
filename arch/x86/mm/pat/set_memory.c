@@ -947,20 +947,11 @@ static pgprot_t pgprot_clear_protnone_bits(pgprot_t prot)
 }
 
 static int __should_split_large_page(pte_t *kpte, unsigned long address,
-				     struct cpa_data *cpa)
+				     enum pg_level level, struct cpa_data *cpa)
 {
 	unsigned long numpages, pmask, psize, lpaddr, pfn, old_pfn;
 	pgprot_t old_prot, new_prot, req_prot, chk_prot;
-	pte_t new_pte, *tmp;
-	enum pg_level level;
-
-	/*
-	 * Check for races, another CPU might have split this page
-	 * up already:
-	 */
-	tmp = _lookup_address_cpa(cpa, address, &level);
-	if (tmp != kpte)
-		return 1;
+	pte_t new_pte;
 
 	switch (level) {
 	case PG_LEVEL_2M:
@@ -1093,13 +1084,13 @@ static int __should_split_large_page(pte_t *kpte, unsigned long address,
 }
 
 static int should_split_large_page(pte_t *kpte, unsigned long address,
-				   struct cpa_data *cpa)
+				   enum pg_level level, struct cpa_data *cpa)
 {
 	if (cpa->force_split)
 		return 1;
 
 	guard(spinlock)(&pgd_lock);
-	return __should_split_large_page(kpte, address, cpa);
+	return __should_split_large_page(kpte, address, level, cpa);
 }
 
 static void split_set_pte(struct cpa_data *cpa, pte_t *pte, unsigned long pfn,
@@ -1140,22 +1131,14 @@ set:
 
 static int
 __split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
-		   pte_t *pbase)
+		   unsigned int level, pte_t *pbase)
 {
 	unsigned long lpaddr, lpinc, ref_pfn, pfn, pfninc = 1;
 	struct page *base = virt_to_page(pbase);
-	unsigned int i, level;
 	pgprot_t ref_prot;
-	pte_t *tmp;
+	unsigned int i;
 
 	guard(spinlock)(&pgd_lock);
-	/*
-	 * Check for races, another CPU might have split this page
-	 * up for us already:
-	 */
-	tmp = _lookup_address_cpa(cpa, address, &level);
-	if (tmp != kpte)
-		return 1;
 
 	paravirt_alloc_pte(&init_mm, page_to_pfn(base));
 
@@ -1242,6 +1225,7 @@ __split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
 static int split_large_page(struct cpa_data *cpa, pte_t *kpte,
 			    unsigned long address)
 {
+	unsigned int level;
 	pte_t *pte;
 
 	spin_unlock(&cpa_lock);
@@ -1254,7 +1238,16 @@ static int split_large_page(struct cpa_data *cpa, pte_t *kpte,
 	if (!pte)
 		return -ENOMEM;
 
-	if (__split_large_page(cpa, kpte, address, pte))
+	/*
+	 * Check for races, another CPU might have split this page
+	 * up for us already:
+	 */
+	if (_lookup_address_cpa(cpa, address, &level) != kpte) {
+		pte_free_kernel(&init_mm, pte);
+		return 0;
+	}
+
+	if (__split_large_page(cpa, kpte, address, level, pte))
 		pte_free_kernel(&init_mm, pte);
 
 	return 0;
@@ -1911,7 +1904,7 @@ repeat:
 	 * Check, whether we can keep the large page intact
 	 * and just change the pte:
 	 */
-	do_split = should_split_large_page(kpte, address, cpa);
+	do_split = should_split_large_page(kpte, address, level, cpa);
 	/*
 	 * When the range fits into the existing large page,
 	 * return. cp->numpages and cpa->tlbflush have been updated in

@@ -367,8 +367,11 @@ static int split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf)
 		if (cpa->state & CPA_ST_INIT_MM_LOCKED)
 			mmap_read_lock(&init_mm);
 		spin_lock(&cpa_lock);
-		if (!table)
+		if (!table) {
+			/* A split this early in boot cannot work. */
+			WARN_ON_ONCE(!slab_is_available());
 			return -ENOMEM;
+		}
 	}
 
 	/*

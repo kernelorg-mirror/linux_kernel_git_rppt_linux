@@ -14,7 +14,12 @@ pgprot_t arch_cpa_new_prot(struct cpa_data *cpa, struct cpa_leaf *leaf);
 
 int arch_cpa_split_leaf(struct cpa_data *cpa, struct cpa_leaf *leaf,
 			void *table);
-#define arch_cpa_split_leaf arch_cpa_split_leaf
+static inline bool arch_cpa_can_split(struct cpa_data *cpa,
+				      struct cpa_leaf *leaf)
+{
+	return true;
+}
+#define arch_cpa_can_split arch_cpa_can_split
 
 int arch_cpa_process_fault(struct cpa_data *cpa);
 #define arch_cpa_process_fault arch_cpa_process_fault

@@ -30,6 +30,7 @@
 #include <linux/initrd.h>
 #include <linux/cpumask.h>
 #include <linux/gfp.h>
+#include <linux/pageattr.h>
 
 #include <asm/asm.h>
 #include <asm/bios_ebda.h>

@@ -180,6 +180,14 @@ config DEBUG_RODATA_TEST
 	help
 	  This option enables a testcase for the setting rodata read-only.
 
+config CPA_STATISTICS
+	bool "Enable statistic for Change Page Attribute"
+	depends on GENERIC_PAGEATTR && DEBUG_FS
+	help
+	  Expose statistics about the Change Page Attribute mechanism, which
+	  helps to determine the effectiveness of preserving large and huge
+	  page mappings when mapping protections are changed.
+
 config PTDUMP_DEBUGFS
 	bool "Export kernel pagetable layout to userspace via debugfs"
 	depends on DEBUG_KERNEL

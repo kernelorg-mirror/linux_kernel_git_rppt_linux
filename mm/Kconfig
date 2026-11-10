@@ -1138,6 +1138,9 @@ config MEM_SOFT_DIRTY
 config GENERIC_EARLY_IOREMAP
 	bool
 
+config GENERIC_PAGEATTR
+	bool
+
 config STACK_MAX_DEFAULT_SIZE_MB
 	int "Default maximum user stack size for 32-bit processes (MB)"
 	default 100

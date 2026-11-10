@@ -33,6 +33,7 @@
 #include <linux/nmi.h>
 #include <linux/gfp.h>
 #include <linux/kcore.h>
+#include <linux/pageattr.h>
 
 #include <asm/processor.h>
 #include <asm/bios_ebda.h>

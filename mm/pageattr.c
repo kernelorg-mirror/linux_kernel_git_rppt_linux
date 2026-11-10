@@ -448,6 +448,9 @@ repeat:
 	/*
 	 * We have to split the large page:
 	 */
+	if (WARN_ON_ONCE(!arch_cpa_can_split(cpa, &leaf)))
+		return -EINVAL;
+
 	ret = split_large_page(cpa, &leaf);
 	if (!ret)
 		goto repeat;

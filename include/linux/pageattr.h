@@ -207,6 +207,31 @@ static inline int arch_cpa_split_leaf(struct cpa_data *cpa,
 {
 	return -EINVAL;
 }
+
+static inline bool arch_cpa_can_split(struct cpa_data *cpa,
+				      struct cpa_leaf *leaf)
+{
+	return false;
+}
+#define arch_cpa_can_split arch_cpa_can_split
+#endif
+
+/**
+ * arch_cpa_can_split() - check if a large page can be split
+ * @cpa: the request
+ * @leaf: the large page
+ *
+ * Called before the page table for the split is allocated. An architecture
+ * without arch_cpa_split_leaf() cannot split at all.
+ *
+ * Return: true if arch_cpa_split_leaf() can split @leaf.
+ */
+#ifndef arch_cpa_can_split
+static inline bool arch_cpa_can_split(struct cpa_data *cpa,
+				      struct cpa_leaf *leaf)
+{
+	return true;
+}
 #endif
 
 /**

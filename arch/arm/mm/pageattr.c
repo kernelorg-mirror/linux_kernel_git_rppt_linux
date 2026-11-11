@@ -4,6 +4,7 @@
  */
 #include <linux/mm.h>
 #include <linux/module.h>
+#include <linux/pageattr.h>
 
 #include <asm/tlbflush.h>
 #include <asm/set_memory.h>
@@ -25,13 +26,6 @@ static int change_page_range(pte_t *ptep, unsigned long addr, void *data)
 	return 0;
 }
 
-static bool range_in_range(unsigned long start, unsigned long size,
-	unsigned long range_start, unsigned long range_end)
-{
-	return start >= range_start && start < range_end &&
-		size <= range_end - start;
-}
-
 /*
  * This function assumes that the range is mapped with PAGE_SIZE pages.
  */
@@ -51,51 +45,78 @@ static int __change_memory_common(unsigned long start, unsigned long size,
 	return ret;
 }
 
-static int change_memory_common(unsigned long addr, int numpages,
-				pgprot_t set_mask, pgprot_t clear_mask)
+/*
+ * Only page mappings are changed: a section has a different format and is
+ * smaller than the level it is found at.
+ */
+void arch_cpa_decode_leaf(struct cpa_leaf *leaf)
 {
-	unsigned long start = addr & PAGE_MASK;
-	unsigned long end = PAGE_ALIGN(addr) + numpages * PAGE_SIZE;
-	unsigned long size = end - start;
+	pte_t pte = ptep_get(leaf->kpte);
 
-	WARN_ON_ONCE(start != addr);
+	if (WARN_ON_ONCE(leaf->level != PGTABLE_LEVEL_PTE)) {
+		leaf->pfn = 0;
+		leaf->prot = __pgprot(0);
+		return;
+	}
+
+	leaf->pfn = pte_pfn(pte);
+	leaf->prot = __pgprot(pte_val(pte) & ~(PHYS_MASK & (s32)PAGE_MASK));
+}
+
+void arch_cpa_modify_leaf(struct cpa_leaf *leaf, pgprot_t prot)
+{
+	if (leaf->level == PGTABLE_LEVEL_PTE)
+		set_pte_ext(leaf->kpte, pfn_pte(leaf->pfn, prot), 0);
+}
+
+void arch_cpa_flush(struct cpa_data *cpa)
+{
+	if (cpa->state & CPA_ST_FLUSH_ALL) {
+		flush_tlb_all();
+		return;
+	}
+
+	cpa_flush_tlb_kernel_range(cpa);
+}
+
+static bool range_in_range(unsigned long start, unsigned long size,
+	unsigned long range_start, unsigned long range_end)
+{
+	return start >= range_start && start < range_end &&
+		size <= range_end - start;
+}
+
+static const struct cpa_op_prot cpa_ops[CPA_OP_NR] = {
+	[CPA_OP_RO]	= { .set = __pgprot(L_PTE_RDONLY) },
+	[CPA_OP_RW]	= { .clr = __pgprot(L_PTE_RDONLY) },
+	[CPA_OP_X]	= { .clr = __pgprot(L_PTE_XN) },
+	[CPA_OP_NX]	= { .set = __pgprot(L_PTE_XN) },
+	[CPA_OP_ROX]	= { .set = __pgprot(L_PTE_RDONLY),
+			    .clr = __pgprot(L_PTE_XN) },
+};
+
+int arch_set_memory_prepare(struct cpa_data *cpa, enum cpa_op op)
+{
+	unsigned long end = PAGE_ALIGN(cpa->addr) + cpa->numpages * PAGE_SIZE;
+	unsigned long start = cpa->addr & PAGE_MASK;
+	unsigned long size = end - start;
+	bool in_modules, in_vmalloc;
 
 	if (!size)
 		return 0;
 
-	if (!range_in_range(start, size, MODULES_VADDR, MODULES_END) &&
-	    !range_in_range(start, size, VMALLOC_START, VMALLOC_END))
+	/*
+	 * The sections of the linear map are copied to every page table, so
+	 * only the page mappings of the modules and vmalloc areas can change.
+	 */
+	in_modules = range_in_range(start, size, MODULES_VADDR, MODULES_END);
+	in_vmalloc = range_in_range(start, size, VMALLOC_START, VMALLOC_END);
+	if (WARN_ON_ONCE(!in_modules && !in_vmalloc))
 		return -EINVAL;
 
-	return __change_memory_common(start, size, set_mask, clear_mask);
-}
+	cpa_init_op(cpa, &cpa_ops[op]);
 
-int set_memory_ro(unsigned long addr, int numpages)
-{
-	return change_memory_common(addr, numpages,
-					__pgprot(L_PTE_RDONLY),
-					__pgprot(0));
-}
-
-int set_memory_rw(unsigned long addr, int numpages)
-{
-	return change_memory_common(addr, numpages,
-					__pgprot(0),
-					__pgprot(L_PTE_RDONLY));
-}
-
-int set_memory_nx(unsigned long addr, int numpages)
-{
-	return change_memory_common(addr, numpages,
-					__pgprot(L_PTE_XN),
-					__pgprot(0));
-}
-
-int set_memory_x(unsigned long addr, int numpages)
-{
-	return change_memory_common(addr, numpages,
-					__pgprot(0),
-					__pgprot(L_PTE_XN));
+	return 0;
 }
 
 int set_memory_valid(unsigned long addr, int numpages, int enable)

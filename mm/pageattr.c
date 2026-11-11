@@ -14,6 +14,8 @@
 #include <linux/vmalloc.h>
 #include <linux/set_memory.h>
 
+#include <asm/tlbflush.h>
+
 /*
  * Serialize cpa() using cpa_lock so that we don't allow any other cpu, with
  * stale large tlb entries, to change the page attribute in parallel to some
@@ -510,6 +512,22 @@ out:
 	/* Restore the original numpages */
 	cpa->numpages = numpages;
 	return ret;
+}
+
+void cpa_flush_tlb_kernel_range(struct cpa_data *cpa)
+{
+	unsigned long addr, i;
+
+	if (cpa->flags & CPA_REQ_PAGES_ARRAY) {
+		for (i = 0; i < cpa->numpages; i++) {
+			addr = cpa_addr(cpa, i);
+			flush_tlb_kernel_range(addr, addr + PAGE_SIZE);
+		}
+		return;
+	}
+
+	flush_tlb_kernel_range(cpa->addr,
+			       cpa->addr + cpa->numpages * PAGE_SIZE);
 }
 
 int cpa_change_alias(struct cpa_data *cpa, struct cpa_data *alias)

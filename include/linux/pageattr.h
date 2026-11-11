@@ -113,6 +113,7 @@ static inline pgd_t *cpa_pgd(struct cpa_data *cpa, unsigned long address)
 unsigned long cpa_addr(struct cpa_data *cpa, unsigned long idx);
 int cpa_process_fault(struct cpa_data *cpa);
 int cpa_change_alias(struct cpa_data *cpa, struct cpa_data *alias);
+void cpa_flush_tlb_kernel_range(struct cpa_data *cpa);
 
 /**
  * change_page_attr() - change the protection of kernel mappings and flush the

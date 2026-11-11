@@ -366,10 +366,15 @@ static int split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf)
 	*leaf = tmp;
 
 	ret = arch_cpa_split_leaf(cpa, leaf, table);
-	if (ret)
+	if (ret) {
 		arch_cpa_free_pgtable(leaf, table);
+		return ret;
+	}
 
-	return ret;
+	if (cpa_is_direct_map(address))
+		direct_map_count_split(leaf->level);
+
+	return 0;
 }
 
 int cpa_process_fault(struct cpa_data *cpa)

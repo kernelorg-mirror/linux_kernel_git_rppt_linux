@@ -888,9 +888,6 @@ int arch_cpa_split_leaf(struct cpa_data *cpa, struct cpa_leaf *leaf,
 	for (i = 0; i < PTRS_PER_PTE; i++, pfn += pfninc)
 		set_pte(pbase + i, cpa_pte(level - 1, pfn, prot));
 
-	if (cpa_is_direct_map(address))
-		direct_map_count_split(level);
-
 	/*
 	 * Install the new, split up pagetable.
 	 *

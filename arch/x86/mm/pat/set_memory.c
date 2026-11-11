@@ -1835,7 +1835,7 @@ static int __cpa_process_fault(struct cpa_data *cpa, unsigned long vaddr,
 		/* Faults in the highmap are OK, so do not warn: */
 		return -EFAULT;
 	} else {
-		WARN(1, KERN_WARNING "CPA: called for zero pte. "
+		WARN(1, "CPA: called for zero pte. "
 			"vaddr = %lx cpa->addr = %lx\n", vaddr,
 			cpa->addr);
 

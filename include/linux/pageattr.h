@@ -65,6 +65,7 @@ static inline unsigned long cpa_addr(struct cpa_data *cpa, unsigned long idx)
 
 int cpa_process_fault(struct cpa_data *cpa);
 int cpa_change_alias(struct cpa_data *cpa, struct cpa_data *alias);
+void cpa_flush_tlb_kernel_range(struct cpa_data *cpa);
 
 int change_page_attr(struct cpa_data *cpa);
 

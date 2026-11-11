@@ -14,6 +14,8 @@
 #include <linux/vmalloc.h>
 #include <linux/set_memory.h>
 
+#include <asm/tlbflush.h>
+
 /*
  * Serialize CPA using cpa_lock so that:
  * - concurrent requests don't split or change the same large mapping at the
@@ -480,6 +482,12 @@ out:
 	/* Restore the original numpages */
 	cpa->numpages = numpages;
 	return ret;
+}
+
+void cpa_flush_tlb_kernel_range(struct cpa_data *cpa)
+{
+	flush_tlb_kernel_range(cpa->addr,
+			       cpa->addr + cpa->numpages * PAGE_SIZE);
 }
 
 int cpa_change_alias(struct cpa_data *cpa, struct cpa_data *alias)

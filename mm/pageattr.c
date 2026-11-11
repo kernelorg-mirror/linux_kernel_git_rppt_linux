@@ -682,8 +682,10 @@ int set_direct_map_invalid_noflush(struct page *page, unsigned int nr)
 	return set_direct_map(page, nr, CPA_OP_DIRECT_MAP_INVALID);
 }
 
+#ifndef set_direct_map_default_noflush
 int set_direct_map_default_noflush(struct page *page, unsigned int nr)
 {
 	return set_direct_map(page, nr, CPA_OP_DIRECT_MAP_DEFAULT);
 }
+#endif
 #endif /* CONFIG_ARCH_HAS_SET_DIRECT_MAP */

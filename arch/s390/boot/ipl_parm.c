@@ -268,6 +268,10 @@ void parse_boot_command_line(void)
 	while (*args) {
 		args = next_arg(args, &param, &val);
 
+		/* The arguments after "--" are for init */
+		if (!val && !strcmp(param, "--"))
+			break;
+
 		if (!strcmp(param, "mem") && val)
 			memory_limit = round_down(memparse(val, NULL), PAGE_SIZE);
 

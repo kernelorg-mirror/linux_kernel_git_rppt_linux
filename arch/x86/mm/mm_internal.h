@@ -24,6 +24,13 @@ void update_cache_mode_entry(unsigned entry, enum page_cache_mode cache);
 
 extern unsigned long tlb_single_page_flush_ceiling;
 
+#ifdef CONFIG_PROC_FS
+void direct_map_count_update(enum pgtable_level level, long pages);
+#else
+static inline void direct_map_count_update(enum pgtable_level level,
+					   long pages) { }
+#endif
+
 #ifdef CONFIG_NUMA
 void __init x86_numa_init(void);
 #endif

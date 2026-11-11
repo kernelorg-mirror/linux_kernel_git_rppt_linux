@@ -30,6 +30,7 @@
 #include <linux/initrd.h>
 #include <linux/cpumask.h>
 #include <linux/gfp.h>
+#include <linux/pageattr.h>
 
 #include <asm/asm.h>
 #include <asm/bios_ebda.h>
@@ -367,8 +368,8 @@ repeat:
 		 * update direct mapping page count only in the first
 		 * iteration.
 		 */
-		update_page_count(PGTABLE_LEVEL_PMD, pages_2m);
-		update_page_count(PGTABLE_LEVEL_PTE, pages_4k);
+		direct_map_count_update(PGTABLE_LEVEL_PMD, pages_2m);
+		direct_map_count_update(PGTABLE_LEVEL_PTE, pages_4k);
 
 		/*
 		 * local global flush tlb, which will flush the previous

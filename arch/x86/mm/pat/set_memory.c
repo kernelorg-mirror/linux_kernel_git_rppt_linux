@@ -49,16 +49,16 @@ static inline pgprot_t cachemode2pgprot(enum page_cache_mode pcm)
 }
 
 #ifdef CONFIG_PROC_FS
-static atomic_long_t direct_pages_count[PGTABLE_LEVEL_NUM];
+static atomic_long_t cpa_direct_map_pages[PGTABLE_LEVEL_NUM];
 
-void update_page_count(int level, unsigned long pages)
+void direct_map_count_update(enum pgtable_level level, long pages)
 {
-	atomic_long_add(pages, &direct_pages_count[level]);
+	atomic_long_add(pages, &cpa_direct_map_pages[level]);
 }
 
-static void split_page_count(int level)
+static void direct_map_count_split(enum pgtable_level level)
 {
-	if (atomic_long_dec_if_positive(&direct_pages_count[level]) < 0)
+	if (atomic_long_dec_if_positive(&cpa_direct_map_pages[level]) < 0)
 		return;
 
 	if (system_state == SYSTEM_RUNNING) {
@@ -67,24 +67,24 @@ static void split_page_count(int level)
 		else if (level == PGTABLE_LEVEL_PUD)
 			count_vm_event(DIRECT_MAP_LEVEL3_SPLIT);
 	}
-	atomic_long_add(PTRS_PER_PTE, &direct_pages_count[level - 1]);
+	atomic_long_add(PTRS_PER_PTE, &cpa_direct_map_pages[level - 1]);
 }
 
-static void collapse_page_count(int level)
+static void direct_map_count_collapse(enum pgtable_level level)
 {
-	atomic_long_inc(&direct_pages_count[level]);
+	atomic_long_inc(&cpa_direct_map_pages[level]);
 	if (system_state == SYSTEM_RUNNING) {
 		if (level == PGTABLE_LEVEL_PMD)
 			count_vm_event(DIRECT_MAP_LEVEL2_COLLAPSE);
 		else if (level == PGTABLE_LEVEL_PUD)
 			count_vm_event(DIRECT_MAP_LEVEL3_COLLAPSE);
 	}
-	atomic_long_sub(PTRS_PER_PTE, &direct_pages_count[level - 1]);
+	atomic_long_sub(PTRS_PER_PTE, &cpa_direct_map_pages[level - 1]);
 }
 
-static unsigned long direct_pages(int level)
+static unsigned long direct_pages(enum pgtable_level level)
 {
-	return atomic_long_read(&direct_pages_count[level]);
+	return atomic_long_read(&cpa_direct_map_pages[level]);
 }
 
 void arch_report_meminfo(struct seq_file *m)
@@ -103,8 +103,8 @@ void arch_report_meminfo(struct seq_file *m)
 			   direct_pages(PGTABLE_LEVEL_PUD) << 20);
 }
 #else
-static inline void split_page_count(int level) { }
-static inline void collapse_page_count(int level) { }
+static inline void direct_map_count_split(enum pgtable_level level) { }
+static inline void direct_map_count_collapse(enum pgtable_level level) { }
 #endif
 
 static inline int
@@ -937,7 +937,7 @@ int arch_cpa_split_leaf(struct cpa_data *cpa, struct cpa_leaf *leaf,
 		set_pte(pbase + i, cpa_pte(level - 1, pfn, prot));
 
 	if (cpa_is_direct_map(address))
-		split_page_count(level);
+		direct_map_count_split(level);
 
 	/*
 	 * Install the new, split up pagetable.
@@ -1038,7 +1038,7 @@ static int collapse_pmd_page(pmd_t *pmd, unsigned long addr,
 	}
 
 	if (cpa_is_direct_map(addr))
-		collapse_page_count(PGTABLE_LEVEL_PMD);
+		direct_map_count_collapse(PGTABLE_LEVEL_PMD);
 
 	return 1;
 }
@@ -1085,7 +1085,7 @@ static int collapse_pud_page(pud_t *pud, unsigned long addr,
 	set_pud(pud, pfn_pud(pfn, pmd_pgprot(first)));
 
 	if (cpa_is_direct_map(addr))
-		collapse_page_count(PGTABLE_LEVEL_PUD);
+		direct_map_count_collapse(PGTABLE_LEVEL_PUD);
 
 	return 1;
 }

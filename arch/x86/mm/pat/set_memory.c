@@ -2152,12 +2152,13 @@ static int change_page_attr_set_clr(unsigned long addr, int numpages,
 	/*
 	 * On error; flush everything to be sure.
 	 */
-	if (ret) {
-		cpa_flush_all(cache);
-		goto out;
-	}
+	if (ret)
+		cpa.force_flush_all = 1;
 
 	cpa_flush(&cpa, cache);
+
+	if (ret)
+		goto out;
 
 	if (!(cpa.flags & CPA_COLLAPSE))
 		goto out;

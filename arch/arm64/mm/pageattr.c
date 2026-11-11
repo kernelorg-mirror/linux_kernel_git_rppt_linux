@@ -130,7 +130,6 @@ int arch_cpa_process_alias(struct cpa_data *cpa)
 	pteval_t prot = pgprot_val(cpa->mask_set) | pgprot_val(cpa->mask_clr);
 	unsigned long vaddr = cpa_addr(cpa, cpa->curpage);
 	struct cpa_data alias_cpa;
-	unsigned long alias;
 	int ret;
 
 	if (!rodata_full || !(prot & PTE_RDONLY))
@@ -140,14 +139,8 @@ int arch_cpa_process_alias(struct cpa_data *cpa)
 	if (cpa_is_direct_map(vaddr) || !pfn_valid(cpa->pfn))
 		return 0;
 
-	alias = (unsigned long)page_address(pfn_to_page(cpa->pfn));
-	ret = split_kernel_leaf_mapping(alias,
-					alias + cpa->numpages * PAGE_SIZE);
-	if (WARN_ON_ONCE(ret))
-		return ret;
-
 	alias_cpa = *cpa;
-	alias_cpa.addr = alias;
+	alias_cpa.addr = (unsigned long)page_address(pfn_to_page(cpa->pfn));
 	pgprot_val(alias_cpa.mask_set) &= PTE_RDONLY | PTE_WRITE;
 	pgprot_val(alias_cpa.mask_clr) &= PTE_RDONLY | PTE_WRITE;
 
@@ -181,18 +174,10 @@ static const struct cpa_op_prot cpa_ops[CPA_OP_NR] = {
 
 int arch_cpa_prepare(struct cpa_data *cpa, enum cpa_op op)
 {
-	unsigned long start = PAGE_ALIGN_DOWN(cpa->addr);
-	unsigned long end = start + cpa->numpages * PAGE_SIZE;
-	int ret;
-
 	/* Nothing in the linear map is invalid without can_set_direct_map() */
 	if ((op == CPA_OP_DIRECT_MAP_INVALID ||
 	     op == CPA_OP_DIRECT_MAP_DEFAULT) && !can_set_direct_map())
 		return 0;
-
-	ret = split_kernel_leaf_mapping(start, end);
-	if (WARN_ON_ONCE(ret))
-		return ret;
 
 	cpa_init_op(cpa, &cpa_ops[op]);
 
@@ -297,11 +282,6 @@ static int __change_memory_common(unsigned long start, unsigned long size,
 		.mask_clr = clear_mask,
 		.flags = CPA_REQ_NO_CHECK_ALIAS,
 	};
-	int ret;
-
-	ret = split_kernel_leaf_mapping(start, start + size);
-	if (WARN_ON_ONCE(ret))
-		return ret;
 
 	return arm64_change_page_attr(&cpa);
 }

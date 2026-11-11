@@ -379,11 +379,8 @@ void __init arch_mm_preinit(void)
 	}
 }
 
-bool page_alloc_available __ro_after_init;
-
 void __init mem_init(void)
 {
-	page_alloc_available = true;
 	swiotlb_update_mem_attributes();
 }
 

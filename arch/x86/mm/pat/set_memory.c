@@ -51,6 +51,15 @@ struct cpa_data {
 	unsigned int	state;
 };
 
+struct cpa_leaf {
+	pte_t			*kpte;
+	enum pgtable_level	level;
+	unsigned long		addr;
+	unsigned long		size;
+	unsigned long		pfn;
+	pgprot_t		prot;
+};
+
 enum cpa_warn {
 	CPA_PROTECT,
 	CPA_DETECT,
@@ -887,12 +896,53 @@ static pte_t *cpa_lookup_in_pgd(pgd_t *pgdp, unsigned long address,
 	return pte_offset_kernel(pmdp, address);
 }
 
-static pte_t *_lookup_address_cpa(struct cpa_data *cpa, unsigned long address,
-				  enum pgtable_level *level)
+static void cpa_decode_leaf(struct cpa_leaf *leaf)
+{
+	enum pgtable_level level = leaf->level;
+	pte_t *kpte = leaf->kpte;
+	pte_t pte;
+	pmd_t pmd;
+	pud_t pud;
+
+	switch (level) {
+	case PGTABLE_LEVEL_PTE:
+		pte = *kpte;
+		leaf->pfn = pte_pfn(pte);
+		leaf->prot = pte_pgprot(pte);
+		break;
+	case PGTABLE_LEVEL_PMD:
+		pmd = *(pmd_t *)kpte;
+		leaf->pfn = pmd_pfn(pmd);
+		leaf->prot = pgprot_large_2_4k(pmd_pgprot(pmd));
+		break;
+	case PGTABLE_LEVEL_PUD:
+		pud = *(pud_t *)kpte;
+		leaf->pfn = pud_pfn(pud);
+		leaf->prot = pgprot_large_2_4k(pud_pgprot(pud));
+		break;
+	default:
+		leaf->pfn = 0;
+		leaf->prot = __pgprot(0);
+		break;
+	}
+}
+
+static pte_t *cpa_lookup(struct cpa_data *cpa, unsigned long address,
+			 struct cpa_leaf *leaf)
 {
 	pgd_t *pgd = cpa_pgd(cpa, address);
 
-	return cpa_lookup_in_pgd(pgd, address, level);
+	leaf->kpte = cpa_lookup_in_pgd(pgd, address, &leaf->level);
+	if (!leaf->kpte)
+		return NULL;
+	if (leaf->level == PGTABLE_LEVEL_PTE && pte_none(ptep_get(leaf->kpte)))
+		return NULL;
+
+	leaf->size = pgtable_level_size(leaf->level);
+	leaf->addr = address & pgtable_level_mask(leaf->level);
+	cpa_decode_leaf(leaf);
+
+	return leaf->kpte;
 }
 
 /*
@@ -1035,53 +1085,36 @@ static pte_t cpa_pte(enum pgtable_level level, unsigned long pfn, pgprot_t prot)
 	return pfn_pte(pfn, prot);
 }
 
-static int should_split_large_page(pte_t *kpte, unsigned long address,
-				   enum pgtable_level level,
-				   struct cpa_data *cpa)
+static int should_split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf)
 {
-	unsigned long numpages, pmask, psize, lpaddr, pfn, old_pfn;
-	pgprot_t old_prot, new_prot, req_prot;
+	unsigned long address = __cpa_addr(cpa, cpa->curpage);
+	enum pgtable_level level = leaf->level;
+	unsigned long lpaddr = leaf->addr;
+	unsigned long old_pfn = leaf->pfn;
+	unsigned long psize = leaf->size;
+	pgprot_t old_prot = leaf->prot;
+	unsigned long numpages, pfn;
+	pgprot_t new_prot, req_prot;
+	pte_t *kpte = leaf->kpte;
 	pte_t new_pte;
 
 	if (cpa->flags & CPA_REQ_SPLIT)
 		return 1;
 
-	switch (level) {
-	case PGTABLE_LEVEL_PMD:
-		old_prot = pmd_pgprot(*(pmd_t *)kpte);
-		old_pfn = pmd_pfn(*(pmd_t *)kpte);
-		break;
-	case PGTABLE_LEVEL_PUD:
-		old_prot = pud_pgprot(*(pud_t *)kpte);
-		old_pfn = pud_pfn(*(pud_t *)kpte);
-		break;
-	default:
+	if (level != PGTABLE_LEVEL_PMD && level != PGTABLE_LEVEL_PUD)
 		return -EINVAL;
-	}
 
 	cpa_inc_pxd_checked(level);
-
-	psize = pgtable_level_size(level);
-	pmask = pgtable_level_mask(level);
 
 	/*
 	 * Calculate the number of pages, which fit into this large
 	 * page starting at address:
 	 */
-	lpaddr = (address + psize) & pmask;
-	numpages = (lpaddr - address) >> PAGE_SHIFT;
+	numpages = (lpaddr + psize - address) >> PAGE_SHIFT;
 	if (numpages < cpa->numpages)
 		cpa->numpages = numpages;
 
-	/*
-	 * We are safe now. Check whether the new pgprot is the same:
-	 * Convert protection attributes to 4k-format, as cpa->mask* are set
-	 * up accordingly.
-	 */
-
-	/* Clear PSE (aka _PAGE_PAT) and move PAT bit to correct position */
-	req_prot = pgprot_large_2_4k(old_prot);
-
+	req_prot = old_prot;
 	pgprot_val(req_prot) &= ~pgprot_val(cpa->mask_clr);
 	pgprot_val(req_prot) |= pgprot_val(cpa->mask_set);
 
@@ -1092,11 +1125,6 @@ static int should_split_large_page(pte_t *kpte, unsigned long address,
 	pfn = old_pfn + ((address & (psize - 1)) >> PAGE_SHIFT);
 	cpa->pfn = pfn;
 
-	/*
-	 * Calculate the large page base address and the number of 4K pages
-	 * in the large page
-	 */
-	lpaddr = address & pmask;
 	numpages = psize >> PAGE_SHIFT;
 
 	/*
@@ -1105,7 +1133,7 @@ static int should_split_large_page(pte_t *kpte, unsigned long address,
 	 * required independent of alignment and length of the requested
 	 * range.
 	 */
-	if (pgprot_val(req_prot) == pgprot_val(pgprot_large_2_4k(old_prot))) {
+	if (pgprot_val(req_prot) == pgprot_val(old_prot)) {
 		cpa_inc_pxd_sameprot(level);
 		return 0;
 	}
@@ -1147,44 +1175,25 @@ static int should_split_large_page(pte_t *kpte, unsigned long address,
 }
 
 static int
-__split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
-		   enum pgtable_level level, pte_t *pbase)
+__split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf, pte_t *pbase)
 {
-	unsigned long ref_pfn, pfn, pfninc = 1;
+	unsigned long address = __cpa_addr(cpa, cpa->curpage);
 	struct page *base = virt_to_page(pbase);
-	pgprot_t ref_prot;
+	enum pgtable_level level = leaf->level;
+	unsigned long pfn = leaf->pfn;
+	pgprot_t prot = leaf->prot;
+	pte_t *kpte = leaf->kpte;
+	unsigned long pfninc;
 	unsigned int i;
+
+	if (level != PGTABLE_LEVEL_PMD && level != PGTABLE_LEVEL_PUD)
+		return -EINVAL;
 
 	paravirt_alloc_pte(&init_mm, page_to_pfn(base));
 
-	switch (level) {
-	case PGTABLE_LEVEL_PMD:
-		ref_prot = pmd_pgprot(*(pmd_t *)kpte);
-		/*
-		 * Clear PSE (aka _PAGE_PAT) and move
-		 * PAT bit to correct position.
-		 */
-		ref_prot = pgprot_large_2_4k(ref_prot);
-		ref_pfn = pmd_pfn(*(pmd_t *)kpte);
-		break;
-
-	case PGTABLE_LEVEL_PUD:
-		ref_prot = pud_pgprot(*(pud_t *)kpte);
-		ref_pfn = pud_pfn(*(pud_t *)kpte);
-		pfninc = PMD_SIZE >> PAGE_SHIFT;
-		ref_prot = pgprot_large_2_4k(ref_prot);
-		break;
-
-	default:
-		return -EINVAL;
-	}
-
-	/*
-	 * Get the target pfn from the original entry:
-	 */
-	pfn = ref_pfn;
+	pfninc = pgtable_level_size(level - 1) >> PAGE_SHIFT;
 	for (i = 0; i < PTRS_PER_PTE; i++, pfn += pfninc)
-		set_pte(pbase + i, cpa_pte(level - 1, pfn, ref_prot));
+		set_pte(pbase + i, cpa_pte(level - 1, pfn, prot));
 
 	if (within(address, PAGE_OFFSET,
 		   PAGE_OFFSET + (max_pfn_mapped << PAGE_SHIFT)))
@@ -1222,10 +1231,11 @@ __split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
 	return 0;
 }
 
-static int split_large_page(struct cpa_data *cpa, pte_t *kpte,
-			    unsigned long address)
+static int split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf)
 {
-	enum pgtable_level level;
+	unsigned long address = __cpa_addr(cpa, cpa->curpage);
+	pte_t *kpte = leaf->kpte;
+	struct cpa_leaf tmp;
 	pte_t *pte;
 	int ret = 0;
 
@@ -1239,10 +1249,11 @@ static int split_large_page(struct cpa_data *cpa, pte_t *kpte,
 	 * Check for races, another CPU might have split this page
 	 * up for us already:
 	 */
-	if (_lookup_address_cpa(cpa, address, &level) != kpte)
+	if (cpa_lookup(cpa, address, &tmp) != kpte)
 		goto out;
+	*leaf = tmp;
 
-	ret = __split_large_page(cpa, kpte, address, level, pte);
+	ret = __split_large_page(cpa, leaf, pte);
 	if (ret)
 		goto out;
 
@@ -1851,26 +1862,21 @@ static int __cpa_process_fault(struct cpa_data *cpa, unsigned long vaddr)
 
 static int __change_page_attr(struct cpa_data *cpa)
 {
-	enum pgtable_level level;
 	unsigned long address;
-	pte_t *kpte, old_pte;
-	int do_split, err;
+	struct cpa_leaf leaf;
+	int do_split, ret;
 
 	address = __cpa_addr(cpa, cpa->curpage);
 repeat:
-	kpte = _lookup_address_cpa(cpa, address, &level);
-	if (!kpte)
+	if (!cpa_lookup(cpa, address, &leaf))
 		return __cpa_process_fault(cpa, address);
 
-	old_pte = *kpte;
-	if (pte_none(old_pte))
-		return __cpa_process_fault(cpa, address);
-
-	if (level == PGTABLE_LEVEL_PTE) {
+	if (leaf.level == PGTABLE_LEVEL_PTE) {
+		pte_t old_pte = *leaf.kpte;
+		pgprot_t old_prot = leaf.prot;
+		pgprot_t new_prot = leaf.prot;
+		unsigned long pfn = leaf.pfn;
 		pte_t new_pte;
-		pgprot_t old_prot = pte_pgprot(old_pte);
-		pgprot_t new_prot = pte_pgprot(old_pte);
-		unsigned long pfn = pte_pfn(old_pte);
 
 		pgprot_val(new_prot) &= ~pgprot_val(cpa->mask_clr);
 		pgprot_val(new_prot) |= pgprot_val(cpa->mask_set);
@@ -1887,13 +1893,13 @@ repeat:
 		 * after all we're only going to change its attributes
 		 * not the memory it points to
 		 */
-		new_pte = cpa_pte(level, pfn, new_prot);
+		new_pte = cpa_pte(leaf.level, pfn, new_prot);
 		cpa->pfn = pfn;
 		/*
 		 * Do we really change anything ?
 		 */
 		if (pte_val(old_pte) != pte_val(new_pte)) {
-			set_pte_atomic(kpte, new_pte);
+			set_pte_atomic(leaf.kpte, new_pte);
 			cpa->state |= CPA_ST_FLUSHTLB;
 		}
 		cpa->numpages = 1;
@@ -1904,7 +1910,7 @@ repeat:
 	 * Check, whether we can keep the large page intact
 	 * and just change the pte:
 	 */
-	do_split = should_split_large_page(kpte, address, level, cpa);
+	do_split = should_split_large_page(cpa, &leaf);
 	/*
 	 * When the range fits into the existing large page,
 	 * return. cp->numpages and cpa->tlbflush have been updated in
@@ -1916,11 +1922,11 @@ repeat:
 	/*
 	 * We have to split the large page:
 	 */
-	err = split_large_page(cpa, kpte, address);
-	if (!err)
+	ret = split_large_page(cpa, &leaf);
+	if (!ret)
 		goto repeat;
 
-	return err;
+	return ret;
 }
 
 static int __change_page_attr_set_clr(struct cpa_data *cpa);

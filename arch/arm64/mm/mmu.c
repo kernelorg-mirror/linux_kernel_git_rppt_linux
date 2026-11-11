@@ -13,6 +13,7 @@
 #include <linux/init.h>
 #include <linux/ioport.h>
 #include <linux/kexec.h>
+#include <linux/pageattr.h>
 #include <linux/libfdt.h>
 #include <linux/mman.h>
 #include <linux/nodemask.h>
@@ -1078,9 +1079,23 @@ static void __init __map_memblock(phys_addr_t start, phys_addr_t end,
 
 static void mark_linear_data_alias_valid(bool valid)
 {
-	set_memory_valid((unsigned long)lm_alias(__init_end),
-			 (unsigned long)(__bss_stop - __init_end) / PAGE_SIZE,
-			 valid);
+	pgprot_t valid_prot = __pgprot(PTE_PRESENT_VALID_KERNEL);
+	pgprot_t invalid_prot = __pgprot(PTE_PRESENT_INVALID);
+	struct cpa_data cpa = {
+		.addr = (unsigned long)lm_alias(__init_end),
+		.numpages = (__bss_stop - __init_end) / PAGE_SIZE,
+		.mask_set = valid ? valid_prot : invalid_prot,
+		.mask_clr = valid ? invalid_prot : valid_prot,
+		.flags = CPA_REQ_NO_CHECK_ALIAS,
+	};
+	int ret;
+
+	ret = split_kernel_leaf_mapping(cpa.addr,
+					cpa.addr + cpa.numpages * PAGE_SIZE);
+	if (WARN_ON_ONCE(ret))
+		return;
+
+	arm64_change_page_attr(&cpa);
 }
 
 static int arm64_hibernate_pm_notify(struct notifier_block *nb,

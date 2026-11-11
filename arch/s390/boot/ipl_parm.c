@@ -255,6 +255,25 @@ static void modify_fac_list(char *str)
 	check_cleared_facilities();
 }
 
+static char dash2underscore(char c)
+{
+	if (c == '-')
+		return '_';
+	return c;
+}
+
+/* Dashes and underscores are equivalent in parameter names */
+static bool parameq(const char *a, const char *b)
+{
+	size_t i, n = strlen(a) + 1;
+
+	for (i = 0; i < n; i++) {
+		if (dash2underscore(a[i]) != dash2underscore(b[i]))
+			return false;
+	}
+	return true;
+}
+
 void parse_boot_command_line(void)
 {
 	char *param, *val;
@@ -272,15 +291,15 @@ void parse_boot_command_line(void)
 		if (!val && !strcmp(param, "--"))
 			break;
 
-		if (!strcmp(param, "mem") && val)
+		if (parameq(param, "mem") && val)
 			memory_limit = round_down(memparse(val, NULL), PAGE_SIZE);
 
-		if (!strcmp(param, "vmalloc") && val) {
+		if (parameq(param, "vmalloc") && val) {
 			vmalloc_size = round_up(memparse(val, NULL), _SEGMENT_SIZE);
 			vmalloc_size_set = 1;
 		}
 
-		if (!strcmp(param, "dfltcc") && val) {
+		if (parameq(param, "dfltcc") && val) {
 			if (!strcmp(val, "off"))
 				zlib_dfltcc_support = ZLIB_DFLTCC_DISABLED;
 			else if (!strcmp(val, "on"))
@@ -293,49 +312,49 @@ void parse_boot_command_line(void)
 				zlib_dfltcc_support = ZLIB_DFLTCC_FULL_DEBUG;
 		}
 
-		if (!strcmp(param, "facilities") && val)
+		if (parameq(param, "facilities") && val)
 			modify_fac_list(val);
 
-		if (!strcmp(param, "debug-alternative"))
+		if (parameq(param, "debug-alternative"))
 			alt_debug_setup(val);
 
-		if (!strcmp(param, "nokaslr"))
+		if (parameq(param, "nokaslr"))
 			__kaslr_enabled = 0;
 
-		if (!strcmp(param, "cmma")) {
+		if (parameq(param, "cmma")) {
 			rc = kstrtobool(val, &enabled);
 			if (!rc && !enabled)
 				cmma_flag = 0;
 		}
 
 #ifdef CONFIG_STACKPROTECTOR
-		if (!strcmp(param, "debug_stackprotector"))
+		if (parameq(param, "debug_stackprotector"))
 			stack_protector_debug = 1;
 #endif
 
 #if IS_ENABLED(CONFIG_KVM)
-		if (!strcmp(param, "prot_virt")) {
+		if (parameq(param, "prot_virt")) {
 			rc = kstrtobool(val, &enabled);
 			if (!rc && enabled)
 				prot_virt_host = 1;
 		}
 #endif
-		if (!strcmp(param, "relocate_lowcore") && test_facility(193))
+		if (parameq(param, "relocate_lowcore") && test_facility(193))
 			set_machine_feature(MFEATURE_LOWCORE);
-		if (!strcmp(param, "earlyprintk"))
+		if (parameq(param, "earlyprintk"))
 			boot_earlyprintk = true;
-		if (!strcmp(param, "debug"))
+		if (parameq(param, "debug"))
 			boot_console_loglevel = CONSOLE_LOGLEVEL_DEBUG;
-		if (!strcmp(param, "bootdebug")) {
+		if (parameq(param, "bootdebug")) {
 			bootdebug = true;
 			if (val)
 				strscpy(bootdebug_filter, val);
 		}
-		if (!strcmp(param, "quiet"))
+		if (parameq(param, "quiet"))
 			boot_console_loglevel = CONSOLE_LOGLEVEL_QUIET;
-		if (!strcmp(param, "ignore_loglevel"))
+		if (parameq(param, "ignore_loglevel"))
 			boot_ignore_loglevel = true;
-		if (!strcmp(param, "loglevel")) {
+		if (parameq(param, "loglevel")) {
 			boot_console_loglevel = simple_strtoull(val, NULL, 10);
 			if (boot_console_loglevel < CONSOLE_LOGLEVEL_MIN)
 				boot_console_loglevel = CONSOLE_LOGLEVEL_MIN;

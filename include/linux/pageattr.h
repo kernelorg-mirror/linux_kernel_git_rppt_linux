@@ -29,6 +29,8 @@
  * and see the request.
  */
 
+struct seq_file;
+
 /**
  * struct cpa_data - a request to change the protection of kernel mappings
  * @addr: the virtual address of the first page
@@ -136,6 +138,11 @@ int change_page_attr(struct cpa_data *cpa);
  * Return: 0 on success, -errno on failure.
  */
 int change_page_attr_noflush(struct cpa_data *cpa);
+
+void direct_map_count_update(enum pgtable_level level, long pages);
+void direct_map_count_split(enum pgtable_level level);
+void direct_map_count_collapse(enum pgtable_level level);
+void cpa_report_meminfo(struct seq_file *m, unsigned long levels);
 
 /**
  * arch_cpa_decode_leaf() - decode a page table entry

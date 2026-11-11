@@ -16,7 +16,6 @@
 #include <linux/pci.h>
 #include <linux/vmalloc.h>
 #include <linux/libnvdimm.h>
-#include <linux/vmstat.h>
 #include <linux/kernel.h>
 #include <linux/cc_platform.h>
 #include <linux/set_memory.h>
@@ -49,62 +48,15 @@ static inline pgprot_t cachemode2pgprot(enum page_cache_mode pcm)
 }
 
 #ifdef CONFIG_PROC_FS
-static atomic_long_t cpa_direct_map_pages[PGTABLE_LEVEL_NUM];
-
-void direct_map_count_update(enum pgtable_level level, long pages)
-{
-	atomic_long_add(pages, &cpa_direct_map_pages[level]);
-}
-
-static void direct_map_count_split(enum pgtable_level level)
-{
-	if (atomic_long_dec_if_positive(&cpa_direct_map_pages[level]) < 0)
-		return;
-
-	if (system_state == SYSTEM_RUNNING) {
-		if (level == PGTABLE_LEVEL_PMD)
-			count_vm_event(DIRECT_MAP_LEVEL2_SPLIT);
-		else if (level == PGTABLE_LEVEL_PUD)
-			count_vm_event(DIRECT_MAP_LEVEL3_SPLIT);
-	}
-	atomic_long_add(PTRS_PER_PTE, &cpa_direct_map_pages[level - 1]);
-}
-
-static void direct_map_count_collapse(enum pgtable_level level)
-{
-	atomic_long_inc(&cpa_direct_map_pages[level]);
-	if (system_state == SYSTEM_RUNNING) {
-		if (level == PGTABLE_LEVEL_PMD)
-			count_vm_event(DIRECT_MAP_LEVEL2_COLLAPSE);
-		else if (level == PGTABLE_LEVEL_PUD)
-			count_vm_event(DIRECT_MAP_LEVEL3_COLLAPSE);
-	}
-	atomic_long_sub(PTRS_PER_PTE, &cpa_direct_map_pages[level - 1]);
-}
-
-static unsigned long direct_pages(enum pgtable_level level)
-{
-	return atomic_long_read(&cpa_direct_map_pages[level]);
-}
-
 void arch_report_meminfo(struct seq_file *m)
 {
-	seq_printf(m, "DirectMap4k:    %8lu kB\n",
-		   direct_pages(PGTABLE_LEVEL_PTE) << 2);
-#if defined(CONFIG_X86_64) || defined(CONFIG_X86_PAE)
-	seq_printf(m, "DirectMap2M:    %8lu kB\n",
-		   direct_pages(PGTABLE_LEVEL_PMD) << 11);
-#else
-	seq_printf(m, "DirectMap4M:    %8lu kB\n",
-		   direct_pages(PGTABLE_LEVEL_PMD) << 12);
-#endif
+	unsigned long levels = BIT(PGTABLE_LEVEL_PTE) | BIT(PGTABLE_LEVEL_PMD);
+
 	if (direct_gbpages)
-		seq_printf(m, "DirectMap1G:    %8lu kB\n",
-			   direct_pages(PGTABLE_LEVEL_PUD) << 20);
+		levels |= BIT(PGTABLE_LEVEL_PUD);
+
+	cpa_report_meminfo(m, levels);
 }
-#else
-static inline void direct_map_count_split(enum pgtable_level level) { }
-static inline void direct_map_count_collapse(enum pgtable_level level) { }
 #endif
 
 static inline int

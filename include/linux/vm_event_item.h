@@ -139,7 +139,8 @@ enum vm_event_item { PGPGIN, PGPGOUT, PSWPIN, PSWPOUT,
 		ZSWPOUT,
 		ZSWPWB,
 #endif
-#ifdef CONFIG_X86
+#ifdef CONFIG_GENERIC_PAGEATTR
+		/* level2 is the PMD and level3 is the PUD level */
 		DIRECT_MAP_LEVEL2_SPLIT,
 		DIRECT_MAP_LEVEL3_SPLIT,
 		DIRECT_MAP_LEVEL2_COLLAPSE,

@@ -2,15 +2,6 @@
 #ifndef _ASM_X86_PAGEATTR_H
 #define _ASM_X86_PAGEATTR_H
 
-#ifdef CONFIG_PROC_FS
-void direct_map_count_update(enum pgtable_level level, long pages);
-#else
-static inline void direct_map_count_update(enum pgtable_level level,
-					   long pages)
-{
-}
-#endif
-
 static inline bool cpa_is_direct_map(unsigned long addr)
 {
 	return addr >= PAGE_OFFSET &&

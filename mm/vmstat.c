@@ -1467,7 +1467,7 @@ const char * const vmstat_text[] = {
 	[I(ZSWPOUT)]				= "zswpout",
 	[I(ZSWPWB)]				= "zswpwb",
 #endif
-#ifdef CONFIG_X86
+#ifdef CONFIG_GENERIC_PAGEATTR
 	[I(DIRECT_MAP_LEVEL2_SPLIT)]		= "direct_map_level2_splits",
 	[I(DIRECT_MAP_LEVEL3_SPLIT)]		= "direct_map_level3_splits",
 	[I(DIRECT_MAP_LEVEL2_COLLAPSE)]		= "direct_map_level2_collapses",

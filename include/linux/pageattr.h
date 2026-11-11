@@ -261,4 +261,49 @@ static inline void arch_cpa_collapse(struct cpa_data *cpa)
 }
 #endif
 
+/* Operations of the generic set_memory_*() and set_direct_map_*_noflush() */
+enum cpa_op {
+	CPA_OP_RO,
+	CPA_OP_RW,
+	CPA_OP_X,
+	CPA_OP_NX,
+	CPA_OP_ROX,
+	CPA_OP_DIRECT_MAP_INVALID,
+	CPA_OP_DIRECT_MAP_DEFAULT,
+	CPA_OP_NR
+};
+
+/**
+ * struct cpa_op_prot - the request of a set_memory() operation
+ * @set: the protection bits to set, in the architecture's PTE format
+ * @clr: the protection bits to clear, in the architecture's PTE format
+ * @req: CPA_REQ_* flags of the request
+ */
+struct cpa_op_prot {
+	pgprot_t	set;
+	pgprot_t	clr;
+	unsigned int	req;
+};
+
+static inline void cpa_init_op(struct cpa_data *cpa,
+			       const struct cpa_op_prot *prot)
+{
+	cpa->mask_set = prot->set;
+	cpa->mask_clr = prot->clr;
+	cpa->flags |= prot->req;
+}
+
+/**
+ * arch_set_memory_prepare() - prepare a request for a set_memory() operation
+ * @cpa: the request with the address and the number of pages
+ * @op: the operation
+ *
+ * Fill the masks and the flags of @cpa for @op, usually with cpa_init_op()
+ * from a table of the operations. A request with empty masks succeeds
+ * without changing anything.
+ *
+ * Return: 0 on success, -errno to refuse the request.
+ */
+int arch_set_memory_prepare(struct cpa_data *cpa, enum cpa_op op);
+
 #endif /* _LINUX_PAGEATTR_H */

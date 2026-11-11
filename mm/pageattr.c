@@ -11,6 +11,7 @@
 #include <linux/pgalloc.h>
 #include <linux/highmem.h>
 #include <linux/vmalloc.h>
+#include <linux/set_memory.h>
 
 /*
  * Serialize cpa() using cpa_lock so that we don't allow any other cpu, with
@@ -532,3 +533,81 @@ int change_page_attr(struct cpa_data *cpa)
 
 	return ret;
 }
+
+static int set_memory_op(unsigned long addr, int numpages, enum cpa_op op)
+{
+	struct cpa_data cpa = {
+		.addr = addr,
+		.numpages = numpages,
+	};
+	int ret;
+
+	ret = arch_set_memory_prepare(&cpa, op);
+	if (ret)
+		return ret;
+
+	if (!pgprot_val(cpa.mask_set) && !pgprot_val(cpa.mask_clr) &&
+	    !(cpa.flags & CPA_REQ_SPLIT))
+		return 0;
+
+	return change_page_attr(&cpa);
+}
+
+int set_memory_x(unsigned long addr, int numpages)
+{
+	return set_memory_op(addr, numpages, CPA_OP_X);
+}
+
+int set_memory_nx(unsigned long addr, int numpages)
+{
+	return set_memory_op(addr, numpages, CPA_OP_NX);
+}
+
+int set_memory_ro(unsigned long addr, int numpages)
+{
+	return set_memory_op(addr, numpages, CPA_OP_RO);
+}
+
+int set_memory_rox(unsigned long addr, int numpages)
+{
+	return set_memory_op(addr, numpages, CPA_OP_ROX);
+}
+
+int set_memory_rw(unsigned long addr, int numpages)
+{
+	return set_memory_op(addr, numpages, CPA_OP_RW);
+}
+
+#ifdef CONFIG_ARCH_HAS_SET_DIRECT_MAP
+static int set_direct_map(struct page *page, unsigned int nr, enum cpa_op op)
+{
+	struct cpa_data cpa = {
+		.addr = (unsigned long)page_address(page),
+		.numpages = nr,
+		.flags = CPA_REQ_NO_CHECK_ALIAS,
+	};
+	int ret;
+
+	ret = arch_set_memory_prepare(&cpa, op);
+	if (ret)
+		return ret;
+
+	/*
+	 * No alias checking needed for setting present flag. otherwise,
+	 * we may need to break large pages for 64-bit kernel text
+	 * mappings (this adds to complexity if we want to do this from
+	 * atomic context especially). Let's keep it simple!
+	 */
+	return change_page_attr_noflush(&cpa);
+}
+
+int set_direct_map_invalid_noflush(struct page *page, unsigned int nr)
+{
+	return set_direct_map(page, nr, CPA_OP_DIRECT_MAP_INVALID);
+}
+
+int set_direct_map_default_noflush(struct page *page, unsigned int nr)
+{
+	return set_direct_map(page, nr, CPA_OP_DIRECT_MAP_DEFAULT);
+}
+#endif /* CONFIG_ARCH_HAS_SET_DIRECT_MAP */

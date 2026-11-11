@@ -1171,7 +1171,7 @@ __split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
 		break;
 
 	default:
-		return 1;
+		return -EINVAL;
 	}
 
 	ref_prot = pgprot_clear_protnone_bits(ref_prot);
@@ -1227,6 +1227,7 @@ static int split_large_page(struct cpa_data *cpa, pte_t *kpte,
 {
 	unsigned int level;
 	pte_t *pte;
+	int ret;
 
 	spin_unlock(&cpa_lock);
 	if (cpa->init_mm_read_locked)
@@ -1247,10 +1248,11 @@ static int split_large_page(struct cpa_data *cpa, pte_t *kpte,
 		return 0;
 	}
 
-	if (__split_large_page(cpa, kpte, address, level, pte))
+	ret = __split_large_page(cpa, kpte, address, level, pte);
+	if (ret)
 		pte_free_kernel(&init_mm, pte);
 
-	return 0;
+	return ret;
 }
 
 static int collapse_pmd_page(pmd_t *pmd, unsigned long addr,

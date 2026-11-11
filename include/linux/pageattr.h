@@ -171,4 +171,16 @@ static inline void cpa_init_op(struct cpa_data *cpa,
 
 int arch_cpa_prepare(struct cpa_data *cpa, enum cpa_op op);
 
+#ifndef arch_cpa_enter
+static inline void arch_cpa_enter(void)
+{
+}
+#endif
+
+#ifndef arch_cpa_leave
+static inline void arch_cpa_leave(void)
+{
+}
+#endif
+
 #endif /* _LINUX_PAGEATTR_H */

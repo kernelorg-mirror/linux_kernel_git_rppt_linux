@@ -638,7 +638,11 @@ static int set_memory_op(unsigned long addr, int numpages, enum cpa_op op)
 	    !(cpa.flags & CPA_REQ_SPLIT))
 		return 0;
 
-	return change_page_attr(&cpa);
+	arch_set_memory_enter();
+	ret = change_page_attr(&cpa);
+	arch_set_memory_leave();
+
+	return ret;
 }
 
 int set_memory_x(unsigned long addr, int numpages)
@@ -686,7 +690,11 @@ static int set_direct_map(struct page *page, unsigned int nr, enum cpa_op op)
 	 * mappings (this adds to complexity if we want to do this from
 	 * atomic context especially). Let's keep it simple!
 	 */
-	return change_page_attr_noflush(&cpa);
+	arch_set_memory_enter();
+	ret = change_page_attr_noflush(&cpa);
+	arch_set_memory_leave();
+
+	return ret;
 }
 
 int set_direct_map_invalid_noflush(struct page *page, unsigned int nr)

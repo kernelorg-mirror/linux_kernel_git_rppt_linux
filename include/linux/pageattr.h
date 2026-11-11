@@ -348,4 +348,27 @@ static inline void cpa_init_op(struct cpa_data *cpa,
  */
 int arch_set_memory_prepare(struct cpa_data *cpa, enum cpa_op op);
 
+#ifndef arch_set_memory_enter
+/**
+ * arch_set_memory_enter() - start a request of the generic entry points
+ *
+ * The generic set_memory_*() and set_direct_map_*_noflush() call it before
+ * the request and arch_set_memory_leave() after it. The request between
+ * them may sleep. An architecture that calls change_page_attr() itself
+ * brackets the request on its own.
+ */
+static inline void arch_set_memory_enter(void)
+{
+}
+#endif
+
+#ifndef arch_set_memory_leave
+/**
+ * arch_set_memory_leave() - end a request of the generic entry points
+ */
+static inline void arch_set_memory_leave(void)
+{
+}
+#endif
+
 #endif /* _LINUX_PAGEATTR_H */

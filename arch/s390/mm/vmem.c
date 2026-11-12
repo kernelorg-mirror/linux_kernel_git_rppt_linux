@@ -6,6 +6,7 @@
 #include <linux/memory_hotplug.h>
 #include <linux/cpufeature.h>
 #include <linux/memblock.h>
+#include <linux/pageattr.h>
 #include <linux/pfn.h>
 #include <linux/mm.h>
 #include <linux/init.h>
@@ -198,7 +199,8 @@ static int __ref modify_pte_table(pmd_t *pmd, unsigned long addr,
 	ret = 0;
 out:
 	if (direct)
-		update_page_count(PG_DIRECT_MAP_4K, add ? pages : -pages);
+		direct_map_count_update(PGTABLE_LEVEL_PTE,
+					add ? pages : -pages);
 	return ret;
 }
 
@@ -295,7 +297,8 @@ static int __ref modify_pmd_table(pud_t *pud, unsigned long addr,
 	ret = 0;
 out:
 	if (direct)
-		update_page_count(PG_DIRECT_MAP_1M, add ? pages : -pages);
+		direct_map_count_update(PGTABLE_LEVEL_PMD,
+					add ? pages : -pages);
 	return ret;
 }
 
@@ -365,7 +368,8 @@ static int modify_pud_table(p4d_t *p4d, unsigned long addr, unsigned long end,
 	ret = 0;
 out:
 	if (direct)
-		update_page_count(PG_DIRECT_MAP_2G, add ? pages : -pages);
+		direct_map_count_update(PGTABLE_LEVEL_PUD,
+					add ? pages : -pages);
 	return ret;
 }
 

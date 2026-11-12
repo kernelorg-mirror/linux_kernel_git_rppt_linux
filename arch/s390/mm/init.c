@@ -24,6 +24,7 @@
 #include <linux/init.h>
 #include <linux/pagemap.h>
 #include <linux/memblock.h>
+#include <linux/pageattr.h>
 #include <linux/memory.h>
 #include <linux/pfn.h>
 #include <linux/poison.h>
@@ -95,11 +96,25 @@ void __init arch_zone_limits_init(unsigned long *max_zone_pfns)
 	max_zone_pfns[ZONE_NORMAL] = max_low_pfn;
 }
 
+static long __init direct_pages(int type)
+{
+	return atomic_long_read(&direct_pages_count[type]);
+}
+
 /*
  * paging_init() sets up the page tables
  */
 void __init paging_init(void)
 {
+	if (IS_ENABLED(CONFIG_PROC_FS)) {
+		direct_map_count_update(PGTABLE_LEVEL_PTE,
+					direct_pages(PG_DIRECT_MAP_4K));
+		direct_map_count_update(PGTABLE_LEVEL_PMD,
+					direct_pages(PG_DIRECT_MAP_1M));
+		direct_map_count_update(PGTABLE_LEVEL_PUD,
+					direct_pages(PG_DIRECT_MAP_2G));
+	}
+
 	vmem_map_init();
 	zone_dma_limit = DMA_BIT_MASK(31);
 }

@@ -49,14 +49,12 @@ struct cpa_data {
 	unsigned long	pfn;
 	unsigned int	flags;
 	unsigned int	force_split		: 1,
-			force_static_prot	: 1,
 			force_flush_all		: 1,
 			init_mm_read_locked	: 1;
 	struct page	**pages;
 };
 
 enum cpa_warn {
-	CPA_CONFLICT,
 	CPA_PROTECT,
 	CPA_DETECT,
 };
@@ -610,7 +608,6 @@ static inline void check_conflict(int warnlvl, pgprot_t prot, pgprotval_t val,
 				  unsigned long pfn, const char *txt)
 {
 	static const char *lvltxt[] = {
-		[CPA_CONFLICT]	= "conflict",
 		[CPA_PROTECT]	= "protect",
 		[CPA_DETECT]	= "detect",
 	};
@@ -957,7 +954,7 @@ static int __should_split_large_page(pte_t *kpte, unsigned long address,
 				     enum pg_level level, struct cpa_data *cpa)
 {
 	unsigned long numpages, pmask, psize, lpaddr, pfn, old_pfn;
-	pgprot_t old_prot, new_prot, req_prot, chk_prot;
+	pgprot_t old_prot, new_prot, req_prot;
 	pte_t new_pte;
 
 	switch (level) {
@@ -1024,30 +1021,10 @@ static int __should_split_large_page(pte_t *kpte, unsigned long address,
 	numpages = psize >> PAGE_SHIFT;
 
 	/*
-	 * Sanity check that the existing mapping is correct versus the static
-	 * protections. static_protections() guards against !PRESENT, so no
-	 * extra conditional required here.
-	 */
-	chk_prot = static_protections(old_prot, lpaddr, old_pfn, numpages,
-				      psize, CPA_CONFLICT);
-
-	if (WARN_ON_ONCE(pgprot_val(chk_prot) != pgprot_val(old_prot))) {
-		/*
-		 * Split the large page and tell the split code to
-		 * enforce static protections.
-		 */
-		cpa->force_static_prot = 1;
-		return 1;
-	}
-
-	/*
 	 * Optimization: If the requested pgprot is the same as the current
 	 * pgprot, then the large page can be preserved and no updates are
 	 * required independent of alignment and length of the requested
-	 * range. The above already established that the current pgprot is
-	 * correct, which in consequence makes the requested pgprot correct
-	 * as well if it is the same. The static protection scan below will
-	 * not come to a different conclusion.
+	 * range.
 	 */
 	if (pgprot_val(req_prot) == pgprot_val(old_prot)) {
 		cpa_inc_lp_sameprot(level);
@@ -1099,47 +1076,11 @@ static int should_split_large_page(pte_t *kpte, unsigned long address,
 	return __should_split_large_page(kpte, address, level, cpa);
 }
 
-static void split_set_pte(struct cpa_data *cpa, pte_t *pte, unsigned long pfn,
-			  pgprot_t ref_prot, unsigned long address,
-			  unsigned long size)
-{
-	unsigned int npg = PFN_DOWN(size);
-	pgprot_t prot;
-
-	/*
-	 * If should_split_large_page() discovered an inconsistent mapping,
-	 * remove the invalid protection in the split mapping.
-	 */
-	if (!cpa->force_static_prot)
-		goto set;
-
-	/* Hand in lpsize = 0 to enforce the protection mechanism */
-	prot = static_protections(ref_prot, address, pfn, npg, 0, CPA_PROTECT);
-
-	if (pgprot_val(prot) == pgprot_val(ref_prot))
-		goto set;
-
-	/*
-	 * If this is splitting a PMD, fix it up. PUD splits cannot be
-	 * fixed trivially as that would require to rescan the newly
-	 * installed PMD mappings after returning from split_large_page()
-	 * so an eventual further split can allocate the necessary PTE
-	 * pages. Warn for now and revisit it in case this actually
-	 * happens.
-	 */
-	if (size == PAGE_SIZE)
-		ref_prot = prot;
-	else
-		pr_warn_once("CPA: Cannot fixup static protections for PUD split\n");
-set:
-	set_pte(pte, pfn_pte(pfn, ref_prot));
-}
-
 static int
 __split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
 		   unsigned int level, pte_t *pbase)
 {
-	unsigned long lpaddr, lpinc, ref_pfn, pfn, pfninc = 1;
+	unsigned long ref_pfn, pfn, pfninc = 1;
 	struct page *base = virt_to_page(pbase);
 	pgprot_t ref_prot;
 	unsigned int i;
@@ -1155,16 +1096,12 @@ __split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
 		 */
 		ref_prot = pgprot_large_2_4k(ref_prot);
 		ref_pfn = pmd_pfn(*(pmd_t *)kpte);
-		lpaddr = address & PMD_MASK;
-		lpinc = PAGE_SIZE;
 		break;
 
 	case PG_LEVEL_1G:
 		ref_prot = pud_pgprot(*(pud_t *)kpte);
 		ref_pfn = pud_pfn(*(pud_t *)kpte);
 		pfninc = PMD_SIZE >> PAGE_SHIFT;
-		lpaddr = address & PUD_MASK;
-		lpinc = PMD_SIZE;
 		/*
 		 * Clear the PSE flags if the PRESENT flag is not set
 		 * otherwise pmd_present() will return true even on a non
@@ -1184,8 +1121,8 @@ __split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
 	 * Get the target pfn from the original entry:
 	 */
 	pfn = ref_pfn;
-	for (i = 0; i < PTRS_PER_PTE; i++, pfn += pfninc, lpaddr += lpinc)
-		split_set_pte(cpa, pbase + i, pfn, ref_prot, lpaddr, lpinc);
+	for (i = 0; i < PTRS_PER_PTE; i++, pfn += pfninc)
+		set_pte(pbase + i, pfn_pte(pfn, ref_prot));
 
 	if (virt_addr_valid(address)) {
 		unsigned long pfn = PFN_DOWN(__pa(address));

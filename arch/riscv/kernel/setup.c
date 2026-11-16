@@ -378,7 +378,11 @@ bool arch_cpu_is_hotpluggable(int cpu)
 void free_initmem(void)
 {
 	if (IS_ENABLED(CONFIG_STRICT_KERNEL_RWX)) {
-		set_kernel_memory(lm_alias(__init_begin), lm_alias(__init_end), set_memory_rw_nx);
+		/* Clear X before setting W, so that the range is never W+X */
+		set_kernel_memory(lm_alias(__init_begin), lm_alias(__init_end),
+				  set_memory_nx);
+		set_kernel_memory(lm_alias(__init_begin), lm_alias(__init_end),
+				  set_memory_rw);
 		if (IS_ENABLED(CONFIG_64BIT))
 			set_kernel_memory(__init_begin, __init_end, set_memory_nx);
 	}

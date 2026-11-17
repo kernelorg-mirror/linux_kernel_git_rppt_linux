@@ -9,12 +9,25 @@
 #include <linux/sched.h>
 #include <linux/vmalloc.h>
 #include <linux/pageattr.h>
+#include <linux/proc_fs.h>
 
 #include <asm/cacheflush.h>
 #include <asm/pgtable-prot.h>
 #include <asm/set_memory.h>
 #include <asm/tlbflush.h>
 #include <asm/kfence.h>
+
+#ifdef CONFIG_PROC_FS
+void arch_report_meminfo(struct seq_file *m)
+{
+	unsigned long levels = BIT(PGTABLE_LEVEL_PTE) | BIT(PGTABLE_LEVEL_PMD);
+
+	if (pud_sect_supported())
+		levels |= BIT(PGTABLE_LEVEL_PUD);
+
+	cpa_report_meminfo(m, levels);
+}
+#endif
 
 static unsigned int cpa_leaf_entries(struct cpa_leaf *leaf)
 {

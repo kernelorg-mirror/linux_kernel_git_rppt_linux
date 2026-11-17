@@ -160,9 +160,19 @@ static void init_clear_pgtable(void *table)
 	dsb(ishst);
 }
 
+static void linear_map_count(unsigned long addr, enum pgtable_level level,
+			     long nr)
+{
+	if (__is_lm_address(addr))
+		direct_map_count_update(level, nr);
+}
+
 static void init_pte(pte_t *ptep, unsigned long addr, unsigned long end,
 		     phys_addr_t phys, pgprot_t prot)
 {
+	unsigned long start = addr;
+	long nr = 0;
+
 	do {
 		pte_t old_pte = __ptep_get(ptep);
 
@@ -179,8 +189,12 @@ static void init_pte(pte_t *ptep, unsigned long addr, unsigned long end,
 		BUG_ON(!pgattr_change_is_safe(pte_val(old_pte),
 					      pte_val(__ptep_get(ptep))));
 
+		if (pte_none(old_pte))
+			nr++;
 		phys += PAGE_SIZE;
 	} while (ptep++, addr += PAGE_SIZE, addr != end);
+
+	linear_map_count(start, PGTABLE_LEVEL_PTE, nr);
 }
 
 static bool pte_range_has_valid_noncont(pte_t *ptep)
@@ -274,6 +288,9 @@ static int init_pmd(pmd_t *pmdp, unsigned long addr, unsigned long end,
 			 */
 			BUG_ON(!pgattr_change_is_safe(pmd_val(old_pmd),
 						      READ_ONCE(pmd_val(*pmdp))));
+
+			if (pmd_none(old_pmd))
+				linear_map_count(addr, PGTABLE_LEVEL_PMD, 1);
 		} else {
 			int ret;
 
@@ -410,6 +427,9 @@ static int alloc_init_pud(p4d_t *p4dp, unsigned long addr, unsigned long end,
 			 */
 			BUG_ON(!pgattr_change_is_safe(pud_val(old_pud),
 						      READ_ONCE(pud_val(*pudp))));
+
+			if (pud_none(old_pud))
+				linear_map_count(addr, PGTABLE_LEVEL_PUD, 1);
 		} else {
 			ret = alloc_init_cont_pmd(pudp, addr, next, phys, prot,
 						  pgtable_alloc, flags);
@@ -750,6 +770,7 @@ static int split_to_ptes_pud_entry(pud_t *pudp, unsigned long addr,
 		return -ENOMEM;
 
 	split_pud(pudp, pud, pmdp, false);
+	direct_map_count_split(PGTABLE_LEVEL_PUD);
 
 	return 0;
 }
@@ -771,6 +792,7 @@ static int split_to_ptes_pmd_entry(pmd_t *pmdp, unsigned long addr,
 	if (pmd_cont(pmd))
 		split_contpmd(pmdp);
 	split_pmd(pmdp, pmd, ptep, false);
+	direct_map_count_split(PGTABLE_LEVEL_PMD);
 
 	/*
 	 * We have split the pmd directly to ptes so there is no need to
@@ -1424,6 +1446,8 @@ static void unmap_hotplug_pte_range(pmd_t *pmdp, unsigned long addr,
 			flush_tlb_kernel_range(addr, addr + PAGE_SIZE);
 			free_hotplug_page_range(pte_page(pte),
 						PAGE_SIZE, altmap);
+		} else {
+			direct_map_count_update(PGTABLE_LEVEL_PTE, -1);
 		}
 		/* unmap_hotplug_range() flushes TLB for !free_mapped */
 	} while (addr += PAGE_SIZE, addr < end);
@@ -1458,6 +1482,8 @@ static void unmap_hotplug_pmd_range(pud_t *pudp, unsigned long addr,
 				flush_tlb_kernel_range(addr, addr + PAGE_SIZE);
 				free_hotplug_page_range(pmd_page(pmd),
 							PMD_SIZE, altmap);
+			} else {
+				direct_map_count_update(PGTABLE_LEVEL_PMD, -1);
 			}
 			/* unmap_hotplug_range() flushes TLB for !free_mapped */
 			continue;
@@ -1489,6 +1515,8 @@ static void unmap_hotplug_pud_range(p4d_t *p4dp, unsigned long addr,
 				flush_tlb_kernel_range(addr, addr + PAGE_SIZE);
 				free_hotplug_page_range(pud_page(pud),
 							PUD_SIZE, altmap);
+			} else {
+				direct_map_count_update(PGTABLE_LEVEL_PUD, -1);
 			}
 			/* unmap_hotplug_range() flushes TLB for !free_mapped */
 			continue;

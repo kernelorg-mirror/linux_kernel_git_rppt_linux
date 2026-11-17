@@ -235,7 +235,8 @@ static pte_t *cpa_lookup(struct cpa_data *cpa, unsigned long address,
 	return leaf->kpte;
 }
 
-static void *arch_cpa_alloc_pgtable(struct cpa_data *cpa, struct cpa_leaf *leaf)
+#ifndef arch_cpa_alloc_pgtable
+void *arch_cpa_alloc_pgtable(struct cpa_data *cpa, struct cpa_leaf *leaf)
 {
 	if (leaf->level == PGTABLE_LEVEL_PMD)
 		return pte_alloc_one_kernel(&init_mm);
@@ -243,7 +244,7 @@ static void *arch_cpa_alloc_pgtable(struct cpa_data *cpa, struct cpa_leaf *leaf)
 	return pmd_alloc_one(&init_mm, leaf->addr);
 }
 
-static void arch_cpa_free_pgtable(struct cpa_leaf *leaf, void *table)
+void arch_cpa_free_pgtable(struct cpa_leaf *leaf, void *table)
 {
 	if (!table)
 		return;
@@ -253,6 +254,7 @@ static void arch_cpa_free_pgtable(struct cpa_leaf *leaf, void *table)
 	else
 		pmd_free(&init_mm, table);
 }
+#endif
 
 static int __should_split_large_page(struct cpa_data *cpa,
 				     struct cpa_leaf *leaf)

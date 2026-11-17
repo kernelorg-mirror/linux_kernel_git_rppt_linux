@@ -21,8 +21,9 @@
  * flush with the hooks below. The hooks that have a default are optional.
  *
  * The walk calls the hooks with cpa_lock held, and they must not sleep.
- * arch_cpa_process_alias() is the exception: it runs without cpa_lock and
- * may sleep to split the large pages of an alias.
+ * arch_cpa_alloc_pgtable() and arch_cpa_process_alias() are the exceptions:
+ * they run without cpa_lock and may sleep, to allocate a page table and to
+ * split the large pages of an alias.
  *
  * While the walk runs, @numpages and @pfn of struct cpa_data describe the
  * current step. arch_cpa_flush() and arch_cpa_collapse() run after the walk
@@ -242,6 +243,27 @@ static inline bool arch_cpa_can_split(struct cpa_data *cpa,
 {
 	return true;
 }
+#endif
+
+#ifndef arch_cpa_alloc_pgtable
+/**
+ * arch_cpa_alloc_pgtable() - allocate the page table for a split
+ * @cpa: the request
+ * @leaf: the large page to split
+ *
+ * An architecture overrides both arch_cpa_alloc_pgtable() and
+ * arch_cpa_free_pgtable() or none.
+ *
+ * Return: the page table, NULL on failure.
+ */
+void *arch_cpa_alloc_pgtable(struct cpa_data *cpa, struct cpa_leaf *leaf);
+
+/**
+ * arch_cpa_free_pgtable() - free a page table from arch_cpa_alloc_pgtable()
+ * @leaf: the large page the table was allocated for
+ * @table: the page table, NULL for a contiguous block
+ */
+void arch_cpa_free_pgtable(struct cpa_leaf *leaf, void *table);
 #endif
 
 /**

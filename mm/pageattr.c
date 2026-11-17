@@ -46,6 +46,11 @@ void direct_map_count_update(enum pgtable_level level, long pages)
 	atomic_long_add(pages, &cpa_direct_map_pages[level]);
 }
 
+static long cpa_split_entries(enum pgtable_level level)
+{
+	return pgtable_level_size(level) / pgtable_level_size(level - 1);
+}
+
 void direct_map_count_split(enum pgtable_level level)
 {
 	if (atomic_long_dec_if_positive(&cpa_direct_map_pages[level]) < 0)
@@ -57,7 +62,8 @@ void direct_map_count_split(enum pgtable_level level)
 		else if (level == PGTABLE_LEVEL_PUD)
 			count_vm_event(DIRECT_MAP_LEVEL3_SPLIT);
 	}
-	atomic_long_add(PTRS_PER_PTE, &cpa_direct_map_pages[level - 1]);
+	atomic_long_add(cpa_split_entries(level),
+			&cpa_direct_map_pages[level - 1]);
 }
 
 void direct_map_count_collapse(enum pgtable_level level)
@@ -69,7 +75,8 @@ void direct_map_count_collapse(enum pgtable_level level)
 		else if (level == PGTABLE_LEVEL_PUD)
 			count_vm_event(DIRECT_MAP_LEVEL3_COLLAPSE);
 	}
-	atomic_long_sub(PTRS_PER_PTE, &cpa_direct_map_pages[level - 1]);
+	atomic_long_sub(cpa_split_entries(level),
+			&cpa_direct_map_pages[level - 1]);
 }
 
 #ifdef CONFIG_PROC_FS

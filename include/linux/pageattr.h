@@ -111,6 +111,12 @@ static inline int arch_cpa_split_leaf(struct cpa_data *cpa,
 }
 #endif
 
+#ifndef arch_cpa_alloc_pgtable
+void *arch_cpa_alloc_pgtable(struct cpa_leaf *leaf);
+
+void arch_cpa_free_pgtable(struct cpa_leaf *leaf, void *table);
+#endif
+
 #ifndef cpa_is_direct_map
 static inline bool cpa_is_direct_map(unsigned long addr)
 {

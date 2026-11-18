@@ -1365,12 +1365,16 @@ void mark_rodata_ro(void)
 	unsigned long text_end = PFN_ALIGN(_etext);
 	unsigned long rodata_end = PFN_ALIGN(__end_rodata);
 	unsigned long all_end;
+	int err;
 
 	printk(KERN_INFO "Write protecting the kernel read-only data: %luk\n",
 	       (end - start) >> 10);
-	set_memory_ro(start, (end - start) >> PAGE_SHIFT);
+	err = set_memory_ro(start, (end - start) >> PAGE_SHIFT);
+	if (err)
+		pr_err("Failed to write protect the kernel read-only data: %d\n",
+		       err);
 
-	kernel_set_to_readonly = 1;
+	kernel_set_to_readonly = !err;
 
 	/*
 	 * The rodata/data/bss/brk section (but not the kernel text!)

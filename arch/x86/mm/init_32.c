@@ -741,12 +741,16 @@ void mark_rodata_ro(void)
 {
 	unsigned long start = PFN_ALIGN(_text);
 	unsigned long size = (unsigned long)__end_rodata - start;
+	int err;
 
-	set_pages_ro(virt_to_page(start), size >> PAGE_SHIFT);
+	err = set_pages_ro(virt_to_page(start), size >> PAGE_SHIFT);
 	pr_info("Write protecting kernel text and read-only data: %luk\n",
 		size >> 10);
+	if (err)
+		pr_err("Failed to write protect kernel text and read-only data: %d\n",
+		       err);
 
-	kernel_set_to_readonly = 1;
+	kernel_set_to_readonly = !err;
 
 #ifdef CONFIG_CPA_DEBUG
 	pr_info("Testing CPA: Reverting %lx-%lx\n", start, start + size);

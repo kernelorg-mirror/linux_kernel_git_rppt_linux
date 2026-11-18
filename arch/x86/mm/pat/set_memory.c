@@ -40,7 +40,7 @@
  * The current flushing context - we pass it instead of 5 arguments:
  */
 struct cpa_data {
-	unsigned long	*vaddr;
+	unsigned long	addr;
 	pgd_t		*pgd;
 	pgprot_t	mask_set;
 	pgprot_t	mask_clr;
@@ -71,7 +71,6 @@ static const int cpa_warn_level = CPA_PROTECT;
 static DEFINE_SPINLOCK(cpa_lock);
 
 #define CPA_FLUSHTLB		0x01
-#define CPA_ARRAY		0x02
 #define CPA_PAGES_ARRAY		0x04
 #define CPA_NO_CHECK_ALIAS	0x08 /* Do not search for aliases */
 #define CPA_COLLAPSE		0x10 /* try to collapse large pages */
@@ -315,10 +314,7 @@ static unsigned long __cpa_addr(struct cpa_data *cpa, unsigned long idx)
 		return (unsigned long)page_address(page);
 	}
 
-	if (cpa->flags & CPA_ARRAY)
-		return cpa->vaddr[idx];
-
-	return *cpa->vaddr + idx * PAGE_SIZE;
+	return cpa->addr + idx * PAGE_SIZE;
 }
 
 /*
@@ -411,7 +407,7 @@ static void __cpa_flush_tlb(void *data)
 
 static int collapse_large_pages(unsigned long addr, struct list_head *pgtables);
 
-static void __cpa_collapse_large_pages(struct cpa_data *cpa)
+static void cpa_collapse_large_pages(struct cpa_data *cpa)
 {
 	unsigned long start, addr, end;
 	struct ptdesc *ptdesc, *tmp;
@@ -419,9 +415,7 @@ static void __cpa_collapse_large_pages(struct cpa_data *cpa)
 	int collapsed = 0;
 	int i;
 
-	guard(spinlock)(&cpa_lock);
-
-	if (cpa->flags & (CPA_PAGES_ARRAY | CPA_ARRAY)) {
+	if (cpa->flags & CPA_PAGES_ARRAY) {
 		for (i = 0; i < cpa->numpages; i++)
 			collapsed += collapse_large_pages(__cpa_addr(cpa, i),
 							  &pgtables);
@@ -453,18 +447,6 @@ static void __cpa_collapse_large_pages(struct cpa_data *cpa)
 	}
 }
 
-static void cpa_collapse_large_pages(struct cpa_data *cpa)
-{
-	/*
-	 * Take the mmap write lock on init_mm to:
-	 * - Avoid a use-after-free if raced by ptdump (which takes its own
-	 *   write lock on init_mm).
-	 * - Serialise concurrent CPA walkers.
-	 */
-	scoped_guard(mmap_write_lock, &init_mm)
-		__cpa_collapse_large_pages(cpa);
-}
-
 static void cpa_flush(struct cpa_data *cpa, int cache)
 {
 	unsigned int i;
@@ -473,7 +455,7 @@ static void cpa_flush(struct cpa_data *cpa, int cache)
 
 	if (cache && !cpu_feature_enabled(X86_FEATURE_CLFLUSH)) {
 		cpa_flush_all(cache);
-		goto collapse_large_pages;
+		return;
 	}
 
 	if (cpa->force_flush_all || cpa->numpages > tlb_single_page_flush_ceiling)
@@ -482,7 +464,7 @@ static void cpa_flush(struct cpa_data *cpa, int cache)
 		on_each_cpu(__cpa_flush_tlb, cpa, 1);
 
 	if (!cache)
-		goto collapse_large_pages;
+		return;
 
 	mb();
 	for (i = 0; i < cpa->numpages; i++) {
@@ -498,10 +480,6 @@ static void cpa_flush(struct cpa_data *cpa, int cache)
 			clflush_cache_range_opt((void *)fix_addr(addr), PAGE_SIZE);
 	}
 	mb();
-
-collapse_large_pages:
-	if (cpa->flags & CPA_COLLAPSE)
-		cpa_collapse_large_pages(cpa);
 }
 
 static bool overlaps(unsigned long r1_start, unsigned long r1_end,
@@ -718,21 +696,15 @@ static inline pgprot_t verify_rwx(pgprot_t old, pgprot_t new, unsigned long star
 	if (!rw || nx)
 		return new;
 
-	end = start + npg * PAGE_SIZE - 1;
-
 	/*
-	 * If the kernel text is still RWX, gently complain, this could be a
-	 * false positive.
-	 * Once debug_checkwx() becomes mandatory for CONFIG_STRICT_KERNEL_RWX,
-	 * the warning can be removed completely.
+	 * The kernel text is RWX until mark_rodata_ro() and the entire kernel
+	 * page table is verified after the text is protected, so there is no
+	 * need to warn.
 	 */
-	if (!kernel_set_to_readonly) {
-		pr_warn_once("CPA detected W^X violation: %016llx -> %016llx range: 0x%016lx - 0x%016lx PFN %lx\n",
-		  (unsigned long long)pgprot_val(old),
-		  (unsigned long long)pgprot_val(new),
-		  start, end, pfn);
+	if (!kernel_set_to_readonly)
 		return new;
-	}
+
+	end = start + npg * PAGE_SIZE - 1;
 
 	WARN_ONCE(1, "CPA detected W^X violation: %016llx -> %016llx range: 0x%016lx - 0x%016lx PFN %lx\n",
 		  (unsigned long long)pgprot_val(old),
@@ -1865,8 +1837,8 @@ static int __cpa_process_fault(struct cpa_data *cpa, unsigned long vaddr,
 		return -EFAULT;
 	} else {
 		WARN(1, KERN_WARNING "CPA: called for zero pte. "
-			"vaddr = %lx cpa->vaddr = %lx\n", vaddr,
-			*cpa->vaddr);
+			"vaddr = %lx cpa->addr = %lx\n", vaddr,
+			cpa->addr);
 
 		return -EFAULT;
 	}
@@ -1958,7 +1930,6 @@ static int __change_page_attr_set_clr(struct cpa_data *cpa, int primary);
 static int cpa_process_alias(struct cpa_data *cpa)
 {
 	struct cpa_data alias_cpa;
-	unsigned long laddr = (unsigned long)__va(cpa->pfn << PAGE_SHIFT);
 	unsigned long vaddr;
 	int ret;
 
@@ -1974,8 +1945,8 @@ static int cpa_process_alias(struct cpa_data *cpa)
 		    PAGE_OFFSET + (max_pfn_mapped << PAGE_SHIFT)))) {
 
 		alias_cpa = *cpa;
-		alias_cpa.vaddr = &laddr;
-		alias_cpa.flags &= ~(CPA_PAGES_ARRAY | CPA_ARRAY);
+		alias_cpa.addr = (unsigned long)__va(cpa->pfn << PAGE_SHIFT);
+		alias_cpa.flags &= ~(CPA_PAGES_ARRAY | CPA_FLUSHTLB);
 		alias_cpa.curpage = 0;
 
 		/* Directmap always has NX set, do not modify. */
@@ -1984,9 +1955,11 @@ static int cpa_process_alias(struct cpa_data *cpa)
 			alias_cpa.mask_set.pgprot &= ~_PAGE_NX;
 		}
 
-		cpa->force_flush_all = 1;
-
 		ret = __change_page_attr_set_clr(&alias_cpa, 0);
+		if (alias_cpa.flags & CPA_FLUSHTLB) {
+			cpa->flags |= CPA_FLUSHTLB;
+			cpa->force_flush_all = 1;
+		}
 		if (ret)
 			return ret;
 	}
@@ -1999,11 +1972,10 @@ static int cpa_process_alias(struct cpa_data *cpa)
 	 */
 	if (!within(vaddr, (unsigned long)_text, _brk_end) &&
 	    __cpa_pfn_in_highmap(cpa->pfn)) {
-		unsigned long temp_cpa_vaddr = (cpa->pfn << PAGE_SHIFT) +
-					       __START_KERNEL_map - phys_base;
 		alias_cpa = *cpa;
-		alias_cpa.vaddr = &temp_cpa_vaddr;
-		alias_cpa.flags &= ~(CPA_PAGES_ARRAY | CPA_ARRAY);
+		alias_cpa.addr = (cpa->pfn << PAGE_SHIFT) +
+				 __START_KERNEL_map - phys_base;
+		alias_cpa.flags &= ~(CPA_PAGES_ARRAY | CPA_FLUSHTLB);
 		alias_cpa.curpage = 0;
 
 		/*
@@ -2015,12 +1987,15 @@ static int cpa_process_alias(struct cpa_data *cpa)
 			alias_cpa.mask_set.pgprot &= ~_PAGE_NX;
 		}
 
-		cpa->force_flush_all = 1;
 		/*
 		 * The high mapping range is imprecise, so ignore the
 		 * return value.
 		 */
 		__change_page_attr_set_clr(&alias_cpa, 0);
+		if (alias_cpa.flags & CPA_FLUSHTLB) {
+			cpa->flags |= CPA_FLUSHTLB;
+			cpa->force_flush_all = 1;
+		}
 	}
 #endif
 
@@ -2071,7 +2046,7 @@ static int __change_page_attr_set_clr(struct cpa_data *cpa, int primary)
 		 */
 		cpa->numpages = rempages;
 		/* for array changes, we can't use large page */
-		if (cpa->flags & (CPA_ARRAY | CPA_PAGES_ARRAY))
+		if (cpa->flags & CPA_PAGES_ARRAY)
 			cpa->numpages = 1;
 
 		if (lock) {
@@ -2094,7 +2069,10 @@ static int __change_page_attr_set_clr(struct cpa_data *cpa, int primary)
 		 * CPA operation. Either a large page has been
 		 * preserved or a single page update happened.
 		 */
-		BUG_ON(cpa->numpages > rempages || !cpa->numpages);
+		if (WARN_ON_ONCE(cpa->numpages > rempages || !cpa->numpages)) {
+			ret = -EINVAL;
+			goto out;
+		}
 		rempages -= cpa->numpages;
 		cpa->curpage += cpa->numpages;
 	}
@@ -2105,7 +2083,7 @@ out:
 	return ret;
 }
 
-static int change_page_attr_set_clr(unsigned long *addr, int numpages,
+static int change_page_attr_set_clr(unsigned long addr, int numpages,
 				    pgprot_t mask_set, pgprot_t mask_clr,
 				    int force_split, int in_flag,
 				    struct page **pages)
@@ -2125,21 +2103,13 @@ static int change_page_attr_set_clr(unsigned long *addr, int numpages,
 		return 0;
 
 	/* Ensure we are PAGE_SIZE aligned */
-	if (in_flag & CPA_ARRAY) {
-		int i;
-		for (i = 0; i < numpages; i++) {
-			if (addr[i] & ~PAGE_MASK) {
-				addr[i] &= PAGE_MASK;
-				WARN_ON_ONCE(1);
-			}
-		}
-	} else if (!(in_flag & CPA_PAGES_ARRAY)) {
+	if (!(in_flag & CPA_PAGES_ARRAY)) {
 		/*
 		 * in_flag of CPA_PAGES_ARRAY implies it is aligned.
 		 * No need to check in that case
 		 */
-		if (*addr & ~PAGE_MASK) {
-			*addr &= PAGE_MASK;
+		if (addr & ~PAGE_MASK) {
+			addr &= PAGE_MASK;
 			/*
 			 * People should not be passing in unaligned addresses:
 			 */
@@ -2152,7 +2122,7 @@ static int change_page_attr_set_clr(unsigned long *addr, int numpages,
 
 	vm_unmap_aliases();
 
-	cpa.vaddr = addr;
+	cpa.addr = addr;
 	cpa.pages = pages;
 	cpa.numpages = numpages;
 	cpa.mask_set = mask_set;
@@ -2182,41 +2152,56 @@ static int change_page_attr_set_clr(unsigned long *addr, int numpages,
 	/*
 	 * On error; flush everything to be sure.
 	 */
-	if (ret) {
-		cpa_flush_all(cache);
-		goto out;
-	}
+	if (ret)
+		cpa.force_flush_all = 1;
 
 	cpa_flush(&cpa, cache);
+
+	if (ret)
+		goto out;
+
+	if (!(cpa.flags & CPA_COLLAPSE))
+		goto out;
+
+	/*
+	 * Take the mmap write lock on init_mm to:
+	 * - Avoid a use-after-free if raced by ptdump (which takes its own
+	 *   write lock on init_mm).
+	 * - Serialise concurrent CPA walkers.
+	 */
+	scoped_guard(mmap_write_lock, &init_mm) {
+		guard(spinlock)(&cpa_lock);
+		cpa_collapse_large_pages(&cpa);
+	}
 out:
 	return ret;
 }
 
-static inline int change_page_attr_set(unsigned long *addr, int numpages,
-				       pgprot_t mask, int array)
+static inline int change_page_attr_set(unsigned long addr, int numpages,
+				       pgprot_t mask)
 {
 	return change_page_attr_set_clr(addr, numpages, mask, __pgprot(0), 0,
-		(array ? CPA_ARRAY : 0), NULL);
+					0, NULL);
 }
 
-static inline int change_page_attr_clear(unsigned long *addr, int numpages,
-					 pgprot_t mask, int array)
+static inline int change_page_attr_clear(unsigned long addr, int numpages,
+					 pgprot_t mask)
 {
 	return change_page_attr_set_clr(addr, numpages, __pgprot(0), mask, 0,
-		(array ? CPA_ARRAY : 0), NULL);
+					0, NULL);
 }
 
 static inline int cpa_set_pages_array(struct page **pages, int numpages,
 				       pgprot_t mask)
 {
-	return change_page_attr_set_clr(NULL, numpages, mask, __pgprot(0), 0,
+	return change_page_attr_set_clr(0, numpages, mask, __pgprot(0), 0,
 		CPA_PAGES_ARRAY, pages);
 }
 
 static inline int cpa_clear_pages_array(struct page **pages, int numpages,
 					 pgprot_t mask)
 {
-	return change_page_attr_set_clr(NULL, numpages, __pgprot(0), mask, 0,
+	return change_page_attr_set_clr(0, numpages, __pgprot(0), mask, 0,
 		CPA_PAGES_ARRAY, pages);
 }
 
@@ -2228,9 +2213,8 @@ int _set_memory_uc(unsigned long addr, int numpages)
 	 * that you cannot override IO areas with set_memory_*() as
 	 * these helpers cannot work with IO memory.
 	 */
-	return change_page_attr_set(&addr, numpages,
-				    cachemode2pgprot(_PAGE_CACHE_MODE_UC_MINUS),
-				    0);
+	return change_page_attr_set(addr, numpages,
+				cachemode2pgprot(_PAGE_CACHE_MODE_UC_MINUS));
 }
 
 int set_memory_uc(unsigned long addr, int numpages)
@@ -2262,11 +2246,10 @@ int _set_memory_wc(unsigned long addr, int numpages)
 {
 	int ret;
 
-	ret = change_page_attr_set(&addr, numpages,
-				   cachemode2pgprot(_PAGE_CACHE_MODE_UC_MINUS),
-				   0);
+	ret = change_page_attr_set(addr, numpages,
+				   cachemode2pgprot(_PAGE_CACHE_MODE_UC_MINUS));
 	if (!ret) {
-		ret = change_page_attr_set_clr(&addr, numpages,
+		ret = change_page_attr_set_clr(addr, numpages,
 					       cachemode2pgprot(_PAGE_CACHE_MODE_WC),
 					       __pgprot(_PAGE_CACHE_MASK),
 					       0, 0, NULL);
@@ -2293,15 +2276,15 @@ EXPORT_SYMBOL(set_memory_wc);
 
 int _set_memory_wt(unsigned long addr, int numpages)
 {
-	return change_page_attr_set(&addr, numpages,
-				    cachemode2pgprot(_PAGE_CACHE_MODE_WT), 0);
+	return change_page_attr_set(addr, numpages,
+				    cachemode2pgprot(_PAGE_CACHE_MODE_WT));
 }
 
 int _set_memory_wb(unsigned long addr, int numpages)
 {
 	/* WB cache mode is hard wired to all cache attribute bits being 0 */
-	return change_page_attr_clear(&addr, numpages,
-				      __pgprot(_PAGE_CACHE_MASK), 0);
+	return change_page_attr_clear(addr, numpages,
+				      __pgprot(_PAGE_CACHE_MASK));
 }
 
 int set_memory_wb(unsigned long addr, int numpages)
@@ -2363,7 +2346,7 @@ int set_memory_x(unsigned long addr, int numpages)
 	if (!(__supported_pte_mask & _PAGE_NX))
 		return 0;
 
-	return change_page_attr_clear(&addr, numpages, __pgprot(_PAGE_NX), 0);
+	return change_page_attr_clear(addr, numpages, __pgprot(_PAGE_NX));
 }
 
 int set_memory_nx(unsigned long addr, int numpages)
@@ -2371,12 +2354,13 @@ int set_memory_nx(unsigned long addr, int numpages)
 	if (!(__supported_pte_mask & _PAGE_NX))
 		return 0;
 
-	return change_page_attr_set(&addr, numpages, __pgprot(_PAGE_NX), 0);
+	return change_page_attr_set(addr, numpages, __pgprot(_PAGE_NX));
 }
 
 int set_memory_ro(unsigned long addr, int numpages)
 {
-	return change_page_attr_clear(&addr, numpages, __pgprot(_PAGE_RW | _PAGE_DIRTY), 0);
+	return change_page_attr_clear(addr, numpages,
+				      __pgprot(_PAGE_RW | _PAGE_DIRTY));
 }
 
 int set_memory_rox(unsigned long addr, int numpages)
@@ -2386,49 +2370,47 @@ int set_memory_rox(unsigned long addr, int numpages)
 	if (__supported_pte_mask & _PAGE_NX)
 		clr.pgprot |= _PAGE_NX;
 
-	return change_page_attr_set_clr(&addr, numpages, __pgprot(0), clr, 0,
+	return change_page_attr_set_clr(addr, numpages, __pgprot(0), clr, 0,
 					CPA_COLLAPSE, NULL);
 }
 
 int set_memory_rw(unsigned long addr, int numpages)
 {
-	return change_page_attr_set(&addr, numpages, __pgprot(_PAGE_RW), 0);
+	return change_page_attr_set(addr, numpages, __pgprot(_PAGE_RW));
 }
 
 int set_memory_np(unsigned long addr, int numpages)
 {
-	return change_page_attr_clear(&addr, numpages, __pgprot(_PAGE_PRESENT), 0);
+	return change_page_attr_clear(addr, numpages, __pgprot(_PAGE_PRESENT));
 }
 
 int set_memory_np_noalias(unsigned long addr, int numpages)
 {
-	return change_page_attr_set_clr(&addr, numpages, __pgprot(0),
+	return change_page_attr_set_clr(addr, numpages, __pgprot(0),
 					__pgprot(_PAGE_PRESENT), 0,
 					CPA_NO_CHECK_ALIAS, NULL);
 }
 
 int set_memory_p(unsigned long addr, int numpages)
 {
-	return change_page_attr_set(&addr, numpages, __pgprot(_PAGE_PRESENT), 0);
+	return change_page_attr_set(addr, numpages, __pgprot(_PAGE_PRESENT));
 }
 
 int set_memory_4k(unsigned long addr, int numpages)
 {
-	return change_page_attr_set_clr(&addr, numpages,
+	return change_page_attr_set_clr(addr, numpages,
 					__pgprot(_PAGE_KERNEL_4K),
 					__pgprot(0), 1, 0, NULL);
 }
 
 int set_memory_nonglobal(unsigned long addr, int numpages)
 {
-	return change_page_attr_clear(&addr, numpages,
-				      __pgprot(_PAGE_GLOBAL), 0);
+	return change_page_attr_clear(addr, numpages, __pgprot(_PAGE_GLOBAL));
 }
 
 int set_memory_global(unsigned long addr, int numpages)
 {
-	return change_page_attr_set(&addr, numpages,
-				    __pgprot(_PAGE_GLOBAL), 0);
+	return change_page_attr_set(addr, numpages, __pgprot(_PAGE_GLOBAL));
 }
 
 /*
@@ -2446,11 +2428,10 @@ static int __set_memory_enc_pgtable(unsigned long addr, int numpages, bool enc)
 		addr &= PAGE_MASK;
 
 	memset(&cpa, 0, sizeof(cpa));
-	cpa.vaddr = &addr;
+	cpa.addr = addr;
 	cpa.numpages = numpages;
 	cpa.mask_set = enc ? pgprot_encrypted(empty) : pgprot_decrypted(empty);
 	cpa.mask_clr = enc ? pgprot_decrypted(empty) : pgprot_encrypted(empty);
-	cpa.pgd = init_mm.pgd;
 
 	/* Must avoid aliasing mappings in the highmem code */
 	kmap_flush_unused();
@@ -2583,7 +2564,7 @@ static int _set_pages_array(struct page **pages, int numpages,
 	ret = cpa_set_pages_array(pages, numpages,
 				  cachemode2pgprot(set_type));
 	if (!ret && new_type == _PAGE_CACHE_MODE_WC)
-		ret = change_page_attr_set_clr(NULL, numpages,
+		ret = change_page_attr_set_clr(0, numpages,
 					       cachemode2pgprot(
 						_PAGE_CACHE_MODE_WC),
 					       __pgprot(_PAGE_CACHE_MASK),
@@ -2664,8 +2645,7 @@ int set_pages_rw(struct page *page, int numpages)
 
 static int __set_pages_p(struct page *page, int numpages, unsigned int cpa_flags)
 {
-	unsigned long tempaddr = (unsigned long) page_address(page);
-	struct cpa_data cpa = { .vaddr = &tempaddr,
+	struct cpa_data cpa = { .addr = (unsigned long)page_address(page),
 				.pgd = NULL,
 				.numpages = numpages,
 				.mask_set = __pgprot(_PAGE_PRESENT | _PAGE_RW),
@@ -2683,8 +2663,7 @@ static int __set_pages_p(struct page *page, int numpages, unsigned int cpa_flags
 
 static int __set_pages_np(struct page *page, int numpages, unsigned int cpa_flags)
 {
-	unsigned long tempaddr = (unsigned long) page_address(page);
-	struct cpa_data cpa = { .vaddr = &tempaddr,
+	struct cpa_data cpa = { .addr = (unsigned long)page_address(page),
 				.pgd = NULL,
 				.numpages = numpages,
 				.mask_set = __pgprot(0),
@@ -2770,7 +2749,7 @@ int __init kernel_map_pages_in_pgd(pgd_t *pgd, u64 pfn, unsigned long address,
 	int retval = -EINVAL;
 
 	struct cpa_data cpa = {
-		.vaddr = &address,
+		.addr = address,
 		.pfn = pfn,
 		.pgd = pgd,
 		.numpages = numpages,
@@ -2813,7 +2792,7 @@ int __init kernel_unmap_pages_in_pgd(pgd_t *pgd, unsigned long address,
 	 * the *target* of a mapping, it's not useful while unmapping.
 	 */
 	struct cpa_data cpa = {
-		.vaddr		= &address,
+		.addr		= address,
 		.pfn		= 0,
 		.pgd		= pgd,
 		.numpages	= numpages,

@@ -286,8 +286,9 @@ static unsigned long resolve_pa_may_alloc(unsigned long addr, unsigned long size
 static bool large_page_mapping_allowed(enum populate_mode mode)
 {
 	switch (mode) {
-	case POPULATE_DIRECT:
 	case POPULATE_IDENTITY:
+		return !debug_pagealloc;
+	case POPULATE_DIRECT:
 	case POPULATE_KERNEL:
 #ifdef CONFIG_KASAN
 	case POPULATE_KASAN_MAP_SHADOW:

@@ -34,6 +34,7 @@ int __bootdata_preserved(cmma_flag) = 1;
 unsigned long vmalloc_size = VMALLOC_DEFAULT_SIZE;
 unsigned long memory_limit;
 int vmalloc_size_set;
+bool debug_pagealloc = IS_ENABLED(CONFIG_DEBUG_PAGEALLOC_ENABLE_DEFAULT);
 
 static inline int __diag308(unsigned long subcode, void *addr)
 {
@@ -330,6 +331,14 @@ void parse_boot_command_line(void)
 #ifdef CONFIG_STACKPROTECTOR
 		if (parameq(param, "debug_stackprotector"))
 			stack_protector_debug = 1;
+#endif
+
+#ifdef CONFIG_DEBUG_PAGEALLOC
+		if (parameq(param, "debug_pagealloc")) {
+			rc = kstrtobool(val, &enabled);
+			if (!rc)
+				debug_pagealloc = enabled;
+		}
 #endif
 
 #if IS_ENABLED(CONFIG_KVM)

@@ -1221,12 +1221,8 @@ __split_large_page(struct cpa_data *cpa, struct cpa_leaf *leaf, pte_t *pbase)
 	for (i = 0; i < PTRS_PER_PTE; i++, pfn += pfninc)
 		set_pte(pbase + i, cpa_pte(level - 1, pfn, prot));
 
-	if (virt_addr_valid(address)) {
-		unsigned long pfn = PFN_DOWN(__pa(address));
-
-		if (pfn_range_is_mapped(pfn, pfn + 1))
-			split_page_count(level);
-	}
+	if (cpa_is_direct_map(address))
+		split_page_count(level);
 
 	/*
 	 * Install the new, split up pagetable.
@@ -1377,7 +1373,7 @@ static int collapse_pmd_page(pmd_t *pmd, unsigned long addr,
 		}
 	}
 
-	if (virt_addr_valid(addr) && pfn_range_is_mapped(pfn, pfn + 1))
+	if (cpa_is_direct_map(addr))
 		collapse_page_count(PGTABLE_LEVEL_PMD);
 
 	return 1;
@@ -1424,7 +1420,7 @@ static int collapse_pud_page(pud_t *pud, unsigned long addr,
 	list_add(&page_ptdesc(pud_page(*pud))->pt_list, pgtables);
 	set_pud(pud, pfn_pud(pfn, pmd_pgprot(first)));
 
-	if (virt_addr_valid(addr) && pfn_range_is_mapped(pfn, pfn + 1))
+	if (cpa_is_direct_map(addr))
 		collapse_page_count(PGTABLE_LEVEL_PUD);
 
 	return 1;
